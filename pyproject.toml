@@ -1,0 +1,32 @@
+[project]
+name = "poleposition"
+version = "0.0.1"
+description = "A FastAPI project scaffolder for building enterprise-grade APIs"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Eren Ertem", email = "mail.erenertem@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+poleposition = "pole_position.cli.main:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["pole_position", "pole_position.*"]
+
+[tool.setuptools.package-data]
+pole_position = ["template/**/*"]
