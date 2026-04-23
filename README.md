@@ -9,10 +9,9 @@ Create a new project:
 ```bash
 poleposition startproject myapp --install
 ```
-
-[![PyPI version](https://img.shields.io/pypi/v/poleposition.svg)](https://pypi.org/project/poleposition/)
-[![Python](https://img.shields.io/pypi/pyversions/poleposition.svg)](https://pypi.org/project/poleposition/)
-[![License](https://img.shields.io/github/license/erenertem/poleposition)](https://github.com/erenertem/poleposition/blob/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/poleposition)](https://pypi.org/project/poleposition)
+[![Python](https://img.shields.io/pypi/pyversions/poleposition)](https://pypi.org/project/poleposition)
+[![License](https://img.shields.io/github/license/erenertem/poleposition)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
 
 ---
 
@@ -200,4 +199,4 @@ Feel free to open an issue or submit a pull request.
 
 MIT
 
-[License](https://github.com/erenertemden/poleposition/blob/main/LICENSE)
+[License](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
