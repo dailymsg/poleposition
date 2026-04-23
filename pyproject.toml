@@ -1,24 +1,19 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "poleposition"
-version = "0.0.3"
-description = "FastAPI project scaffolder for building clean and scalable APIs"
-readme = "README.md"
+version = "0.0.4"
+description = "CLI tool to scaffold production-ready FastAPI projects with clean architecture and built-in logging"
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 dependencies = []
 
 keywords = [
     "fastapi",
-    "scaffold",
-    "scaffolding",
     "cli",
-    "starter",
+    "scaffold",
     "template",
-    "api",
+    "starter",
     "backend",
+    "api",
 ]
 
 classifiers = [
