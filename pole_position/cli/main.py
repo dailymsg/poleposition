@@ -11,7 +11,7 @@ def main() -> None:
         print("Usage: poleposition <command> [options]")
         print("")
         print("Commands:")
-        print("  startproject <project_name>")
+        print("  startproject <project_name> [--install]")
         print("  version")
         raise SystemExit(1)
 
@@ -29,7 +29,6 @@ def main() -> None:
     print(f"Unknown command: {command}")
     print("Usage: poleposition <command> [options]")
     raise SystemExit(1)
-
 
 if __name__ == "__main__":
     main()
