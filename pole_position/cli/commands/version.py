@@ -1,6 +1,8 @@
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
-try:
-    __version__ = version("poleposition")
-except PackageNotFoundError:
-    __version__ = "0.0.7"
+
+def run(args: list[str]) -> None:
+    try:
+        print(version("poleposition"))
+    except PackageNotFoundError:
+        print("0.0.8") # Fallback version if package metadata is not found
