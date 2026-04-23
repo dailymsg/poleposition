@@ -180,7 +180,7 @@ The CLI is intentionally lightweight and avoids heavy templating engines.
 
 ## Roadmap
 
-* [ ] Project name validation
+* [x] Project name validation
 * [ ] `poleposition add module`
 * [ ] JSON logging support
 * [ ] Docker support
