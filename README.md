@@ -1,11 +1,13 @@
 # PolePosition
 
-A FastAPI project scaffolder for building enterprise-grade APIs.
+A CLI tool to quickly scaffold production-ready FastAPI projects.
 
-Create a new FastAPI project in seconds:
+Create a clean, structured API project in seconds with built-in logging, configuration, and testing.
+
+Create a new project:
 
 ```bash
-poleposition startproject myapp
+poleposition startproject myapp --install
 ```
 
 [![PyPI version](https://img.shields.io/pypi/v/poleposition.svg)](https://pypi.org/project/poleposition/)
@@ -13,6 +15,24 @@ poleposition startproject myapp
 [![License](https://img.shields.io/github/license/erenertem/poleposition)](https://github.com/erenertem/poleposition/blob/main/LICENSE)
 
 ---
+
+## Example output
+
+```bash
+$ poleposition startproject myapp --install
+Created project: myapp
+
+Installing project dependencies with uv...
+Resolved 47 packages in 40ms
+Installed 47 packages in 52ms
+
+Project ready.
+
+Next steps:
+  cd myapp
+  uv run fastapi dev src/myapp/main.py
+```
+
 
 ## Why PolePosition?
 
@@ -56,23 +76,16 @@ pip install poleposition
 
 ---
 
-## Quickstart
+## Quick example
 
 ```bash
-poleposition startproject myapp
+poleposition startproject myapp --install
 cd myapp
 
-# setup environment
-cp .env.example .env
-
-# install dependencies
-uv sync
-
-# run the app
 uv run fastapi dev src/myapp/main.py
 ```
 
-Open your API documentation at:
+Open your API documentation:
 
 ```
 http://127.0.0.1:8000/docs
@@ -80,15 +93,50 @@ http://127.0.0.1:8000/docs
 
 ---
 
+## Quickstart
+
+### One-command setup (recommended)
+
+```bash
+poleposition startproject myapp --install
+cd myapp
+
+uv run fastapi dev src/myapp/main.py
+```
+
+### Manual setup
+
+```bash
+poleposition startproject myapp
+cd myapp
+
+cp .env.example .env
+uv sync
+
+uv run fastapi dev src/myapp/main.py
+```
+
+---
+
+## CLI
+
+```bash
+poleposition startproject <name> [--install]
+poleposition version
+```
+
+---
+
 ## Project Structure
 
-```
+```text
 myapp/
 ├─ pyproject.toml
 ├─ .env.example
 ├─ src/
 │  └─ myapp/
 │     ├─ main.py
+│     ├─ app.py
 │     ├─ api/
 │     │  └─ routes/
 │     │     └─ status.py
