@@ -10,7 +10,7 @@ poleposition startproject myapp
 
 [![PyPI version](https://img.shields.io/pypi/v/poleposition.svg)](https://pypi.org/project/poleposition/)
 [![Python](https://img.shields.io/pypi/pyversions/poleposition.svg)](https://pypi.org/project/poleposition/)
-[![License](https://img.shields.io/github/license/erenertem/poleposition)](LICENSE)
+[![License](https://img.shields.io/github/license/erenertem/poleposition)](https://github.com/erenertem/poleposition/blob/main/LICENSE)
 
 ---
 
@@ -127,7 +127,7 @@ PolePosition is built around a few principles:
 * Opinionated — sensible defaults
 * Extensible — easy to grow into larger systems
 
-The CLI is intentionally lightweight, avoiding heavy templating engines.
+The CLI is intentionally lightweight and avoids heavy templating engines.
 
 ---
 
@@ -151,3 +151,6 @@ Feel free to open an issue or submit a pull request.
 ## License
 
 MIT
+
+Full license:
+https://github.com/erenertem/poleposition/blob/main/LICENSE
