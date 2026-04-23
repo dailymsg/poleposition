@@ -1,5 +1,6 @@
-from pole_position import __version__
+from importlib.metadata import version, PackageNotFoundError
 
-
-def run(args: list[str]) -> None:
-    print(__version__)
+try:
+    __version__ = version("poleposition")
+except PackageNotFoundError:
+    __version__ = "0.0.7"
