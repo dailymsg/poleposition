@@ -15,11 +15,12 @@ TEXT_FILE_EXTENSIONS = {
 }
 
 
-def build_context(project_name: str) -> dict[str, str]:
+def build_context(project_name: str, package_name: str) -> dict[str, str]:
     return {
         "{{project_name}}": project_name,
-        "{{project_import_name}}": project_name,
-        "{{app_name}}": project_name,
+        "{{ package_name }}": package_name,
+        "{{project_import_name}}": package_name,
+        "{{ app_name }}": project_name,
     }
 
 
