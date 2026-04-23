@@ -200,5 +200,4 @@ Feel free to open an issue or submit a pull request.
 
 MIT
 
-Full license:
-https://github.com/erenertem/poleposition/blob/main/LICENSE
+[License](https://github.com/erenertemden/poleposition/blob/main/LICENSE)
