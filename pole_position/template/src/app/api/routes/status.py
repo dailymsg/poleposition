@@ -1,24 +1,21 @@
 import logging
-import time
 
 from fastapi import APIRouter
 
-from app.core.config import settings
-
-from app import __version__
+from {{project_name}} import __version__
+from {{project_name}}.core.config import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.get("/status")
-def status() -> dict:
+async def status() -> dict[str, str]:
     logger.info("Status endpoint called")
 
     return {
-        "uptime": time.time(),
         "status": "ok",
         "service": settings.app_name,
         "environment": settings.app_env,
-        "version": __version__
+        "version": __version__,
     }

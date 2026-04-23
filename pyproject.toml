@@ -1,9 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "poleposition"
 version = "0.0.3"
 description = "FastAPI project scaffolder for building clean and scalable APIs"
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = []
 
 keywords = [
     "fastapi",
@@ -25,7 +30,16 @@ classifiers = [
     "Topic :: Software Development :: Code Generators",
 ]
 
+[project.scripts]
+poleposition = "pole_position.cli.main:main"
+
 [project.urls]
 Homepage = "https://github.com/erenertem/poleposition"
 Repository = "https://github.com/erenertem/poleposition"
 Issues = "https://github.com/erenertem/poleposition/issues"
+
+[tool.setuptools]
+packages = ["pole_position"]
+
+[tool.setuptools.package-data]
+pole_position = ["template/**/*"]
