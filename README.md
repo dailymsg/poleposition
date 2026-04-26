@@ -1,8 +1,8 @@
 # PolePosition
 
-A CLI tool to quickly scaffold production-ready FastAPI projects.
+A CLI tool that puts teams in pole position when starting enterprise FastAPI projects.
 
-Create a clean, structured API project in seconds with built-in logging, configuration, and testing.
+PolePosition helps you keep FastAPI's speed while avoiding the usual setup drag of enterprise backend work. It gives you a structured, production-minded starting point from day one.
 
 Create a new project:
 
@@ -32,7 +32,9 @@ Next steps:
 
 ## Why PolePosition?
 
-Starting a FastAPI project should be fast, clean, and predictable.
+PolePosition is named for the same reason teams use it: to start enterprise FastAPI development from pole position.
+
+FastAPI projects should start fast, clean, and predictable, even when the target is a larger production system.
 
 PolePosition provides:
 
@@ -40,6 +42,7 @@ PolePosition provides:
 * Environment-based configuration
 * Built-in logging
 * Testing setup
+* Module-oriented organization for growing codebases
 * A ready-to-run FastAPI application
 
 No boilerplate. No setup friction.
@@ -52,6 +55,8 @@ FastAPI is excellent, but starting a new project often involves:
 
 * Recreating the same structure
 * Setting up logging and configuration
+* Defining module boundaries
+* Wiring database foundations
 * Organizing modules manually
 
 PolePosition removes that overhead by providing a clean, production-ready starting point out of the box.
@@ -200,9 +205,12 @@ The CLI is intentionally lightweight and avoids heavy templating engines.
 ## Roadmap
 
 * [x] Project name validation
-* [ ] `poleposition add module`
-* [ ] JSON logging support
+* [x] `polepos add module`
+* [ ] Alembic and database migrations
 * [ ] Docker support
+* [ ] `polepos db ...` commands
+* [ ] JSON logging support
+* [ ] Auth foundation
 * [ ] Production-ready presets
 
 ---
