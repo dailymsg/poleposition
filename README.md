@@ -15,23 +15,20 @@ polepos start myapp --install
 
 ---
 
-## Example output
+## Example Output
 
 ```bash
 $ polepos start myapp --install
 Created project: myapp
 
 Installing project dependencies with uv...
-Resolved 47 packages in 40ms
-Installed 47 packages in 52ms
-
-Project ready.
+Dependencies installed successfully.
 
 Next steps:
   cd myapp
+  cp .env.example .env
   uv run fastapi dev src/myapp/main.py
 ```
-
 
 ## Why PolePosition?
 
@@ -75,33 +72,40 @@ pip install poleposition
 
 ---
 
-## Quick example
+## Quick Start
 
 ```bash
 polepos start myapp --install
 cd myapp
+cp .env.example .env
 
 uv run fastapi dev src/myapp/main.py
 ```
 
 Open your API documentation:
 
-```
+```text
 http://127.0.0.1:8000/docs
 ```
 
 ---
 
-## Quickstart
+## Usage
 
-### One-command setup (recommended)
+### Create a project
 
 ```bash
 polepos start myapp --install
-cd myapp
-
-uv run fastapi dev src/myapp/main.py
 ```
+
+`--install` runs `uv sync` inside the generated project for you.
+
+Project names:
+
+* Must not be empty
+* Must not contain whitespace
+* May use hyphens like `my-app`
+* Are normalized to a Python package name like `my_app`
 
 ### Manual setup
 
@@ -115,12 +119,21 @@ uv sync
 uv run fastapi dev src/myapp/main.py
 ```
 
+### Help and version
+
+```bash
+polepos help
+polepos version
+```
+
 ---
 
 ## CLI
 
 ```bash
+polepos help
 polepos start <name> [--install]
+polepos startproject <name> [--install]
 polepos version
 ```
 
@@ -170,9 +183,9 @@ GET /api/v1/status
 
 PolePosition is built around a few principles:
 
-* Minimal — no unnecessary abstractions
-* Opinionated — sensible defaults
-* Extensible — easy to grow into larger systems
+* Minimal: no unnecessary abstractions
+* Opinionated: sensible defaults
+* Extensible: easy to grow into larger systems
 
 The CLI is intentionally lightweight and avoids heavy templating engines.
 
