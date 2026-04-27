@@ -151,6 +151,14 @@ polepos db revision -m "add garage table"
 polepos db downgrade -1
 ```
 
+### When to use which command
+
+* `polepos start` when you want to create a new FastAPI project with the PolePosition structure
+* `polepos add module` when you want to add a new REST/domain module to an existing project
+* `polepos db upgrade` when you want to apply migrations to the database
+* `polepos db revision -m "..."` when you changed models and need a new migration
+* `polepos db downgrade` when you need to roll back a migration
+
 ### Help and version
 
 ```bash
@@ -246,6 +254,95 @@ The CLI is intentionally lightweight and avoids heavy templating engines.
 * [ ] JSON logging support
 * [ ] Auth foundation
 * [ ] Production-ready presets
+
+---
+
+## Example Workflow
+
+Here is a concrete example for a new PostgreSQL-backed FastAPI REST API project.
+
+Create the project and install dependencies:
+
+```bash
+uv tool install poleposition
+polepos start shop-api
+cd shop-api
+cp .env.example .env
+uv sync
+```
+
+Point the project to PostgreSQL in `.env`:
+
+```env
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/shop_api
+```
+
+Apply the initial migration and start the API:
+
+```bash
+polepos db upgrade
+uv run fastapi dev src/shop_api/main.py
+```
+
+Add a new REST module:
+
+```bash
+polepos add module customers
+```
+
+Extend `src/shop_api/modules/customers/model.py` and `schemas.py` for your domain, then generate and apply a migration:
+
+```bash
+polepos db revision -m "add customers table"
+polepos db upgrade
+```
+
+At that point, your project has:
+
+* FastAPI app structure
+* PostgreSQL-ready SQLAlchemy setup
+* Alembic migration workflow
+* A generated REST module with router, schemas, service, repository, and tests
+
+That is the core PolePosition flow: start fast, add modules as the API grows, and evolve the database schema through the CLI.
+
+### Example: build a `users` REST API
+
+If you want a REST API that returns users, the flow is:
+
+Generate the module:
+
+```bash
+polepos add module users
+```
+
+Update `src/shop_api/modules/users/model.py` with user fields such as:
+
+```python
+class Users(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True)
+    full_name: Mapped[str] = mapped_column(String(120))
+    is_active: Mapped[bool] = mapped_column(default=True)
+```
+
+Update `schemas.py` so the API returns those fields, then create and apply a migration:
+
+```bash
+polepos db revision -m "create users table"
+polepos db upgrade
+```
+
+At that point, you already have the generated router shape for:
+
+```text
+GET  /api/v1/users/
+POST /api/v1/users/
+```
+
+From there, you refine the generated module for your actual domain instead of starting from an empty project structure.
 
 ---
 
