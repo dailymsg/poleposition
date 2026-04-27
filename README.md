@@ -1,5 +1,7 @@
 # PolePosition
 
+![PolePosition logo](assets/logo/poleposition-python-logo.png)
+
 A CLI tool that puts teams in pole position when starting enterprise FastAPI projects.
 
 PolePosition helps you keep FastAPI's speed while avoiding the usual setup drag of enterprise backend work. It gives you a structured, production-minded starting point from day one.
@@ -34,7 +36,7 @@ Next steps:
   cd myapp
   cp .env.example .env
   alembic upgrade head
-  uv run fastapi dev src/myapp/main.py
+  uv run python -m myapp.run
 ```
 
 ## Why PolePosition?
@@ -95,7 +97,7 @@ cd myapp
 cp .env.example .env
 alembic upgrade head
 
-uv run fastapi dev src/myapp/main.py
+uv run python -m myapp.run
 ```
 
 Create and run migrations:
@@ -141,7 +143,7 @@ cp .env.example .env
 uv sync
 alembic upgrade head
 
-uv run fastapi dev src/myapp/main.py
+uv run python -m myapp.run
 ```
 
 ### Add modules
@@ -167,6 +169,36 @@ from shop_api.bootstrap.logging import get_logger
 
 logger = get_logger(__name__)
 ```
+
+### Runtime configuration
+
+Generated projects include `src/<package>/run.py` as the preferred local and production-friendly entrypoint.
+
+Use:
+
+```bash
+uv run python -m shop_api.run
+```
+
+The runner is configured from `settings.py` and `.env`, including:
+
+* `APP_HOST`
+* `APP_PORT`
+* `APP_RELOAD`
+* `LOG_LEVEL`
+* `UVICORN_WORKERS`
+* `UVICORN_ACCESS_LOG`
+* `UVICORN_PROXY_HEADERS`
+* `UVICORN_FORWARDED_ALLOW_IPS`
+* `UVICORN_SERVER_HEADER`
+* `UVICORN_DATE_HEADER`
+* `UVICORN_TIMEOUT_KEEP_ALIVE`
+* `UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN`
+* `UVICORN_TIMEOUT_WORKER_HEALTHCHECK`
+* `UVICORN_LIMIT_CONCURRENCY`
+* `UVICORN_LIMIT_MAX_REQUESTS`
+* `UVICORN_LIMIT_MAX_REQUESTS_JITTER`
+* `UVICORN_BACKLOG`
 
 ### When to use which command
 
@@ -211,6 +243,7 @@ myapp/
 ├─ .env.example
 ├─ src/
 │  └─ myapp/
+│     ├─ run.py
 │     ├─ main.py
 │     ├─ app.py
 │     ├─ settings.py
@@ -298,7 +331,7 @@ Apply the initial migration and start the API:
 
 ```bash
 polepos db upgrade
-uv run fastapi dev src/shop_api/main.py
+uv run python -m shop_api.run
 ```
 
 Add a new REST module:

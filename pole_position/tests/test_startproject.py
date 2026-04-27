@@ -89,6 +89,7 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
         project_root / "migrations" / "script.py.mako",
         project_root / "migrations" / "versions" / "__init__.py",
         project_root / "migrations" / "versions" / "0001_create_races_table.py",
+        package_root / "run.py",
         package_root / "settings.py",
         package_root / "bootstrap" / "logging.py",
         package_root / "bootstrap" / "errors.py",
@@ -132,6 +133,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
 
     env_example = (project_root / ".env.example").read_text(encoding="utf-8")
     app_module = (package_root / "app.py").read_text(encoding="utf-8")
+    run_module = (package_root / "run.py").read_text(encoding="utf-8")
+    settings_module = (package_root / "settings.py").read_text(encoding="utf-8")
     logging_module = (package_root / "bootstrap" / "logging.py").read_text(encoding="utf-8")
     lifespan = (package_root / "bootstrap" / "lifespan.py").read_text(encoding="utf-8")
     status_service = (
@@ -139,7 +142,22 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     ).read_text(encoding="utf-8")
 
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
+    assert "APP_HOST=127.0.0.1" in env_example
+    assert "UVICORN_WORKERS=1" in env_example
+    assert "UVICORN_LIMIT_MAX_REQUESTS=" in env_example
+    assert "UVICORN_LIMIT_MAX_REQUESTS_JITTER=0" in env_example
     assert "from demo_app.api.router import api_router" in app_module
+    assert 'uvicorn.run(' in run_module
+    assert '"demo_app.main:app"' in run_module
+    assert "host=settings.app_host" in run_module
+    assert "workers=settings.uvicorn_workers" in run_module
+    assert "limit_max_requests=settings.uvicorn_limit_max_requests" in run_module
+    assert "limit_max_requests_jitter=settings.uvicorn_limit_max_requests_jitter" in run_module
+    assert "timeout_worker_healthcheck=settings.uvicorn_timeout_worker_healthcheck" in run_module
+    assert "app_host: str = \"127.0.0.1\"" in settings_module
+    assert "uvicorn_workers: int = 1" in settings_module
+    assert "uvicorn_limit_max_requests: int | None = None" in settings_module
+    assert "uvicorn_limit_max_requests_jitter: int = 0" in settings_module
     assert "def get_logger(name: str) -> logging.Logger:" in logging_module
     assert "from demo_app.bootstrap.logging import get_logger" in lifespan
     assert "logger = get_logger(__name__)" in lifespan
@@ -201,7 +219,7 @@ def test_no_bytecode_flag_updates_generated_run_instructions(tmp_path: Path):
     project_root = tmp_path / "demo-app"
     readme = (project_root / "README.md").read_text(encoding="utf-8")
 
-    expected_command = "PYTHONDONTWRITEBYTECODE=1 uv run fastapi dev src/demo_app/main.py"
+    expected_command = "PYTHONDONTWRITEBYTECODE=1 uv run python -m demo_app.run"
     assert expected_command in result.stdout
     assert expected_command in readme
 

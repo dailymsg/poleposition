@@ -50,7 +50,7 @@ cd shop-api
 cp .env.example .env
 uv sync
 polepos db upgrade
-uv run fastapi dev src/shop_api/main.py
+uv run python -m shop_api.run
 ```
 
 2. Add a new domain module
@@ -120,6 +120,18 @@ Why:
 - it gives agents a single preferred logging entrypoint
 
 When updating generated template files or module generation code, prefer `get_logger(__name__)` as the standard logging pattern.
+
+## Runtime Conventions
+
+Generated projects should prefer a dedicated runner module:
+
+```bash
+uv run python -m <package>.run
+```
+
+This is preferred over embedding long `uvicorn` command lines in documentation or relying only on `fastapi dev`.
+
+The runner should read production-relevant `uvicorn` settings from `settings.py` / `.env` so teams can configure runtime behavior without editing code for common cases.
 
 ## CLI Conventions
 

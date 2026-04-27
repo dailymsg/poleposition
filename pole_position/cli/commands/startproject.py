@@ -77,7 +77,7 @@ def run(args: list[str]) -> None:
 
     print("  alembic upgrade head")
     bytecode_prefix = "PYTHONDONTWRITEBYTECODE=1 " if no_bytecode else ""
-    print(f"  {bytecode_prefix}uv run fastapi dev src/{package_name}/main.py")
+    print(f"  {bytecode_prefix}uv run python -m {package_name}.run")
 
 
 command = Command(
