@@ -65,12 +65,15 @@ def test_add_module_creates_module_files_and_updates_router(tmp_path: Path):
     integration_test_content = (
         project_root / "tests" / "integration" / "test_garage.py"
     ).read_text(encoding="utf-8")
+    service_content = (module_root / "service.py").read_text(encoding="utf-8")
 
     assert "from myapp.modules.garage.router import router as garage_router" in router_content
     assert 'api_router.include_router(garage_router, prefix="/garage", tags=["garage"])' in router_content
     assert "from myapp.modules.garage import model" in db_models_content
     assert '"garage"' in modules_init_content
     assert 'client.post("/api/v1/garage/"' in integration_test_content
+    assert "from myapp.bootstrap.logging import get_logger" in service_content
+    assert "logger = get_logger(__name__)" in service_content
 
 
 def test_add_module_keeps_router_imports_sorted(tmp_path: Path):

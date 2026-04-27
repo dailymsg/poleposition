@@ -2,10 +2,14 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from {{project_import_name}}.bootstrap.logging import get_logger
 from {{project_import_name}}.domain.exceptions import DomainError, NotFoundError
 from {{project_import_name}}.modules.races.model import Race, RaceStatus
 from {{project_import_name}}.modules.races.repository import RaceRepository
 from {{project_import_name}}.modules.races.schemas import RaceCreate
+
+
+logger = get_logger(__name__)
 
 
 class RaceService:
@@ -13,6 +17,7 @@ class RaceService:
         self.repository = RaceRepository(db)
 
     def list_races(self) -> list[Race]:
+        logger.info("Listing races")
         return self.repository.list()
 
     def get_race(self, race_id: int) -> Race:
@@ -29,6 +34,7 @@ class RaceService:
         if scheduled_at < datetime.now(timezone.utc):
             raise DomainError("Race schedule must be in the future.")
 
+        logger.info("Creating race", extra={"race_name": payload.name})
         return self.repository.create(
             name=payload.name,
             circuit=payload.circuit,
@@ -46,4 +52,8 @@ class RaceService:
         if current == status:
             raise DomainError("Race is already in the requested status.")
 
+        logger.info(
+            "Updating race status",
+            extra={"race_id": race_id, "status": status.value},
+        )
         return self.repository.update_status(race, status)

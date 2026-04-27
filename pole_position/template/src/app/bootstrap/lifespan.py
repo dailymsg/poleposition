@@ -1,14 +1,14 @@
-import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
 
+from {{project_import_name}}.bootstrap.logging import get_logger
 from {{project_import_name}}.db.models import import_models
 from {{project_import_name}}.settings import get_settings
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager

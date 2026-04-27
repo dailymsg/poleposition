@@ -158,6 +158,16 @@ polepos db revision -m "add garage table"
 polepos db downgrade -1
 ```
 
+### Logging
+
+Generated projects use `get_logger(__name__)` from `bootstrap.logging` as the preferred logging entrypoint.
+
+```python
+from shop_api.bootstrap.logging import get_logger
+
+logger = get_logger(__name__)
+```
+
 ### When to use which command
 
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure

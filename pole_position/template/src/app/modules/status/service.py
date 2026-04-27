@@ -3,14 +3,26 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 
 from {{project_import_name}} import __version__
+from {{project_import_name}}.bootstrap.logging import get_logger
 from {{project_import_name}}.modules.status.schemas import StatusResponse
 from {{project_import_name}}.settings import get_settings
+
+
+logger = get_logger(__name__)
 
 
 def get_status(app: FastAPI) -> StatusResponse:
     settings = get_settings()
     started_at = getattr(app.state, "started_at", datetime.now(timezone.utc))
     now = datetime.now(timezone.utc)
+
+    logger.info(
+        "Status endpoint called",
+        extra={
+            "app_name": settings.app_name,
+            "environment": settings.app_env,
+        },
+    )
 
     return StatusResponse(
         status="ok",

@@ -101,6 +101,26 @@ Important meanings:
 
 Agents should prefer adding behavior inside modules instead of creating large global folders like `services/` or `repositories/` at the project root.
 
+## Logging Conventions
+
+Generated projects should prefer:
+
+```python
+from <package>.bootstrap.logging import get_logger
+
+logger = get_logger(__name__)
+```
+
+over repeating raw `import logging` and `logging.getLogger(__name__)` in every file.
+
+Why:
+
+- it keeps logging usage consistent across generated code
+- it leaves room for future logger adapters or context-aware wrappers
+- it gives agents a single preferred logging entrypoint
+
+When updating generated template files or module generation code, prefer `get_logger(__name__)` as the standard logging pattern.
+
 ## CLI Conventions
 
 Current CLI command groups:

@@ -132,13 +132,20 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
 
     env_example = (project_root / ".env.example").read_text(encoding="utf-8")
     app_module = (package_root / "app.py").read_text(encoding="utf-8")
+    logging_module = (package_root / "bootstrap" / "logging.py").read_text(encoding="utf-8")
+    lifespan = (package_root / "bootstrap" / "lifespan.py").read_text(encoding="utf-8")
     status_service = (
         package_root / "modules" / "status" / "service.py"
     ).read_text(encoding="utf-8")
 
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
     assert "from demo_app.api.router import api_router" in app_module
+    assert "def get_logger(name: str) -> logging.Logger:" in logging_module
+    assert "from demo_app.bootstrap.logging import get_logger" in lifespan
+    assert "logger = get_logger(__name__)" in lifespan
     assert "from demo_app.settings import get_settings" in app_module
+    assert "from demo_app.bootstrap.logging import get_logger" in status_service
+    assert "logger = get_logger(__name__)" in status_service
     assert "from demo_app import __version__" in status_service
     assert "{{project" not in app_module
     assert "{{project" not in status_service

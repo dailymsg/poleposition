@@ -13,6 +13,10 @@ class DefaultFieldsFilter(logging.Filter):
         return True
 
 
+def get_logger(name: str) -> logging.Logger:
+    return logging.getLogger(name)
+
+
 def setup_logging(log_level: str = "INFO") -> None:
     root_logger = logging.getLogger()
 
