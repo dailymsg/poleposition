@@ -9,6 +9,12 @@ Create a new project:
 ```bash
 polepos start myapp --install
 ```
+
+If you prefer not to generate Python bytecode while developing locally:
+
+```bash
+polepos start myapp --no-bytecode
+```
 [![PyPI version](https://img.shields.io/pypi/v/poleposition)](https://pypi.org/project/poleposition)
 [![Python](https://img.shields.io/pypi/pyversions/poleposition)](https://pypi.org/project/poleposition)
 [![License](https://img.shields.io/github/license/erenertem/poleposition)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
@@ -116,6 +122,7 @@ polepos start myapp --install
 ```
 
 `--install` runs `uv sync` inside the generated project for you.
+`--no-bytecode` updates generated run instructions to use `PYTHONDONTWRITEBYTECODE=1`.
 
 Project names:
 
@@ -172,8 +179,8 @@ polepos version
 
 ```bash
 polepos help
-polepos start <name> [--install]
-polepos startproject <name> [--install]
+polepos start <name> [--install] [--no-bytecode]
+polepos startproject <name> [--install] [--no-bytecode]
 polepos add module <name>
 polepos db upgrade [target]
 polepos db revision -m "<message>"

@@ -84,6 +84,7 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
 
     expected_paths = [
         project_root / "alembic.ini",
+        project_root / ".gitignore",
         project_root / "migrations" / "env.py",
         project_root / "migrations" / "script.py.mako",
         project_root / "migrations" / "versions" / "__init__.py",
@@ -183,6 +184,29 @@ def test_generated_project_is_migration_first(tmp_path: Path):
     assert "import_models()" in lifespan
     assert "alembic upgrade head" in result.stdout
     assert "alembic upgrade head" in readme
+
+
+def test_no_bytecode_flag_updates_generated_run_instructions(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "demo-app", "--no-bytecode")
+
+    assert result.returncode == 0
+
+    project_root = tmp_path / "demo-app"
+    readme = (project_root / "README.md").read_text(encoding="utf-8")
+
+    expected_command = "PYTHONDONTWRITEBYTECODE=1 uv run fastapi dev src/demo_app/main.py"
+    assert expected_command in result.stdout
+    assert expected_command in readme
+
+
+def test_generated_gitignore_ignores_bytecode_artifacts(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "demo-app")
+
+    assert result.returncode == 0
+
+    gitignore = (tmp_path / "demo-app" / ".gitignore").read_text(encoding="utf-8")
+    assert "__pycache__/" in gitignore
+    assert "*.pyc" in gitignore
 
 def test_install_flag(tmp_path: Path):
     from pole_position.cli.commands.startproject import run

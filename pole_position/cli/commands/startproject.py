@@ -9,16 +9,19 @@ from pole_position.cli.services.project_name import (
 )
 
 
-USAGE = "Usage: polepos start <project_name> [--install]"
+USAGE = "Usage: polepos start <project_name> [--install] [--no-bytecode]"
 
 
 def run(args: list[str]) -> None:
     install = False
+    no_bytecode = False
     filtered_args: list[str] = []
 
     for arg in args:
         if arg == "--install":
             install = True
+        elif arg == "--no-bytecode":
+            no_bytecode = True
         else:
             filtered_args.append(arg)
 
@@ -51,6 +54,7 @@ def run(args: list[str]) -> None:
         project_name=project_name,
         package_name=package_name,
         project_path=project_path,
+        no_bytecode=no_bytecode,
     )
     print(f"Created project: {project_name}")
 
@@ -72,7 +76,8 @@ def run(args: list[str]) -> None:
         print("  uv sync")
 
     print("  alembic upgrade head")
-    print(f"  uv run fastapi dev src/{package_name}/main.py")
+    bytecode_prefix = "PYTHONDONTWRITEBYTECODE=1 " if no_bytecode else ""
+    print(f"  {bytecode_prefix}uv run fastapi dev src/{package_name}/main.py")
 
 
 command = Command(

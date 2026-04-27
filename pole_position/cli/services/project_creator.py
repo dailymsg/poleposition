@@ -11,6 +11,8 @@ def create_project(
     project_name: str,
     package_name: str,
     project_path: Path,
+    *,
+    no_bytecode: bool = False,
 ) -> None:
     template_dir = Path(__file__).resolve().parents[2] / "template"
 
@@ -31,6 +33,7 @@ def create_project(
     context = build_context(
         project_name=project_name,
         package_name=package_name,
+        no_bytecode=no_bytecode,
     )
     render_project_files(project_path=project_path, context=context)
 
