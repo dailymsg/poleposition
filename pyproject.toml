@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "poleposition"
-version = "0.0.15"
+version = "0.0.16"
 description = "CLI tool to put teams in pole position when starting enterprise FastAPI projects"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -58,3 +58,6 @@ pole_position = [
 testpaths = ["pole_position/tests"]
 pythonpath = ["."]
 addopts = ["-ra"]
+markers = [
+    "e2e: end-to-end workflow tests that exercise generated projects with subprocesses",
+]

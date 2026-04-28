@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +35,19 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @field_validator(
+        "uvicorn_use_colors",
+        "uvicorn_timeout_graceful_shutdown",
+        "uvicorn_limit_concurrency",
+        "uvicorn_limit_max_requests",
+        mode="before",
+    )
+    @classmethod
+    def empty_string_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 @lru_cache

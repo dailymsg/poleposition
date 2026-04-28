@@ -146,7 +146,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
     assert "APP_HOST=127.0.0.1" in env_example
     assert "UVICORN_WORKERS=1" in env_example
-    assert "UVICORN_LIMIT_MAX_REQUESTS=" in env_example
+    assert "# UVICORN_USE_COLORS=" in env_example
+    assert "# UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=" in env_example
+    assert "# UVICORN_LIMIT_CONCURRENCY=" in env_example
+    assert "# UVICORN_LIMIT_MAX_REQUESTS=" in env_example
     assert "UVICORN_LIMIT_MAX_REQUESTS_JITTER=0" in env_example
     assert "from demo_app.api.router import api_router" in app_module
     assert 'uvicorn.run(' in run_module
@@ -161,6 +164,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "uvicorn_workers: int = 1" in settings_module
     assert "uvicorn_limit_max_requests: int | None = None" in settings_module
     assert "uvicorn_limit_max_requests_jitter: int = 0" in settings_module
+    assert "@field_validator(" in settings_module
+    assert 'def empty_string_to_none(cls, value: object) -> object:' in settings_module
     assert "def get_logger(name: str) -> logging.Logger:" in logging_module
     assert "from demo_app.bootstrap.logging import get_logger" in lifespan
     assert "logger = get_logger(__name__)" in lifespan
@@ -244,6 +249,19 @@ def test_generated_gitignore_ignores_bytecode_artifacts(tmp_path: Path):
     gitignore = (tmp_path / "demo-app" / ".gitignore").read_text(encoding="utf-8")
     assert "__pycache__/" in gitignore
     assert "*.pyc" in gitignore
+
+
+def test_generated_env_example_is_safe_to_copy(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "demo-app")
+
+    assert result.returncode == 0
+
+    env_example = (tmp_path / "demo-app" / ".env.example").read_text(encoding="utf-8")
+    env_lines = env_example.splitlines()
+
+    assert "UVICORN_LIMIT_MAX_REQUESTS=" not in env_lines
+    assert "UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=" not in env_lines
+    assert "UVICORN_LIMIT_CONCURRENCY=" not in env_lines
 
 
 def test_packaging_includes_hidden_template_files() -> None:
