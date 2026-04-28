@@ -1,7 +1,10 @@
+import sys
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+
+{{bytecode_runtime_setup}}
 
 from {{project_import_name}}.app import create_app
 from {{project_import_name}}.db.base import Base

@@ -58,6 +58,9 @@ def run(args: list[str]) -> None:
     )
     print(f"Created project: {project_name}")
 
+    if no_bytecode:
+        print("Configured generated runtime and migration entrypoints without Python bytecode writes.")
+
     if install:
         try:
             print("Installing project dependencies with uv...")
@@ -76,8 +79,7 @@ def run(args: list[str]) -> None:
         print("  uv sync")
 
     print("  alembic upgrade head")
-    bytecode_prefix = "PYTHONDONTWRITEBYTECODE=1 " if no_bytecode else ""
-    print(f"  {bytecode_prefix}uv run python -m {package_name}.run")
+    print(f"  uv run python -m {package_name}.run")
 
 
 command = Command(

@@ -124,7 +124,8 @@ polepos start myapp --install
 ```
 
 `--install` runs `uv sync` inside the generated project for you.
-`--no-bytecode` updates generated run instructions to use `PYTHONDONTWRITEBYTECODE=1`.
+`--no-bytecode` configures the generated runner, Alembic entrypoint, and test
+fixture setup to disable Python bytecode writes during common local workflows.
 
 Project names:
 

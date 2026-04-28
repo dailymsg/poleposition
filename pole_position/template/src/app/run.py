@@ -1,3 +1,7 @@
+import sys
+
+{{bytecode_runtime_setup}}
+
 import uvicorn
 
 from {{project_import_name}}.settings import get_settings

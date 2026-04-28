@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "poleposition"
-version = "0.0.14"
+version = "0.0.15"
 description = "CLI tool to put teams in pole position when starting enterprise FastAPI projects"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -42,7 +42,17 @@ Issues = "https://github.com/erenertem/poleposition/issues"
 include = ["pole_position*"]
 
 [tool.setuptools.package-data]
-pole_position = ["template/**/*"]
+pole_position = [
+    "template/**/*",
+    "template/.env.example",
+    "template/.gitignore",
+]
+
+[tool.setuptools.exclude-package-data]
+pole_position = [
+    "template/**/__pycache__/*",
+    "template/**/*.pyc",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["pole_position/tests"]

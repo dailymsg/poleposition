@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import subprocess
 import sys
+import tomllib
 from unittest.mock import patch
 
 import pytest
@@ -137,6 +138,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     settings_module = (package_root / "settings.py").read_text(encoding="utf-8")
     logging_module = (package_root / "bootstrap" / "logging.py").read_text(encoding="utf-8")
     lifespan = (package_root / "bootstrap" / "lifespan.py").read_text(encoding="utf-8")
+    tests_conftest = (project_root / "tests" / "conftest.py").read_text(encoding="utf-8")
     status_service = (
         package_root / "modules" / "status" / "service.py"
     ).read_text(encoding="utf-8")
@@ -154,6 +156,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "limit_max_requests=settings.uvicorn_limit_max_requests" in run_module
     assert "limit_max_requests_jitter=settings.uvicorn_limit_max_requests_jitter" in run_module
     assert "timeout_worker_healthcheck=settings.uvicorn_timeout_worker_healthcheck" in run_module
+    assert "sys.dont_write_bytecode = True" not in run_module
     assert "app_host: str = \"127.0.0.1\"" in settings_module
     assert "uvicorn_workers: int = 1" in settings_module
     assert "uvicorn_limit_max_requests: int | None = None" in settings_module
@@ -165,6 +168,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "from demo_app.bootstrap.logging import get_logger" in status_service
     assert "logger = get_logger(__name__)" in status_service
     assert "from demo_app import __version__" in status_service
+    assert "sys.dont_write_bytecode = True" not in tests_conftest
     assert "{{project" not in app_module
     assert "{{project" not in status_service
 
@@ -218,10 +222,18 @@ def test_no_bytecode_flag_updates_generated_run_instructions(tmp_path: Path):
 
     project_root = tmp_path / "demo-app"
     readme = (project_root / "README.md").read_text(encoding="utf-8")
+    run_module = (project_root / "src" / "demo_app" / "run.py").read_text(encoding="utf-8")
+    migrations_env = (project_root / "migrations" / "env.py").read_text(encoding="utf-8")
+    tests_conftest = (project_root / "tests" / "conftest.py").read_text(encoding="utf-8")
 
-    expected_command = "PYTHONDONTWRITEBYTECODE=1 uv run python -m demo_app.run"
+    expected_command = "uv run python -m demo_app.run"
     assert expected_command in result.stdout
     assert expected_command in readme
+    assert "Configured generated runtime and migration entrypoints without Python bytecode writes." in result.stdout
+    assert "generated with `--no-bytecode`" in readme
+    assert "sys.dont_write_bytecode = True" in run_module
+    assert "sys.dont_write_bytecode = True" in migrations_env
+    assert "sys.dont_write_bytecode = True" in tests_conftest
 
 
 def test_generated_gitignore_ignores_bytecode_artifacts(tmp_path: Path):
@@ -232,6 +244,24 @@ def test_generated_gitignore_ignores_bytecode_artifacts(tmp_path: Path):
     gitignore = (tmp_path / "demo-app" / ".gitignore").read_text(encoding="utf-8")
     assert "__pycache__/" in gitignore
     assert "*.pyc" in gitignore
+
+
+def test_packaging_includes_hidden_template_files() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    package_data = pyproject["tool"]["setuptools"]["package-data"]["pole_position"]
+    exclude_package_data = pyproject["tool"]["setuptools"]["exclude-package-data"][
+        "pole_position"
+    ]
+    manifest = (REPO_ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+
+    assert "template/.env.example" in package_data
+    assert "template/.gitignore" in package_data
+    assert "template/**/__pycache__/*" in exclude_package_data
+    assert "template/**/*.pyc" in exclude_package_data
+    assert "recursive-include pole_position/template *" in manifest
+    assert "include pole_position/template/.env.example" in manifest
+    assert "include pole_position/template/.gitignore" in manifest
+    assert "global-exclude __pycache__ *.py[cod]" in manifest
 
 def test_install_flag(tmp_path: Path):
     from pole_position.cli.commands.startproject import run
