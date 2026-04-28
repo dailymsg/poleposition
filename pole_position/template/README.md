@@ -27,6 +27,10 @@ The generated project uses `run.py` as the preferred entrypoint:
 uv run python -m {{project_import_name}}.run
 ```
 
+On startup, the runner prints a small summary table with key runtime details such
+as service name, environment, API prefix, database backend, host, port, worker
+count, and docs URL.
+
 You can configure `uvicorn` behavior from `.env` and `settings.py`, including:
 
 * `APP_HOST`

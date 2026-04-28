@@ -4,6 +4,7 @@ import sys
 
 import uvicorn
 
+from {{project_import_name}}.bootstrap.logging import print_startup_table
 from {{project_import_name}}.settings import get_settings
 
 
@@ -11,6 +12,17 @@ settings = get_settings()
 
 
 def main() -> None:
+    print_startup_table(
+        app_name=settings.app_name,
+        app_env=settings.app_env,
+        app_debug=settings.app_debug,
+        api_v1_prefix=settings.api_v1_prefix,
+        database_url=settings.database_url,
+        app_host=settings.app_host,
+        app_port=settings.app_port,
+        app_reload=settings.app_reload,
+        uvicorn_workers=settings.uvicorn_workers,
+    )
     uvicorn.run(
         "{{project_import_name}}.main:app",
         host=settings.app_host,

@@ -201,6 +201,10 @@ The runner is configured from `settings.py` and `.env`, including:
 * `UVICORN_LIMIT_MAX_REQUESTS_JITTER`
 * `UVICORN_BACKLOG`
 
+When the generated runner starts, it prints a compact startup table with the
+current service name, environment, API prefix, database backend, host, port,
+worker count, and docs URL.
+
 ### When to use which command
 
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure

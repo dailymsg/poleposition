@@ -154,6 +154,13 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "from demo_app.api.router import api_router" in app_module
     assert 'uvicorn.run(' in run_module
     assert '"demo_app.main:app"' in run_module
+    assert "from demo_app.bootstrap.logging import print_startup_table" in run_module
+    assert "print_startup_table(" in run_module
+    assert 'docs_url = f"http://{display_host}:{app_port}/docs"' in logging_module
+    assert 'openapi_url = f"http://{display_host}:{app_port}/openapi.json"' in logging_module
+    assert "def render_startup_table(" in logging_module
+    assert "def print_startup_table(**kwargs: object) -> None:" in logging_module
+    assert "PolePosition Startup" in logging_module
     assert "host=settings.app_host" in run_module
     assert "workers=settings.uvicorn_workers" in run_module
     assert "limit_max_requests=settings.uvicorn_limit_max_requests" in run_module
