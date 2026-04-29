@@ -125,3 +125,53 @@ def test_add_module_works_from_nested_directory(tmp_path: Path):
 
     assert result.returncode == 0
     assert (tmp_path / "myapp" / "src" / "myapp" / "modules" / "garage" / "router.py").exists()
+
+
+def test_add_module_works_with_custom_content_around_markers(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+
+    router_path = package_root / "api" / "router.py"
+    router_content = router_path.read_text(encoding="utf-8")
+    router_content = router_content.replace(
+        "# polepos:router-imports",
+        "# custom import note\n# polepos:router-imports",
+    ).replace(
+        "# polepos:router-includes",
+        "# custom include note\n# polepos:router-includes",
+    )
+    router_path.write_text(router_content, encoding="utf-8")
+
+    models_path = package_root / "db" / "models.py"
+    models_content = models_path.read_text(encoding="utf-8").replace(
+        "    # polepos:model-imports",
+        "    # custom model note\n    # polepos:model-imports",
+    )
+    models_path.write_text(models_content, encoding="utf-8")
+
+    modules_init_path = package_root / "modules" / "__init__.py"
+    modules_init_content = modules_init_path.read_text(encoding="utf-8").replace(
+        "    # polepos:module-exports",
+        "    # custom exports note\n    # polepos:module-exports",
+    )
+    modules_init_path.write_text(modules_init_content, encoding="utf-8")
+
+    result = run_cli(project_root, "add", "module", "garage")
+
+    assert result.returncode == 0
+
+    router_content = router_path.read_text(encoding="utf-8")
+    models_content = models_path.read_text(encoding="utf-8")
+    modules_init_content = modules_init_path.read_text(encoding="utf-8")
+
+    assert "from myapp.modules.garage.router import router as garage_router" in router_content
+    assert 'api_router.include_router(garage_router, prefix="/garage", tags=["garage"])' in router_content
+    assert "# custom import note" in router_content
+    assert "# custom include note" in router_content
+    assert "from myapp.modules.garage import model  # noqa: F401" in models_content
+    assert "# custom model note" in models_content
+    assert '"garage"' in modules_init_content
+    assert "# custom exports note" in modules_init_content

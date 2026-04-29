@@ -1,4 +1,5 @@
 from functools import lru_cache
+import json
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,6 +12,19 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_v1_prefix: str = "/api/v1"
     database_url: str = Field(default="sqlite:///./poleposition.db")
+    cors_enabled: bool = True
+    cors_allow_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+    cors_allow_origin_regex: str | None = None
+    cors_allow_credentials: bool = True
+    cors_allow_methods: list[str] = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    cors_allow_headers: list[str] = ["Authorization", "Content-Type", "X-Request-ID"]
+    cors_expose_headers: list[str] = ["X-Request-ID"]
+    cors_max_age: int = 600
     app_host: str = "127.0.0.1"
     app_port: int = 8000
     app_reload: bool = True
@@ -37,6 +51,7 @@ class Settings(BaseSettings):
     )
 
     @field_validator(
+        "cors_allow_origin_regex",
         "uvicorn_use_colors",
         "uvicorn_timeout_graceful_shutdown",
         "uvicorn_limit_concurrency",
@@ -48,6 +63,27 @@ class Settings(BaseSettings):
         if isinstance(value, str) and not value.strip():
             return None
         return value
+
+    @field_validator(
+        "cors_allow_origins",
+        "cors_allow_methods",
+        "cors_allow_headers",
+        "cors_expose_headers",
+        mode="before",
+    )
+    @classmethod
+    def parse_list_env(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+
+        stripped = value.strip()
+        if not stripped:
+            return []
+
+        if stripped.startswith("["):
+            return json.loads(stripped)
+
+        return [item.strip() for item in stripped.split(",") if item.strip()]
 
 
 @lru_cache

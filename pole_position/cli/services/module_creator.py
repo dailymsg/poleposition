@@ -2,6 +2,11 @@ from pathlib import Path
 
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 
+ROUTER_IMPORTS_MARKER = "# polepos:router-imports"
+ROUTER_INCLUDES_MARKER = "# polepos:router-includes"
+MODEL_IMPORTS_MARKER = "    # polepos:model-imports"
+MODULE_EXPORTS_MARKER = "    # polepos:module-exports"
+
 
 def add_module(module_name: str, cwd: Path | None = None) -> None:
     project_root = find_project_root(cwd)
@@ -58,19 +63,16 @@ def _write_module_tests(tests_root: Path, package_name: str, module_name: str) -
 
 
 def _update_modules_init(path: Path, module_name: str) -> None:
-    content = path.read_text(encoding="utf-8")
-    exports = _parse_string_list_block(content, "__all__ = [", path)
-    if module_name in exports:
-        return
-
-    exports.append(module_name)
-    exports.sort()
-    updated = _render_string_list_block(exports)
-    path.write_text(updated, encoding="utf-8")
+    export_line = f'    "{module_name}",'
+    _insert_sorted_line_before_marker(
+        path=path,
+        line=export_line,
+        marker=MODULE_EXPORTS_MARKER,
+        match_prefix='    "',
+    )
 
 
 def _update_api_router(path: Path, package_name: str, module_name: str) -> None:
-    content = path.read_text(encoding="utf-8")
     import_line = (
         f"from {package_name}.modules.{module_name}.router import router as {module_name}_router"
     )
@@ -79,41 +81,27 @@ def _update_api_router(path: Path, package_name: str, module_name: str) -> None:
         f'tags=["{module_name}"])'
     )
 
-    lines = content.splitlines()
-    import_lines = [line for line in lines if line.startswith("from ")]
-    other_lines = [line for line in lines if not line.startswith("from ")]
-
-    if import_line not in import_lines:
-        import_lines.append(import_line)
-        import_lines.sort()
-
-    if include_line not in other_lines:
-        insert_index = len(other_lines)
-        for index, line in enumerate(other_lines):
-            if line.startswith("api_router.include_router("):
-                insert_index = index + 1
-        other_lines.insert(insert_index, include_line)
-
-    updated = "\n".join(import_lines + [""] + other_lines) + "\n"
-    path.write_text(updated, encoding="utf-8")
+    _insert_sorted_line_before_marker(
+        path=path,
+        line=import_line,
+        marker=ROUTER_IMPORTS_MARKER,
+        match_prefix="from ",
+    )
+    _insert_line_before_marker(
+        path=path,
+        line=include_line,
+        marker=ROUTER_INCLUDES_MARKER,
+    )
 
 
 def _update_db_models(path: Path, package_name: str, module_name: str) -> None:
-    content = path.read_text(encoding="utf-8")
-    if "def import_models() -> None:\n" not in content:
-        raise RuntimeError(f"Unsupported db models layout: {path}")
-
     import_line = f"    from {package_name}.modules.{module_name} import model  # noqa: F401"
-    lines = content.splitlines()
-    existing_imports = [line for line in lines[1:] if line.startswith("    from ")]
-
-    if import_line in existing_imports:
-        return
-
-    existing_imports.append(import_line)
-    existing_imports.sort()
-    updated = "\n".join([lines[0], *existing_imports]) + "\n"
-    path.write_text(updated, encoding="utf-8")
+    _insert_sorted_line_before_marker(
+        path=path,
+        line=import_line,
+        marker=MODEL_IMPORTS_MARKER,
+        match_prefix="    from ",
+    )
 
 
 def _module_init_content() -> str:
@@ -268,28 +256,43 @@ def test_list_{module_name}_delegates_to_repository() -> None:
 '''
 
 
-def _parse_string_list_block(content: str, block_start: str, path: Path) -> list[str]:
-    if block_start not in content:
-        raise RuntimeError(f"Unsupported list block layout: {path}")
+def _insert_line_before_marker(path: Path, line: str, marker: str) -> None:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    marker_index = _find_marker_index(lines, marker, path)
 
-    lines = content.splitlines()
-    if not lines or lines[0] != block_start:
-        raise RuntimeError(f"Unsupported list block layout: {path}")
+    if line in lines:
+        return
 
-    exports: list[str] = []
-    for line in lines[1:]:
-        stripped = line.strip()
-        if stripped == "]":
-            return exports
-        if stripped:
-            exports.append(stripped.strip('",'))
-
-    raise RuntimeError(f"Unsupported list block layout: {path}")
+    lines.insert(marker_index, line)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _render_string_list_block(entries: list[str]) -> str:
-    body = "".join(f'    "{entry}",\n' for entry in entries)
-    return f"__all__ = [\n{body}]\n"
+def _insert_sorted_line_before_marker(
+    *,
+    path: Path,
+    line: str,
+    marker: str,
+    match_prefix: str,
+) -> None:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    marker_index = _find_marker_index(lines, marker, path)
+
+    managed_lines = [existing for existing in lines[:marker_index] if existing.startswith(match_prefix)]
+    if line in managed_lines:
+        return
+
+    managed_lines.append(line)
+    managed_lines.sort()
+    preserved_prefix = [existing for existing in lines[:marker_index] if not existing.startswith(match_prefix)]
+    updated_lines = preserved_prefix + managed_lines + lines[marker_index:]
+    path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+
+
+def _find_marker_index(lines: list[str], marker: str, path: Path) -> int:
+    try:
+        return lines.index(marker)
+    except ValueError as exc:
+        raise RuntimeError(f"Unsupported managed block layout: {path}") from exc
 
 
 def _to_class_name(module_name: str) -> str:

@@ -36,8 +36,9 @@ def run_in_project(
     project_root: Path,
     *args: str,
     uv_cache_dir: Path,
+    **extra_env: str,
 ) -> subprocess.CompletedProcess[str]:
-    env = build_project_env(uv_cache_dir)
+    env = build_project_env(uv_cache_dir, **extra_env)
 
     return subprocess.run(
         list(args),
@@ -69,6 +70,22 @@ def start_in_project(
         stderr=subprocess.PIPE,
         text=True,
         env=env,
+    )
+
+
+def run_compose(
+    project_root: Path,
+    *args: str,
+    uv_cache_dir: Path,
+    **extra_env: str,
+) -> subprocess.CompletedProcess[str]:
+    return run_in_project(
+        project_root,
+        "docker",
+        "compose",
+        *args,
+        uv_cache_dir=uv_cache_dir,
+        **extra_env,
     )
 
 
@@ -184,3 +201,72 @@ def test_e2e_start_project_and_run_generated_app(tmp_path: Path) -> None:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.communicate(timeout=5)
+
+
+@pytest.mark.e2e
+@pytest.mark.docker_e2e
+@pytest.mark.skipif(
+    os.environ.get("POLEPOSITION_RUN_DOCKER_E2E") != "1",
+    reason="Set POLEPOSITION_RUN_DOCKER_E2E=1 to run Docker end-to-end workflow tests.",
+)
+@pytest.mark.skipif(
+    shutil.which("docker") is None,
+    reason="docker is required for Docker end-to-end workflow tests.",
+)
+def test_e2e_start_project_and_run_generated_app_with_docker(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+
+    assert create_result.returncode == 0, create_result.stderr
+
+    project_root = tmp_path / "myapp"
+    env_example = project_root / ".env.example"
+    app_port = find_free_port()
+    postgres_port = find_free_port()
+    env_file = project_root / ".env"
+    env_file.write_text(
+        env_example.read_text(encoding="utf-8")
+        + (
+            f"\nAPP_PORT={app_port}\n"
+            "APP_RELOAD=false\n"
+            f"POSTGRES_PORT={postgres_port}\n"
+        ),
+        encoding="utf-8",
+    )
+
+    uv_cache_dir = tmp_path / ".uv-cache"
+
+    try:
+        up_result = run_compose(project_root, "up", "--build", "-d", uv_cache_dir=uv_cache_dir)
+        assert up_result.returncode == 0, (
+            f"docker compose up failed\nstdout:\n{up_result.stdout}\nstderr:\n{up_result.stderr}"
+        )
+
+        migrate_result = run_compose(
+            project_root,
+            "run",
+            "--rm",
+            "app",
+            "uv",
+            "run",
+            "alembic",
+            "upgrade",
+            "head",
+            uv_cache_dir=uv_cache_dir,
+        )
+        assert migrate_result.returncode == 0, (
+            "docker compose migration failed\n"
+            f"stdout:\n{migrate_result.stdout}\n"
+            f"stderr:\n{migrate_result.stderr}"
+        )
+
+        status_payload = wait_for_status(app_port, timeout_seconds=30.0)
+        assert status_payload["status"] == "ok"
+        assert status_payload["service"] == "myapp"
+    finally:
+        down_result = run_compose(project_root, "down", "-v", uv_cache_dir=uv_cache_dir)
+        if down_result.returncode != 0:
+            print(
+                "docker compose down failed\n"
+                f"stdout:\n{down_result.stdout}\n"
+                f"stderr:\n{down_result.stderr}"
+            )

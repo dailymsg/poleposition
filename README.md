@@ -180,7 +180,9 @@ docker compose run --rm app uv run alembic upgrade head
 ```
 
 The compose setup uses the generated `run.py` entrypoint and overrides
-`DATABASE_URL` so the app talks to the bundled PostgreSQL service.
+`DATABASE_URL` so the app talks to the bundled PostgreSQL service. If you
+already have PostgreSQL on `5432`, change `POSTGRES_PORT` in `.env` before
+starting the compose stack.
 
 ### Logging
 
@@ -225,6 +227,24 @@ The runner is configured from `settings.py` and `.env`, including:
 When the generated runner starts, it prints a compact startup table with the
 current service name, environment, API prefix, database backend, host, port,
 worker count, and docs URL.
+
+### CORS
+
+Generated projects include settings-driven CORS support with development
+defaults for common localhost frontend origins.
+
+You can control it from `.env` with:
+
+* `CORS_ENABLED`
+* `CORS_ALLOW_ORIGINS`
+* `CORS_ALLOW_ORIGIN_REGEX`
+* `CORS_ALLOW_CREDENTIALS`
+* `CORS_ALLOW_METHODS`
+* `CORS_ALLOW_HEADERS`
+* `CORS_EXPOSE_HEADERS`
+* `CORS_MAX_AGE`
+
+The list-style fields accept JSON arrays in `.env`.
 
 ### When to use which command
 

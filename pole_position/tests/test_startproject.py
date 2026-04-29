@@ -145,15 +145,24 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     compose_file = (project_root / "compose.yaml").read_text(encoding="utf-8")
     logging_module = (package_root / "bootstrap" / "logging.py").read_text(encoding="utf-8")
     lifespan = (package_root / "bootstrap" / "lifespan.py").read_text(encoding="utf-8")
+    middleware_module = (package_root / "bootstrap" / "middleware.py").read_text(encoding="utf-8")
     tests_conftest = (project_root / "tests" / "conftest.py").read_text(encoding="utf-8")
     status_service = (
         package_root / "modules" / "status" / "service.py"
     ).read_text(encoding="utf-8")
 
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
+    assert "CORS_ENABLED=true" in env_example
+    assert 'CORS_ALLOW_ORIGINS=["http://localhost:3000"' in env_example
+    assert "# CORS_ALLOW_ORIGIN_REGEX=" in env_example
+    assert 'CORS_ALLOW_METHODS=["GET","POST","PUT","PATCH","DELETE","OPTIONS"]' in env_example
+    assert 'CORS_ALLOW_HEADERS=["Authorization","Content-Type","X-Request-ID"]' in env_example
+    assert 'CORS_EXPOSE_HEADERS=["X-Request-ID"]' in env_example
+    assert "CORS_MAX_AGE=600" in env_example
     assert "POSTGRES_DB=app" in env_example
     assert "POSTGRES_USER=postgres" in env_example
     assert "POSTGRES_PASSWORD=postgres" in env_example
+    assert "POSTGRES_PORT=5432" in env_example
     assert "APP_HOST=127.0.0.1" in env_example
     assert "UVICORN_WORKERS=1" in env_example
     assert "# UVICORN_USE_COLORS=" in env_example
@@ -170,6 +179,11 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "image: postgres:16" in compose_file
     assert "DATABASE_URL: postgresql+psycopg://" in compose_file
     assert 'APP_HOST: 0.0.0.0' in compose_file
+    assert '- "${POSTGRES_PORT:-5432}:5432"' in compose_file
+    assert "# polepos:router-imports" in (package_root / "api" / "router.py").read_text(encoding="utf-8")
+    assert "# polepos:router-includes" in (package_root / "api" / "router.py").read_text(encoding="utf-8")
+    assert "# polepos:model-imports" in (package_root / "db" / "models.py").read_text(encoding="utf-8")
+    assert "# polepos:module-exports" in (package_root / "modules" / "__init__.py").read_text(encoding="utf-8")
     assert "from demo_app.api.router import api_router" in app_module
     assert 'uvicorn.run(' in run_module
     assert '"demo_app.main:app"' in run_module
@@ -188,11 +202,25 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "sys.dont_write_bytecode = True" not in run_module
     assert "app_host: str = \"127.0.0.1\"" in settings_module
     assert "uvicorn_workers: int = 1" in settings_module
+    assert "cors_enabled: bool = True" in settings_module
+    assert "cors_allow_origins: list[str] = [" in settings_module
+    assert "cors_allow_origin_regex: str | None = None" in settings_module
+    assert "cors_allow_credentials: bool = True" in settings_module
+    assert "cors_max_age: int = 600" in settings_module
     assert "uvicorn_limit_max_requests: int | None = None" in settings_module
     assert "uvicorn_limit_max_requests_jitter: int = 0" in settings_module
     assert "@field_validator(" in settings_module
     assert 'def empty_string_to_none(cls, value: object) -> object:' in settings_module
+    assert "def parse_list_env(cls, value: object) -> object:" in settings_module
     assert "def get_logger(name: str) -> logging.Logger:" in logging_module
+    assert "from fastapi.middleware.cors import CORSMiddleware" in middleware_module
+    assert "allow_origins=settings.cors_allow_origins" in middleware_module
+    assert "allow_origin_regex=settings.cors_allow_origin_regex" in middleware_module
+    assert "allow_credentials=settings.cors_allow_credentials" in middleware_module
+    assert "allow_methods=settings.cors_allow_methods" in middleware_module
+    assert "allow_headers=settings.cors_allow_headers" in middleware_module
+    assert "expose_headers=settings.cors_expose_headers" in middleware_module
+    assert "max_age=settings.cors_max_age" in middleware_module
     assert "from demo_app.bootstrap.logging import get_logger" in lifespan
     assert "logger = get_logger(__name__)" in lifespan
     assert "from demo_app.settings import get_settings" in app_module

@@ -27,6 +27,9 @@ Apply migrations from the app container:
 docker compose run --rm app uv run alembic upgrade head
 ```
 
+If PostgreSQL is already using local port `5432`, update `POSTGRES_PORT` in
+`.env` before starting the compose stack.
+
 ## Database Migrations
 
 ```bash
@@ -65,6 +68,25 @@ You can configure `uvicorn` behavior from `.env` and `settings.py`, including:
 * `UVICORN_LIMIT_MAX_REQUESTS`
 * `UVICORN_LIMIT_MAX_REQUESTS_JITTER`
 * `UVICORN_BACKLOG`
+
+## CORS
+
+Generated projects include a settings-driven CORS configuration. By default,
+common local frontend origins are enabled for development.
+
+You can configure CORS from `.env` with:
+
+* `CORS_ENABLED`
+* `CORS_ALLOW_ORIGINS`
+* `CORS_ALLOW_ORIGIN_REGEX`
+* `CORS_ALLOW_CREDENTIALS`
+* `CORS_ALLOW_METHODS`
+* `CORS_ALLOW_HEADERS`
+* `CORS_EXPOSE_HEADERS`
+* `CORS_MAX_AGE`
+
+`CORS_ALLOW_ORIGINS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`, and
+`CORS_EXPOSE_HEADERS` accept JSON arrays in `.env`.
 
 ## Project Layout
 
