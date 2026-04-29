@@ -1,6 +1,6 @@
 # PolePosition
 
-![PolePosition logo](assets/logo/poleposition-python-logo.svg)
+![PolePosition logo](https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/logo/poleposition-python-logo.svg)
 
 A CLI tool that puts teams in pole position when starting enterprise FastAPI projects.
 
