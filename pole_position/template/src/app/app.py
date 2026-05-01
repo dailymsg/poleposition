@@ -9,7 +9,12 @@ from {{project_import_name}}.settings import get_settings
 
 
 settings = get_settings()
-setup_logging(log_level=settings.log_level)
+setup_logging(
+    log_level=settings.log_level,
+    log_format=settings.log_format,
+    app_name=settings.app_name,
+    environment=settings.app_env,
+)
 
 
 def create_app() -> FastAPI:

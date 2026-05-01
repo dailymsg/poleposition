@@ -268,6 +268,25 @@ Relevant auth settings:
 * `AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`
 * `AUTH_ISSUER`
 
+### JSON logging
+
+Generated projects support both text and JSON logging formats.
+
+Use:
+
+* `LOG_FORMAT=text` for local development
+* `LOG_FORMAT=json` for structured production logging
+
+The JSON formatter includes:
+
+* `timestamp`
+* `level`
+* `logger`
+* `message`
+* `app_name`
+* `environment`
+* `request_id`
+
 ### When to use which command
 
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure

@@ -55,6 +55,7 @@ You can configure `uvicorn` behavior from `.env` and `settings.py`, including:
 * `APP_PORT`
 * `APP_RELOAD`
 * `LOG_LEVEL`
+* `LOG_FORMAT`
 * `UVICORN_WORKERS`
 * `UVICORN_ACCESS_LOG`
 * `UVICORN_PROXY_HEADERS`
@@ -87,6 +88,23 @@ You can configure CORS from `.env` with:
 
 `CORS_ALLOW_ORIGINS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`, and
 `CORS_EXPOSE_HEADERS` accept JSON arrays in `.env`.
+
+## Logging
+
+Generated projects support two logging formats:
+
+* `LOG_FORMAT=text` for readable local development logs
+* `LOG_FORMAT=json` for structured production logging
+
+JSON logs include:
+
+* `timestamp`
+* `level`
+* `logger`
+* `message`
+* `app_name`
+* `environment`
+* `request_id`
 
 ## Authentication
 

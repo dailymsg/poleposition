@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_debug: bool = True
     log_level: str = "INFO"
+    log_format: str = "text"
     api_v1_prefix: str = "/api/v1"
     database_url: str = Field(default="sqlite:///./poleposition.db")
     cors_enabled: bool = True
@@ -57,6 +58,7 @@ class Settings(BaseSettings):
     )
 
     @field_validator(
+        "log_format",
         "cors_allow_origin_regex",
         "uvicorn_use_colors",
         "uvicorn_timeout_graceful_shutdown",
@@ -69,6 +71,14 @@ class Settings(BaseSettings):
         if isinstance(value, str) and not value.strip():
             return None
         return value
+
+    @field_validator("log_format")
+    @classmethod
+    def validate_log_format(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"text", "json"}:
+            raise ValueError("LOG_FORMAT must be either 'text' or 'json'.")
+        return normalized
 
     @field_validator(
         "cors_allow_origins",

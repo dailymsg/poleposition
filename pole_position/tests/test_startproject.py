@@ -183,6 +183,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "AUTH_ACCESS_TOKEN_EXPIRE_MINUTES=60" in env_example
     assert "AUTH_ISSUER=demo-app" in env_example
     assert "APP_HOST=127.0.0.1" in env_example
+    assert "LOG_FORMAT=text" in env_example
     assert "UVICORN_WORKERS=1" in env_example
     assert "# UVICORN_USE_COLORS=" in env_example
     assert "# UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=" in env_example
@@ -229,6 +230,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "sys.dont_write_bytecode = True" not in run_module
     assert "app_host: str = \"127.0.0.1\"" in settings_module
     assert "uvicorn_workers: int = 1" in settings_module
+    assert 'log_format: str = "text"' in settings_module
     assert "cors_enabled: bool = True" in settings_module
     assert "cors_allow_origins: list[str] = [" in settings_module
     assert "cors_allow_origin_regex: str | None = None" in settings_module
@@ -244,6 +246,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert 'def empty_string_to_none(cls, value: object) -> object:' in settings_module
     assert "def parse_list_env(cls, value: object) -> object:" in settings_module
     assert "def get_logger(name: str) -> logging.Logger:" in logging_module
+    assert "class JsonFormatter(logging.Formatter):" in logging_module
+    assert 'if log_format.lower() == "json":' in logging_module
+    assert '"timestamp": datetime.fromtimestamp(' in logging_module
+    assert '"request_id": getattr(record, "request_id", "-")' in logging_module
     assert "from fastapi.middleware.cors import CORSMiddleware" in middleware_module
     assert "allow_origins=settings.cors_allow_origins" in middleware_module
     assert "allow_origin_regex=settings.cors_allow_origin_regex" in middleware_module
@@ -255,6 +261,9 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "from demo_app.bootstrap.logging import get_logger" in lifespan
     assert "logger = get_logger(__name__)" in lifespan
     assert "from demo_app.settings import get_settings" in app_module
+    assert "log_format=settings.log_format" in app_module
+    assert "app_name=settings.app_name" in app_module
+    assert "environment=settings.app_env" in app_module
     assert "from demo_app.bootstrap.logging import get_logger" in status_service
     assert "logger = get_logger(__name__)" in status_service
     assert "from demo_app import __version__" in status_service

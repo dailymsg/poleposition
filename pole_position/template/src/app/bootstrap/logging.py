@@ -1,17 +1,45 @@
 import logging
+import json
 import sys
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 
 class DefaultFieldsFilter(logging.Filter):
+    def __init__(self, *, app_name: str, environment: str) -> None:
+        super().__init__()
+        self.app_name = app_name
+        self.environment = environment
+
     def filter(self, record: logging.LogRecord) -> bool:
         if not hasattr(record, "app_name"):
-            record.app_name = "-"
+            record.app_name = self.app_name
         if not hasattr(record, "environment"):
-            record.environment = "-"
+            record.environment = self.environment
         if not hasattr(record, "request_id"):
             record.request_id = "-"
         return True
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "timestamp": datetime.fromtimestamp(
+                record.created,
+                tz=timezone.utc,
+            ).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "app_name": getattr(record, "app_name", "-"),
+            "environment": getattr(record, "environment", "-"),
+            "request_id": getattr(record, "request_id", "-"),
+        }
+
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+
+        return json.dumps(payload, ensure_ascii=True)
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -70,15 +98,11 @@ def print_startup_table(**kwargs: object) -> None:
     print(render_startup_table(**kwargs), file=sys.stdout, flush=True)
 
 
-def setup_logging(log_level: str = "INFO") -> None:
-    root_logger = logging.getLogger()
+def _build_formatter(log_format: str) -> logging.Formatter:
+    if log_format.lower() == "json":
+        return JsonFormatter()
 
-    if root_logger.handlers:
-        root_logger.handlers.clear()
-
-    root_logger.setLevel(log_level.upper())
-
-    formatter = logging.Formatter(
+    return logging.Formatter(
         fmt=(
             "%(asctime)s | %(levelname)s | %(name)s | "
             "app=%(app_name)s env=%(environment)s request_id=%(request_id)s | "
@@ -87,10 +111,30 @@ def setup_logging(log_level: str = "INFO") -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
+
+def setup_logging(
+    *,
+    log_level: str = "INFO",
+    log_format: str = "text",
+    app_name: str = "-",
+    environment: str = "-",
+) -> None:
+    root_logger = logging.getLogger()
+
+    if root_logger.handlers:
+        root_logger.handlers.clear()
+
+    root_logger.setLevel(log_level.upper())
+
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(log_level.upper())
-    handler.setFormatter(formatter)
-    handler.addFilter(DefaultFieldsFilter())
+    handler.setFormatter(_build_formatter(log_format))
+    handler.addFilter(
+        DefaultFieldsFilter(
+            app_name=app_name,
+            environment=environment,
+        )
+    )
 
     root_logger.addHandler(handler)
 
