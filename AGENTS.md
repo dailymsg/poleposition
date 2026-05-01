@@ -5,6 +5,12 @@ This file is for coding agents working in this repository.
 If you are an agent, read this file before making changes.
 Use it as the default operating guide for understanding product intent, preferred workflows, and repo conventions.
 
+Read these companion docs when you need deeper repo context:
+
+- `docs/architecture.md`
+- `docs/feature-status.md`
+- `examples/README.md`
+
 ## What PolePosition Is
 
 PolePosition is a CLI for starting enterprise FastAPI projects from pole position.
@@ -225,6 +231,31 @@ When changing module generation:
 
 Do not assume a generated module means a complete auth or domain solution.
 It is a strong starting skeleton, not a full business system.
+
+## Managed Block Rules
+
+Some generated files contain PolePosition-managed markers.
+
+Examples:
+
+- `# polepos:router-imports`
+- `# polepos:router-includes`
+- `# polepos:model-imports`
+- `# polepos:module-exports`
+- `# polepos:auth-settings`
+- `# polepos:auth-env`
+- `# polepos:llm-settings`
+- `# polepos:llm-env`
+
+Why they matter:
+
+- `polepos add module` inserts generated lines relative to these markers
+- surrounding custom code is allowed
+- removing the marker may break future automated updates
+
+If you change managed files, prefer preserving the marker and customizing code around it rather than deleting it.
+
+If you must redesign a managed file completely, treat that as opting out of future automatic patching for that surface.
 
 ## Documentation Expectations
 

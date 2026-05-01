@@ -74,6 +74,17 @@ PolePosition removes that overhead by providing a clean, production-ready starti
 
 ---
 
+## Documentation Map
+
+Use these files to understand the repo quickly:
+
+* [Architecture](docs/architecture.md)
+* [Feature Status](docs/feature-status.md)
+* [Examples Index](examples/README.md)
+* [Agent Guide](AGENTS.md)
+
+---
+
 ## Installation
 
 PolePosition follows a `uv`-first workflow for installation, dependency sync, migrations, and local development.
@@ -294,6 +305,13 @@ The JSON formatter includes:
 * `polepos db upgrade` when you want to apply migrations to the database
 * `polepos db revision -m "..."` when you changed models and need a new migration
 * `polepos db downgrade` when you need to roll back a migration
+
+### Examples
+
+Concrete scenarios live under [examples/README.md](examples/README.md):
+
+* auth foundation workflow
+* PostgreSQL-backed HTML swap workflow
 
 ### Help and version
 
