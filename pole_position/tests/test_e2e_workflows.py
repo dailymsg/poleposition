@@ -135,6 +135,7 @@ def test_e2e_start_project_and_run_generated_tests(tmp_path: Path) -> None:
     assert sync_result.returncode == 0, (
         f"uv sync failed\nstdout:\n{sync_result.stdout}\nstderr:\n{sync_result.stderr}"
     )
+    assert list(project_root.rglob("*.egg-info")) == []
 
     pytest_result = run_in_project(project_root, "uv", "run", "pytest", uv_cache_dir=uv_cache_dir)
 

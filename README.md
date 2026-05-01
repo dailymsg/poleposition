@@ -158,7 +158,12 @@ uv run python -m myapp.run
 
 ```bash
 polepos add module garage
+polepos add module assistant --template ai-prompt
 ```
+
+`standard` is the default template for REST and domain modules.
+`ai-prompt` adds a provider-agnostic LLM endpoint skeleton with module-local
+prompt orchestration and shared `integrations/llm` adapters.
 
 ### Database commands
 
@@ -249,7 +254,7 @@ The list-style fields accept JSON arrays in `.env`.
 ### When to use which command
 
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure
-* `polepos add module` when you want to add a new REST/domain module to an existing project
+* `polepos add module` when you want to add a new REST/domain module or an AI prompt module to an existing project
 * `polepos db upgrade` when you want to apply migrations to the database
 * `polepos db revision -m "..."` when you changed models and need a new migration
 * `polepos db downgrade` when you need to roll back a migration

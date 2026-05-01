@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     uvicorn_limit_max_requests: int | None = None
     uvicorn_limit_max_requests_jitter: int = 0
     uvicorn_backlog: int = 2048
+    # polepos:llm-settings
 
     model_config = SettingsConfigDict(
         env_file=".env",

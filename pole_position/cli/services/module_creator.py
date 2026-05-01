@@ -1,63 +1,78 @@
 from pathlib import Path
 
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
+from pole_position.cli.services.module_templates import (
+    SUPPORTED_MODULE_TEMPLATES,
+    build_module_template,
+    llm_env_block,
+    llm_integration_files,
+    llm_settings_block,
+)
 
 ROUTER_IMPORTS_MARKER = "# polepos:router-imports"
 ROUTER_INCLUDES_MARKER = "# polepos:router-includes"
 MODEL_IMPORTS_MARKER = "    # polepos:model-imports"
 MODULE_EXPORTS_MARKER = "    # polepos:module-exports"
+SETTINGS_LLM_MARKER = "    # polepos:llm-settings"
+ENV_LLM_MARKER = "# polepos:llm-env"
 
 
-def add_module(module_name: str, cwd: Path | None = None) -> None:
+def add_module(module_name: str, template: str = "standard", cwd: Path | None = None) -> None:
+    if template not in SUPPORTED_MODULE_TEMPLATES:
+        supported = ", ".join(SUPPORTED_MODULE_TEMPLATES)
+        raise ValueError(
+            f"Unsupported module template '{template}'. Expected one of: {supported}."
+        )
+
     project_root = find_project_root(cwd)
     package_root = find_package_root(cwd)
     package_name = package_root.name
     modules_root = package_root / "modules"
     module_root = modules_root / module_name
+    template_spec = build_module_template(
+        template=template,
+        package_name=package_name,
+        module_name=module_name,
+    )
 
     if module_root.exists():
         raise RuntimeError(f"Module already exists: {module_name}")
 
-    _write_module_files(module_root, package_name, module_name)
-    _write_module_tests(project_root / "tests", package_name, module_name)
+    _write_module_files(module_root, template_spec.files)
+    _write_module_tests(project_root / "tests", template_spec)
     _update_modules_init(modules_root / "__init__.py", module_name)
     _update_api_router(package_root / "api" / "router.py", package_name, module_name)
-    _update_db_models(package_root / "db" / "models.py", package_name, module_name)
+    if template_spec.update_db_models:
+        _update_db_models(package_root / "db" / "models.py", package_name, module_name)
+    if template_spec.ensure_llm_integrations:
+        _ensure_llm_integrations(package_root, package_name)
+    if template_spec.ensure_llm_settings:
+        _ensure_llm_settings(package_root / "settings.py")
+        _ensure_llm_env(project_root / ".env.example")
 
 
-def _write_module_files(module_root: Path, package_name: str, module_name: str) -> None:
+def _write_module_files(module_root: Path, files: dict[str, str]) -> None:
     module_root.mkdir(parents=True)
-    class_name = _to_class_name(module_name)
-
-    files = {
-        "__init__.py": _module_init_content(),
-        "model.py": _model_content(package_name, module_name, class_name),
-        "repository.py": _repository_content(package_name, module_name, class_name),
-        "schemas.py": _schemas_content(package_name, module_name, class_name),
-        "service.py": _service_content(package_name, module_name, class_name),
-        "router.py": _router_content(package_name, module_name, class_name),
-    }
 
     for file_name, content in files.items():
         (module_root / file_name).write_text(content, encoding="utf-8")
 
 
-def _write_module_tests(tests_root: Path, package_name: str, module_name: str) -> None:
-    class_name = _to_class_name(module_name)
+def _write_module_tests(tests_root: Path, template_spec) -> None:
     integration_root = tests_root / "integration"
     unit_root = tests_root / "unit"
     integration_root.mkdir(parents=True, exist_ok=True)
     unit_root.mkdir(parents=True, exist_ok=True)
 
-    integration_test = integration_root / f"test_{module_name}.py"
-    unit_test = unit_root / f"test_{module_name}_service.py"
+    integration_test = integration_root / template_spec.integration_test_name
+    unit_test = unit_root / template_spec.unit_test_name
 
     integration_test.write_text(
-        _integration_test_content(module_name, class_name),
+        template_spec.integration_test_content,
         encoding="utf-8",
     )
     unit_test.write_text(
-        _unit_test_content(package_name, module_name, class_name),
+        template_spec.unit_test_content,
         encoding="utf-8",
     )
 
@@ -104,156 +119,40 @@ def _update_db_models(path: Path, package_name: str, module_name: str) -> None:
     )
 
 
-def _module_init_content() -> str:
-    return '''__all__ = [
-    "model",
-    "repository",
-    "router",
-    "schemas",
-    "service",
-]
-'''
+def _ensure_llm_integrations(package_root: Path, package_name: str) -> None:
+    for relative_path, content in llm_integration_files(package_name).items():
+        path = package_root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text(content, encoding="utf-8")
 
 
-def _model_content(package_name: str, module_name: str, class_name: str) -> str:
-    return f'''from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+def _ensure_llm_settings(path: Path) -> None:
+    content = path.read_text(encoding="utf-8")
+    if "llm_provider:" in content:
+        return
 
-from {package_name}.db.base import Base
-
-
-class {class_name}(Base):
-    __tablename__ = "{module_name}"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(120))
-'''
-
-
-def _repository_content(package_name: str, module_name: str, class_name: str) -> str:
-    return f'''from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from {package_name}.modules.{module_name}.model import {class_name}
+    block = llm_settings_block()
+    _insert_block_before_marker_or_anchor(
+        path=path,
+        block=block,
+        marker=SETTINGS_LLM_MARKER,
+        anchor="    model_config = SettingsConfigDict(",
+    )
 
 
-class {class_name}Repository:
-    def __init__(self, db: Session) -> None:
-        self.db = db
+def _ensure_llm_env(path: Path) -> None:
+    content = path.read_text(encoding="utf-8")
+    if "LLM_PROVIDER=" in content:
+        return
 
-    def list(self) -> list[{class_name}]:
-        statement = select({class_name}).order_by({class_name}.id.asc())
-        return list(self.db.scalars(statement))
-
-    def create(self, *, name: str) -> {class_name}:
-        item = {class_name}(name=name)
-        self.db.add(item)
-        self.db.commit()
-        self.db.refresh(item)
-        return item
-'''
-
-
-def _schemas_content(package_name: str, module_name: str, class_name: str) -> str:
-    return f'''from pydantic import BaseModel, ConfigDict, Field
-
-
-class {class_name}Create(BaseModel):
-    name: str = Field(min_length=3, max_length=120)
-
-
-class {class_name}Read(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str
-'''
-
-
-def _service_content(
-    package_name: str,
-    module_name: str,
-    class_name: str,
-) -> str:
-    return f'''from sqlalchemy.orm import Session
-
-from {package_name}.bootstrap.logging import get_logger
-from {package_name}.modules.{module_name}.model import {class_name}
-from {package_name}.modules.{module_name}.repository import {class_name}Repository
-from {package_name}.modules.{module_name}.schemas import {class_name}Create
-
-
-logger = get_logger(__name__)
-
-
-class {class_name}Service:
-    def __init__(self, db: Session) -> None:
-        self.repository = {class_name}Repository(db)
-
-    def list_{module_name}(self) -> list[{class_name}]:
-        logger.info("Listing {module_name}")
-        return self.repository.list()
-
-    def create_{module_name}(self, payload: {class_name}Create) -> {class_name}:
-        logger.info("Creating {module_name}", extra={{"name": payload.name}})
-        return self.repository.create(name=payload.name)
-'''
-
-
-def _router_content(package_name: str, module_name: str, class_name: str) -> str:
-    return f'''from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
-
-from {package_name}.api.deps import db_session
-from {package_name}.modules.{module_name}.schemas import {class_name}Create, {class_name}Read
-from {package_name}.modules.{module_name}.service import {class_name}Service
-
-
-router = APIRouter()
-
-
-@router.get("/", response_model=list[{class_name}Read])
-def list_{module_name}(db: Session = Depends(db_session)) -> list[{class_name}Read]:
-    return {class_name}Service(db).list_{module_name}()
-
-
-@router.post("/", response_model={class_name}Read, status_code=status.HTTP_201_CREATED)
-def create_{module_name}(payload: {class_name}Create, db: Session = Depends(db_session)) -> {class_name}Read:
-    return {class_name}Service(db).create_{module_name}(payload)
-'''
-
-
-def _integration_test_content(module_name: str, class_name: str) -> str:
-    return f'''from fastapi.testclient import TestClient
-
-
-def test_create_and_list_{module_name}(client: TestClient) -> None:
-    create_response = client.post("/api/v1/{module_name}/", json={{"name": "Main {class_name}"}})
-    assert create_response.status_code == 201
-
-    list_response = client.get("/api/v1/{module_name}/")
-    assert list_response.status_code == 200
-
-    payload = list_response.json()
-    assert len(payload) == 1
-    assert payload[0]["name"] == "Main {class_name}"
-'''
-
-
-def _unit_test_content(package_name: str, module_name: str, class_name: str) -> str:
-    return f'''from unittest.mock import Mock
-
-from {package_name}.modules.{module_name}.service import {class_name}Service
-
-
-def test_list_{module_name}_delegates_to_repository() -> None:
-    service = {class_name}Service(db=Mock())
-    service.repository = Mock()
-
-    service.list_{module_name}()
-
-    service.repository.list.assert_called_once_with()
-'''
+    block = llm_env_block()
+    _insert_block_before_marker_or_anchor(
+        path=path,
+        block=block,
+        marker=ENV_LLM_MARKER,
+        anchor=None,
+    )
 
 
 def _insert_line_before_marker(path: Path, line: str, marker: str) -> None:
@@ -288,12 +187,28 @@ def _insert_sorted_line_before_marker(
     path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
 
 
+def _insert_block_before_marker_or_anchor(
+    *,
+    path: Path,
+    block: list[str],
+    marker: str,
+    anchor: str | None,
+) -> None:
+    lines = path.read_text(encoding="utf-8").splitlines()
+
+    if marker in lines:
+        insert_at = lines.index(marker)
+    elif anchor and anchor in lines:
+        insert_at = lines.index(anchor)
+    else:
+        insert_at = len(lines)
+
+    lines[insert_at:insert_at] = block + [""]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def _find_marker_index(lines: list[str], marker: str, path: Path) -> int:
     try:
         return lines.index(marker)
     except ValueError as exc:
         raise RuntimeError(f"Unsupported managed block layout: {path}") from exc
-
-
-def _to_class_name(module_name: str) -> str:
-    return "".join(part.capitalize() for part in module_name.split("_"))

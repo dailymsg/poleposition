@@ -175,3 +175,96 @@ def test_add_module_works_with_custom_content_around_markers(tmp_path: Path):
     assert "# custom model note" in models_content
     assert '"garage"' in modules_init_content
     assert "# custom exports note" in modules_init_content
+
+
+def test_add_module_with_ai_prompt_template_creates_llm_module_files(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "module", "assistant", "--template", "ai-prompt")
+
+    assert result.returncode == 0
+    assert "Added module: assistant" in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    module_root = package_root / "modules" / "assistant"
+
+    expected_files = [
+        module_root / "__init__.py",
+        module_root / "orchestrator.py",
+        module_root / "prompts.py",
+        module_root / "router.py",
+        module_root / "schemas.py",
+        module_root / "service.py",
+        package_root / "integrations" / "__init__.py",
+        package_root / "integrations" / "llm" / "__init__.py",
+        package_root / "integrations" / "llm" / "factory.py",
+        package_root / "integrations" / "llm" / "openai_client.py",
+        package_root / "integrations" / "llm" / "anthropic_client.py",
+        package_root / "integrations" / "llm" / "provider.py",
+        package_root / "integrations" / "llm" / "schemas.py",
+        project_root / "tests" / "integration" / "test_assistant.py",
+        project_root / "tests" / "unit" / "test_assistant_orchestrator.py",
+    ]
+    for path in expected_files:
+        assert path.exists(), f"Expected generated AI module file is missing: {path}"
+
+    router_content = (package_root / "api" / "router.py").read_text(encoding="utf-8")
+    db_models_content = (package_root / "db" / "models.py").read_text(encoding="utf-8")
+    settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
+    env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+    service_content = (module_root / "service.py").read_text(encoding="utf-8")
+    orchestrator_content = (module_root / "orchestrator.py").read_text(encoding="utf-8")
+    integration_test_content = (
+        project_root / "tests" / "integration" / "test_assistant.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'api_router.include_router(assistant_router, prefix="/assistant", tags=["assistant"])' in router_content
+    assert "from myapp.modules.assistant import model" not in db_models_content
+    assert 'llm_provider: str = "openai"' in settings_content
+    assert 'llm_model: str = "gpt-5.4-mini"' in settings_content
+    assert "llm_timeout_seconds: float = 30.0" in settings_content
+    assert "LLM_PROVIDER=openai" in env_content
+    assert "LLM_MODEL=gpt-5.4-mini" in env_content
+    assert "LLM_API_KEY=" in env_content
+    assert "from myapp.bootstrap.logging import get_logger" in service_content
+    assert "logger = get_logger(__name__)" in service_content
+    assert "from myapp.integrations.llm.factory import get_llm_provider" in orchestrator_content
+    assert "/api/v1/assistant/respond" in integration_test_content
+    assert "return_value=StubProvider()" in integration_test_content
+
+
+def test_add_module_ai_prompt_does_not_duplicate_llm_settings_or_integrations(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    first_result = run_cli(project_root, "add", "module", "assistant", "--template", "ai-prompt")
+    second_result = run_cli(project_root, "add", "module", "copilot", "--template", "ai-prompt")
+
+    assert first_result.returncode == 0
+    assert second_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
+    env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+    provider_content = (
+        package_root / "integrations" / "llm" / "provider.py"
+    ).read_text(encoding="utf-8")
+
+    assert settings_content.count('llm_provider: str = "openai"') == 1
+    assert env_content.count("LLM_PROVIDER=openai") == 1
+    assert provider_content.count("class LLMProvider(Protocol):") == 1
+
+
+def test_add_module_rejects_unknown_template(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "module", "assistant", "--template", "unknown")
+
+    assert result.returncode != 0
+    assert "Unsupported module template 'unknown'" in result.stdout
+    assert "Templates: standard, ai-prompt" in result.stdout

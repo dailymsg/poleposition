@@ -201,6 +201,19 @@ It also updates:
 - `src/<package>/api/router.py`
 - `src/<package>/db/models.py`
 
+`polepos add module <name> --template ai-prompt` generates an LLM-oriented
+module skeleton instead:
+
+- `__init__.py`
+- `prompts.py`
+- `orchestrator.py`
+- `router.py`
+- `schemas.py`
+- `service.py`
+- integration and unit tests
+- shared `src/<package>/integrations/llm/*` files when missing
+- `settings.py` / `.env.example` LLM settings when missing
+
 When changing module generation:
 
 - keep generated code simple and readable
@@ -208,6 +221,7 @@ When changing module generation:
 - keep generated tests useful but lightweight
 - avoid generating auth-specific behavior by default
 - preserve a REST-friendly starting point
+- keep AI templates provider-agnostic unless the user explicitly asks for a provider-specific scaffold
 
 Do not assume a generated module means a complete auth or domain solution.
 It is a strong starting skeleton, not a full business system.

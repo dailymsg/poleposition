@@ -170,7 +170,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "# UVICORN_LIMIT_CONCURRENCY=" in env_example
     assert "# UVICORN_LIMIT_MAX_REQUESTS=" in env_example
     assert "UVICORN_LIMIT_MAX_REQUESTS_JITTER=0" in env_example
+    assert 'name = "demo-app"' in pyproject
     assert '"psycopg[binary]>=' in pyproject
+    assert 'build-backend = "hatchling.build"' in pyproject
+    assert 'packages = ["src/demo_app"]' in pyproject
     assert 'CMD ["uv", "run", "python", "-m", "demo_app.run"]' in dockerfile
     assert "RUN uv sync --no-dev" in dockerfile
     assert ".venv" in dockerignore
@@ -184,6 +187,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "# polepos:router-includes" in (package_root / "api" / "router.py").read_text(encoding="utf-8")
     assert "# polepos:model-imports" in (package_root / "db" / "models.py").read_text(encoding="utf-8")
     assert "# polepos:module-exports" in (package_root / "modules" / "__init__.py").read_text(encoding="utf-8")
+    assert "# polepos:llm-settings" in settings_module
+    assert "# polepos:llm-env" in env_example
     assert "from demo_app.api.router import api_router" in app_module
     assert 'uvicorn.run(' in run_module
     assert '"demo_app.main:app"' in run_module
@@ -315,6 +320,7 @@ def test_generated_gitignore_ignores_bytecode_artifacts(tmp_path: Path):
     gitignore = (tmp_path / "demo-app" / ".gitignore").read_text(encoding="utf-8")
     assert "__pycache__/" in gitignore
     assert "*.pyc" in gitignore
+    assert "*.egg-info/" in gitignore
 
 
 def test_generated_env_example_is_safe_to_copy(tmp_path: Path):
