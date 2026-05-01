@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 {{bytecode_runtime_setup}}
 
 from {{project_import_name}}.app import create_app
+from {{project_import_name}}.auth.token import create_access_token
 from {{project_import_name}}.db.base import Base
 from {{project_import_name}}.db.models import import_models
 from {{project_import_name}}.db.session import get_engine, get_session_factory
@@ -18,6 +19,8 @@ def reset_state(monkeypatch: pytest.MonkeyPatch, tmp_path):
     database_url = f"sqlite:///{tmp_path / 'test.db'}"
     monkeypatch.setenv("DATABASE_URL", database_url)
     monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.setenv("AUTH_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("AUTH_ISSUER", "{{project_name}}-test")
 
     get_settings.cache_clear()
     get_engine.cache_clear()
@@ -49,3 +52,21 @@ def race_payload() -> dict[str, str]:
         "country": "Monaco",
         "scheduled_at": scheduled_at.isoformat(),
     }
+
+
+@pytest.fixture
+def auth_token() -> str:
+    return create_access_token(
+        subject="driver-1",
+        email="driver@example.com",
+        roles=["member"],
+    )
+
+
+@pytest.fixture
+def admin_token() -> str:
+    return create_access_token(
+        subject="team-principal",
+        email="principal@example.com",
+        roles=["admin", "member"],
+    )

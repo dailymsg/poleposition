@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     uvicorn_limit_max_requests: int | None = None
     uvicorn_limit_max_requests_jitter: int = 0
     uvicorn_backlog: int = 2048
+    auth_secret_key: str = "change-me-in-production"
+    auth_algorithm: str = "HS256"
+    auth_access_token_expire_minutes: int = 60
+    auth_issuer: str = "{{project_name}}"
+    # polepos:auth-settings
     # polepos:llm-settings
 
     model_config = SettingsConfigDict(

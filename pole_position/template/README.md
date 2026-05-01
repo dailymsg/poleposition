@@ -88,6 +88,33 @@ You can configure CORS from `.env` with:
 `CORS_ALLOW_ORIGINS`, `CORS_ALLOW_METHODS`, `CORS_ALLOW_HEADERS`, and
 `CORS_EXPOSE_HEADERS` accept JSON arrays in `.env`.
 
+## Authentication
+
+Generated projects include a minimal JWT-based authentication foundation.
+
+Public endpoint:
+
+```text
+GET /api/v1/status
+```
+
+Protected example endpoints:
+
+```text
+GET /api/v1/profile/me
+GET /api/v1/profile/admin-preview
+```
+
+Relevant settings in `.env`:
+
+* `AUTH_SECRET_KEY`
+* `AUTH_ALGORITHM`
+* `AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`
+* `AUTH_ISSUER`
+
+Use `get_current_user` for authenticated routes and `require_roles(...)` for
+simple role-gated routes.
+
 ## Project Layout
 
 ```text
@@ -96,10 +123,12 @@ migrations/
   versions/
 src/{{project_import_name}}/
   run.py
+  auth/
   bootstrap/
   api/
   db/
   modules/
+    profile/
     status/
     races/
 ```
@@ -108,6 +137,8 @@ src/{{project_import_name}}/
 
 ```text
 GET    /api/v1/status
+GET    /api/v1/profile/me
+GET    /api/v1/profile/admin-preview
 GET    /api/v1/races/
 GET    /api/v1/races/{race_id}
 POST   /api/v1/races/

@@ -95,6 +95,11 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
         project_root / "migrations" / "versions" / "0001_create_races_table.py",
         package_root / "run.py",
         package_root / "settings.py",
+        package_root / "auth" / "__init__.py",
+        package_root / "auth" / "dependencies.py",
+        package_root / "auth" / "schemas.py",
+        package_root / "auth" / "service.py",
+        package_root / "auth" / "token.py",
         package_root / "bootstrap" / "logging.py",
         package_root / "bootstrap" / "errors.py",
         package_root / "bootstrap" / "middleware.py",
@@ -103,12 +108,15 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
         package_root / "db" / "session.py",
         package_root / "db" / "base.py",
         package_root / "domain" / "exceptions.py",
+        package_root / "modules" / "profile" / "router.py",
+        package_root / "modules" / "profile" / "schemas.py",
         package_root / "modules" / "status" / "router.py",
         package_root / "modules" / "status" / "service.py",
         package_root / "modules" / "races" / "model.py",
         package_root / "modules" / "races" / "repository.py",
         package_root / "modules" / "races" / "router.py",
         project_root / "tests" / "conftest.py",
+        project_root / "tests" / "integration" / "test_profile.py",
         project_root / "tests" / "integration" / "test_status.py",
         project_root / "tests" / "integration" / "test_races.py",
         project_root / "tests" / "unit" / "test_race_service.py",
@@ -150,6 +158,13 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     status_service = (
         package_root / "modules" / "status" / "service.py"
     ).read_text(encoding="utf-8")
+    profile_router = (
+        package_root / "modules" / "profile" / "router.py"
+    ).read_text(encoding="utf-8")
+    auth_dependencies = (
+        package_root / "auth" / "dependencies.py"
+    ).read_text(encoding="utf-8")
+    auth_token = (package_root / "auth" / "token.py").read_text(encoding="utf-8")
 
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
     assert "CORS_ENABLED=true" in env_example
@@ -163,6 +178,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "POSTGRES_USER=postgres" in env_example
     assert "POSTGRES_PASSWORD=postgres" in env_example
     assert "POSTGRES_PORT=5432" in env_example
+    assert "AUTH_SECRET_KEY=change-me-in-production" in env_example
+    assert "AUTH_ALGORITHM=HS256" in env_example
+    assert "AUTH_ACCESS_TOKEN_EXPIRE_MINUTES=60" in env_example
+    assert "AUTH_ISSUER=demo-app" in env_example
     assert "APP_HOST=127.0.0.1" in env_example
     assert "UVICORN_WORKERS=1" in env_example
     assert "# UVICORN_USE_COLORS=" in env_example
@@ -171,6 +190,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "# UVICORN_LIMIT_MAX_REQUESTS=" in env_example
     assert "UVICORN_LIMIT_MAX_REQUESTS_JITTER=0" in env_example
     assert 'name = "demo-app"' in pyproject
+    assert '"PyJWT>=' in pyproject
     assert '"psycopg[binary]>=' in pyproject
     assert 'build-backend = "hatchling.build"' in pyproject
     assert 'packages = ["src/demo_app"]' in pyproject
@@ -187,7 +207,9 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "# polepos:router-includes" in (package_root / "api" / "router.py").read_text(encoding="utf-8")
     assert "# polepos:model-imports" in (package_root / "db" / "models.py").read_text(encoding="utf-8")
     assert "# polepos:module-exports" in (package_root / "modules" / "__init__.py").read_text(encoding="utf-8")
+    assert "# polepos:auth-settings" in settings_module
     assert "# polepos:llm-settings" in settings_module
+    assert "# polepos:auth-env" in env_example
     assert "# polepos:llm-env" in env_example
     assert "from demo_app.api.router import api_router" in app_module
     assert 'uvicorn.run(' in run_module
@@ -214,6 +236,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "cors_max_age: int = 600" in settings_module
     assert "uvicorn_limit_max_requests: int | None = None" in settings_module
     assert "uvicorn_limit_max_requests_jitter: int = 0" in settings_module
+    assert 'auth_secret_key: str = "change-me-in-production"' in settings_module
+    assert 'auth_algorithm: str = "HS256"' in settings_module
+    assert "auth_access_token_expire_minutes: int = 60" in settings_module
+    assert 'auth_issuer: str = "demo-app"' in settings_module
     assert "@field_validator(" in settings_module
     assert 'def empty_string_to_none(cls, value: object) -> object:' in settings_module
     assert "def parse_list_env(cls, value: object) -> object:" in settings_module
@@ -232,6 +258,14 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "from demo_app.bootstrap.logging import get_logger" in status_service
     assert "logger = get_logger(__name__)" in status_service
     assert "from demo_app import __version__" in status_service
+    assert "from demo_app.api.deps import get_current_user, require_roles" in profile_router
+    assert '@router.get("/me", response_model=ProfileResponse)' in profile_router
+    assert '@router.get("/admin-preview", response_model=ProfileResponse)' in profile_router
+    assert "bearer_scheme = HTTPBearer(auto_error=False)" in auth_dependencies
+    assert "def get_current_user(" in auth_dependencies
+    assert "def require_roles(*roles: str)" in auth_dependencies
+    assert "def create_access_token(" in auth_token
+    assert "def decode_access_token(token: str" in auth_token
     assert "sys.dont_write_bytecode = True" not in tests_conftest
     assert "{{project" not in app_module
     assert "{{project" not in status_service
@@ -260,6 +294,27 @@ def test_generated_project_includes_alembic_support(tmp_path: Path):
     assert '"races"' in initial_migration
     assert 'alembic revision --autogenerate -m "add garage table"' in readme
     assert "{{project" not in migrations_env
+
+
+def test_generated_project_includes_auth_foundation(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "demo-app")
+
+    assert result.returncode == 0
+
+    project_root = tmp_path / "demo-app"
+    readme = (project_root / "README.md").read_text(encoding="utf-8")
+    profile_test = (
+        project_root / "tests" / "integration" / "test_profile.py"
+    ).read_text(encoding="utf-8")
+    auth_schemas = (
+        project_root / "src" / "demo_app" / "auth" / "schemas.py"
+    ).read_text(encoding="utf-8")
+
+    assert "GET /api/v1/profile/me" in readme
+    assert "GET /api/v1/profile/admin-preview" in readme
+    assert "test_profile_requires_authentication" in profile_test
+    assert "test_admin_preview_requires_admin_role" in profile_test
+    assert "class AuthenticatedUser(BaseModel):" in auth_schemas
 
 
 def test_generated_project_includes_docker_workflow_docs(tmp_path: Path):

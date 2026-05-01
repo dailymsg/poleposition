@@ -51,6 +51,7 @@ PolePosition provides:
 * Environment-based configuration
 * Alembic-based database migrations
 * Built-in logging
+* JWT-based endpoint authentication foundations
 * Testing setup
 * Module-oriented organization for growing codebases
 * A ready-to-run FastAPI application
@@ -250,6 +251,22 @@ You can control it from `.env` with:
 * `CORS_MAX_AGE`
 
 The list-style fields accept JSON arrays in `.env`.
+
+### Authentication
+
+Generated projects include a minimal JWT-based authentication foundation with:
+
+* a public `GET /api/v1/status` endpoint
+* a protected `GET /api/v1/profile/me` endpoint
+* a role-gated `GET /api/v1/profile/admin-preview` endpoint
+* `get_current_user` and `require_roles(...)` helpers
+
+Relevant auth settings:
+
+* `AUTH_SECRET_KEY`
+* `AUTH_ALGORITHM`
+* `AUTH_ACCESS_TOKEN_EXPIRE_MINUTES`
+* `AUTH_ISSUER`
 
 ### When to use which command
 
