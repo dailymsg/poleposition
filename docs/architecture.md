@@ -75,7 +75,7 @@ polepos db upgrade
 polepos check
   -> commands/check.py
   -> project_checker.py
-  -> core project diagnostics + added module lifecycle wiring diagnostics
+  -> core project diagnostics + added module lifecycle wiring + opt-in integration diagnostics
 ```
 
 ## CLI Map

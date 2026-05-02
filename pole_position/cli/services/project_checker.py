@@ -118,6 +118,109 @@ AI_PROMPT_MODULE_PATHS = [
     "service.py",
 ]
 
+INTEGRATION_SPECS = {
+    "kafka": {
+        "dependency": "aiokafka>=0.12.0",
+        "files": [
+            "integrations/__init__.py",
+            "integrations/kafka/__init__.py",
+            "integrations/kafka/consumer.py",
+            "integrations/kafka/factory.py",
+            "integrations/kafka/producer.py",
+            "integrations/kafka/schemas.py",
+            "integrations/kafka/testing.py",
+        ],
+        "settings": [
+            "kafka_enabled",
+            "kafka_bootstrap_servers",
+            "kafka_client_id",
+            "kafka_default_topic",
+            "kafka_group_id",
+            "kafka_auto_offset_reset",
+            "kafka_acks",
+            "kafka_compression_type",
+            "kafka_request_timeout_ms",
+        ],
+        "env": [
+            "KAFKA_ENABLED",
+            "KAFKA_BOOTSTRAP_SERVERS",
+            "KAFKA_CLIENT_ID",
+            "KAFKA_DEFAULT_TOPIC",
+            "KAFKA_GROUP_ID",
+            "KAFKA_AUTO_OFFSET_RESET",
+            "KAFKA_ACKS",
+            "KAFKA_COMPRESSION_TYPE",
+            "KAFKA_REQUEST_TIMEOUT_MS",
+        ],
+    },
+    "rabbitmq": {
+        "dependency": "aio-pika>=9.0.0",
+        "files": [
+            "integrations/__init__.py",
+            "integrations/rabbitmq/__init__.py",
+            "integrations/rabbitmq/consumer.py",
+            "integrations/rabbitmq/factory.py",
+            "integrations/rabbitmq/publisher.py",
+            "integrations/rabbitmq/schemas.py",
+            "integrations/rabbitmq/testing.py",
+        ],
+        "settings": [
+            "rabbitmq_enabled",
+            "rabbitmq_url",
+            "rabbitmq_client_id",
+            "rabbitmq_exchange",
+            "rabbitmq_exchange_type",
+            "rabbitmq_exchange_durable",
+            "rabbitmq_default_routing_key",
+            "rabbitmq_default_queue",
+            "rabbitmq_queue_durable",
+            "rabbitmq_prefetch_count",
+        ],
+        "env": [
+            "RABBITMQ_ENABLED",
+            "RABBITMQ_URL",
+            "RABBITMQ_CLIENT_ID",
+            "RABBITMQ_EXCHANGE",
+            "RABBITMQ_EXCHANGE_TYPE",
+            "RABBITMQ_EXCHANGE_DURABLE",
+            "RABBITMQ_DEFAULT_ROUTING_KEY",
+            "RABBITMQ_DEFAULT_QUEUE",
+            "RABBITMQ_QUEUE_DURABLE",
+            "RABBITMQ_PREFETCH_COUNT",
+        ],
+    },
+    "llm": {
+        "dependency": None,
+        "files": [
+            "integrations/__init__.py",
+            "integrations/llm/__init__.py",
+            "integrations/llm/anthropic_client.py",
+            "integrations/llm/factory.py",
+            "integrations/llm/openai_client.py",
+            "integrations/llm/provider.py",
+            "integrations/llm/schemas.py",
+        ],
+        "settings": [
+            "llm_provider",
+            "llm_model",
+            "llm_api_key",
+            "llm_base_url",
+            "llm_timeout_seconds",
+            "llm_temperature",
+            "llm_max_tokens",
+        ],
+        "env": [
+            "LLM_PROVIDER",
+            "LLM_MODEL",
+            "LLM_API_KEY",
+            "LLM_BASE_URL",
+            "LLM_TIMEOUT_SECONDS",
+            "LLM_TEMPERATURE",
+            "LLM_MAX_TOKENS",
+        ],
+    },
+}
+
 
 @dataclass(frozen=True)
 class ProjectCheckResult:
@@ -135,17 +238,18 @@ class ProjectCheckResult:
 
 
 def check_project(cwd: Path | None = None) -> ProjectCheckResult:
-    return _run_project_checks(cwd, include_lifecycle=True)
+    return _run_project_checks(cwd, include_lifecycle=True, include_integrations=True)
 
 
 def check_core_project(cwd: Path | None = None) -> ProjectCheckResult:
-    return _run_project_checks(cwd, include_lifecycle=False)
+    return _run_project_checks(cwd, include_lifecycle=False, include_integrations=False)
 
 
 def _run_project_checks(
     cwd: Path | None = None,
     *,
     include_lifecycle: bool,
+    include_integrations: bool,
 ) -> ProjectCheckResult:
     project_root, package_root = _discover_core_project(cwd)
     problems: list[str] = []
@@ -156,6 +260,8 @@ def _run_project_checks(
     _check_managed_markers(problems, package_root)
     if include_lifecycle:
         _check_lifecycle_wiring(problems, project_root, package_root)
+    if include_integrations:
+        _check_integration_wiring(problems, project_root, package_root)
 
     return ProjectCheckResult(
         project_root=project_root,
@@ -453,8 +559,192 @@ def _check_module_tests(
         )
 
 
+def _check_integration_wiring(
+    problems: list[str],
+    project_root: Path,
+    package_root: Path,
+) -> None:
+    settings_content = _read_file_text(package_root / "settings.py")
+    env_content = _read_file_text(project_root / ".env.example")
+    pyproject_content = _read_file_text(project_root / "pyproject.toml")
+
+    for integration_name, spec in INTEGRATION_SPECS.items():
+        if not _has_integration_signal(
+            integration_name=integration_name,
+            spec=spec,
+            project_root=project_root,
+            package_root=package_root,
+            settings_content=settings_content,
+            env_content=env_content,
+            pyproject_content=pyproject_content,
+        ):
+            continue
+
+        _check_integration_files(
+            problems=problems,
+            package_root=package_root,
+            integration_name=integration_name,
+            files=spec["files"],
+        )
+        _check_integration_dependency(
+            problems=problems,
+            project_root=project_root,
+            integration_name=integration_name,
+            dependency=spec["dependency"],
+            pyproject_content=pyproject_content,
+        )
+        _check_integration_settings(
+            problems=problems,
+            package_root=package_root,
+            integration_name=integration_name,
+            settings=spec["settings"],
+            settings_content=settings_content,
+        )
+        _check_integration_env(
+            problems=problems,
+            project_root=project_root,
+            integration_name=integration_name,
+            env=spec["env"],
+            env_content=env_content,
+        )
+
+
+def _has_integration_signal(
+    *,
+    integration_name: str,
+    spec,
+    project_root: Path,
+    package_root: Path,
+    settings_content: str | None,
+    env_content: str | None,
+    pyproject_content: str | None,
+) -> bool:
+    if (package_root / "integrations" / integration_name).exists():
+        return True
+
+    dependency = spec["dependency"]
+    if (
+        isinstance(dependency, str)
+        and pyproject_content is not None
+        and dependency in pyproject_content
+    ):
+        return True
+
+    if settings_content is not None:
+        for setting in spec["settings"]:
+            if f"{setting}:" in settings_content:
+                return True
+
+    if env_content is not None:
+        for env_name in spec["env"]:
+            if f"{env_name}=" in env_content:
+                return True
+
+    if integration_name == "llm":
+        return _has_ai_prompt_module(project_root, package_root)
+
+    return False
+
+
+def _has_ai_prompt_module(project_root: Path, package_root: Path) -> bool:
+    modules_root = package_root / "modules"
+    if not modules_root.is_dir():
+        return False
+
+    for module_root in modules_root.iterdir():
+        if not module_root.is_dir() or module_root.name in STARTER_MODULES:
+            continue
+        if _detect_module_kind(project_root, module_root) == "ai-prompt":
+            return True
+
+    return False
+
+
+def _check_integration_files(
+    *,
+    problems: list[str],
+    package_root: Path,
+    integration_name: str,
+    files,
+) -> None:
+    for relative_path in files:
+        path = package_root / relative_path
+        if not path.exists():
+            problems.append(
+                f"Integration '{integration_name}' is missing generated file: {path}"
+            )
+
+
+def _check_integration_dependency(
+    *,
+    problems: list[str],
+    project_root: Path,
+    integration_name: str,
+    dependency,
+    pyproject_content: str | None,
+) -> None:
+    if not isinstance(dependency, str):
+        return
+
+    if pyproject_content is None:
+        return
+
+    if dependency not in pyproject_content:
+        problems.append(
+            f"Integration '{integration_name}' is missing dependency in "
+            f"{project_root / 'pyproject.toml'}: {dependency}"
+        )
+
+
+def _check_integration_settings(
+    *,
+    problems: list[str],
+    package_root: Path,
+    integration_name: str,
+    settings,
+    settings_content: str | None,
+) -> None:
+    if settings_content is None:
+        return
+
+    settings_path = package_root / "settings.py"
+    for setting in settings:
+        if f"{setting}:" not in settings_content:
+            problems.append(
+                f"Integration '{integration_name}' is missing setting in "
+                f"{settings_path}: {setting}"
+            )
+
+
+def _check_integration_env(
+    *,
+    problems: list[str],
+    project_root: Path,
+    integration_name: str,
+    env,
+    env_content: str | None,
+) -> None:
+    if env_content is None:
+        return
+
+    env_path = project_root / ".env.example"
+    for env_name in env:
+        if f"{env_name}=" not in env_content:
+            problems.append(
+                f"Integration '{integration_name}' is missing env value in "
+                f"{env_path}: {env_name}"
+            )
+
+
 def _read_file_lines(path: Path) -> list[str] | None:
     if not path.is_file():
         return None
 
     return path.read_text(encoding="utf-8").splitlines()
+
+
+def _read_file_text(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+
+    return path.read_text(encoding="utf-8")

@@ -240,8 +240,8 @@ polepos check
 
 `check` runs the core project health checks for the current PolePosition
 project. It validates project identity, generated structure, Alembic config,
-managed markers, and added module lifecycle wiring used by commands such as
-`polepos add module`.
+managed markers, added module lifecycle wiring, and opt-in integration wiring
+used by commands such as `polepos add module` and `polepos add integration`.
 
 ### Database commands
 
@@ -376,7 +376,7 @@ PolePosition is a lifecycle CLI, so the commands are meant to be used over time,
 * `polepos add module` when you want to add a new REST/domain module or an AI prompt module to an existing project
 * `polepos add integration kafka` when you want Kafka producer and consumer wiring in an existing project
 * `polepos add integration rabbitmq` when you want RabbitMQ publisher and consumer wiring in an existing project
-* `polepos check` when you want to validate generated structure, Alembic config, and managed markers
+* `polepos check` when you want to validate generated structure, Alembic config, managed markers, module wiring, and integration wiring
 * `polepos db upgrade` when you want to apply migrations to the database
 * `polepos db revision -m "..."` when you changed models and need a new migration
 * `polepos db downgrade` when you need to roll back a migration

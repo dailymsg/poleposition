@@ -73,6 +73,23 @@ def test_check_passes_after_added_standard_and_ai_prompt_modules(tmp_path: Path)
     assert "PolePosition project check passed." in result.stdout
 
 
+def test_check_passes_after_added_messaging_integrations(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    kafka_result = run_cli(project_root, "add", "integration", "kafka")
+    rabbitmq_result = run_cli(project_root, "add", "integration", "rabbitmq")
+
+    assert kafka_result.returncode == 0
+    assert rabbitmq_result.returncode == 0
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode == 0
+    assert "PolePosition project check passed." in result.stdout
+
+
 def test_check_fails_outside_project(tmp_path: Path) -> None:
     result = run_cli(tmp_path, "check")
 
@@ -203,6 +220,118 @@ def test_check_reports_missing_ai_prompt_module_files(tmp_path: Path) -> None:
     assert "orchestrator.py" in result.stdout
     assert "prompts.py" in result.stdout
     assert "missing model import" not in result.stdout
+
+
+def test_check_reports_missing_kafka_integration_file(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "kafka")
+    assert add_result.returncode == 0
+
+    (
+        project_root
+        / "src"
+        / "myapp"
+        / "integrations"
+        / "kafka"
+        / "producer.py"
+    ).unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'kafka' is missing generated file" in result.stdout
+    assert "producer.py" in result.stdout
+
+
+def test_check_reports_missing_kafka_dependency(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "kafka")
+    assert add_result.returncode == 0
+
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_content = pyproject_path.read_text(encoding="utf-8").replace(
+        '    "aiokafka>=0.12.0",\n',
+        "",
+    )
+    pyproject_path.write_text(pyproject_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'kafka' is missing dependency" in result.stdout
+    assert "aiokafka>=0.12.0" in result.stdout
+
+
+def test_check_reports_missing_rabbitmq_settings_and_env(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "rabbitmq")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    settings_content = settings_path.read_text(encoding="utf-8").replace(
+        '    rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"\n',
+        "",
+    )
+    settings_path.write_text(settings_content, encoding="utf-8")
+
+    env_path = project_root / ".env.example"
+    env_content = env_path.read_text(encoding="utf-8").replace(
+        "RABBITMQ_URL=amqp://guest:guest@localhost:5672/\n",
+        "",
+    )
+    env_path.write_text(env_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'rabbitmq' is missing setting" in result.stdout
+    assert "rabbitmq_url" in result.stdout
+    assert "Integration 'rabbitmq' is missing env value" in result.stdout
+    assert "RABBITMQ_URL" in result.stdout
+
+
+def test_check_reports_missing_llm_integration_file_and_env(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    (package_root / "integrations" / "llm" / "factory.py").unlink()
+
+    env_path = project_root / ".env.example"
+    env_content = env_path.read_text(encoding="utf-8").replace(
+        "LLM_PROVIDER=openai\n",
+        "",
+    )
+    env_path.write_text(env_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'llm' is missing generated file" in result.stdout
+    assert "factory.py" in result.stdout
+    assert "Integration 'llm' is missing env value" in result.stdout
+    assert "LLM_PROVIDER" in result.stdout
 
 
 def test_check_reports_missing_alembic_config(tmp_path: Path) -> None:
