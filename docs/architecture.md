@@ -19,7 +19,8 @@ Its value comes from connected lifecycle workflows:
 1. `polepos start`
 2. `polepos add module`
 3. `polepos add integration ...`
-4. `polepos db ...`
+4. `polepos check`
+5. `polepos db ...`
 
 That means the product helps at:
 
@@ -204,6 +205,41 @@ helpers and adds `aiokafka`; RabbitMQ writes `integrations/rabbitmq` helpers
 and adds `aio-pika`. Both integrations patch settings and `.env.example`
 values. Consumer loops are left as explicit worker/runtime code instead of
 being started inside the FastAPI app process.
+
+## `check` Architecture
+
+`polepos check` is the lifecycle contract validator. It keeps project
+diagnostics separate from project mutation: it reads generated files and reports
+drift, but it does not patch files, install packages, connect to databases, or
+start external services.
+
+Implementation lives in:
+
+```text
+pole_position/cli/services/project_checker.py
+```
+
+The command handler lives in:
+
+```text
+pole_position/cli/commands/check.py
+```
+
+Current check layers:
+
+- core checks: project identity, generated structure, Alembic config, and managed markers
+- lifecycle checks: added module files, exports, router wiring, model wiring, and generated tests
+- integration checks: Kafka, RabbitMQ, and LLM files, dependencies, settings keys, and env keys
+
+Core-only behavior is kept available through `check_core_project()` so future
+CLI modes can reuse the foundation without lifecycle or integration checks.
+The public `check_project()` path runs the full current contract.
+
+For the detailed user guide and agent-facing contract, see:
+
+```text
+docs/project-checks.md
+```
 
 ## Managed Block Contract
 

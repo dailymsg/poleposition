@@ -58,6 +58,27 @@ Kafka and RabbitMQ are opt-in messaging integrations rather than default
 AMQP exchange/queue messaging. Both should remain explicit runtime or worker
 surfaces instead of being started automatically inside the API process.
 
+### Project checks
+
+`polepos check` is now a stable lifecycle validation surface rather than a
+template smoke check.
+
+It currently validates:
+
+- core project identity and generated structure
+- Alembic migration setup
+- PolePosition-managed markers
+- added module lifecycle wiring
+- Kafka, RabbitMQ, and LLM opt-in integration wiring
+
+The command is intentionally read-only and file-based. It should remain safe to
+run from local development, CI, and agent workflows without requiring a running
+database, message broker, LLM provider, or optional integration dependency.
+
+Future improvements should focus on better output and automation surfaces such
+as `--json`, issue codes, severity levels, and possibly a limited `--fix` mode
+for safe marker restoration.
+
 ### Auth foundation
 
 The current auth layer solves:

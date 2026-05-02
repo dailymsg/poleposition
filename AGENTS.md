@@ -9,6 +9,7 @@ Read these companion docs when you need deeper repo context:
 
 - `docs/architecture.md`
 - `docs/feature-status.md`
+- `docs/project-checks.md`
 - `examples/README.md`
 
 ## What PolePosition Is
@@ -21,6 +22,8 @@ Today that flow is centered around:
 
 - `polepos start` for creating a project
 - `polepos add module` for growing the codebase
+- `polepos add integration ...` for opt-in external-system scaffolds
+- `polepos check` for validating the project lifecycle contract
 - `polepos db ...` for managing Alembic migration workflows
 
 When in doubt, optimize for this product idea:
@@ -72,7 +75,13 @@ polepos add module customers
 - update `service.py`
 - update `router.py` if needed
 
-4. Create and apply a migration
+4. Validate the project contract
+
+```bash
+polepos check
+```
+
+5. Create and apply a migration
 
 ```bash
 polepos db revision -m "add customers table"
@@ -89,11 +98,14 @@ The generated app currently follows this structure:
 src/<package>/
   app.py
   main.py
+  run.py
   settings.py
+  auth/
   bootstrap/
   api/
   db/
   domain/
+  integrations/
   modules/
 ```
 
@@ -103,6 +115,7 @@ Important meanings:
 - `api/`: API composition and shared dependencies
 - `db/`: SQLAlchemy base, session, model import registry
 - `domain/`: shared domain exceptions and similar cross-module domain primitives
+- `integrations/`: opt-in external-system adapters such as LLM, Kafka, or RabbitMQ helpers
 - `modules/`: feature/domain modules such as `status`, `races`, `users`, `customers`
 
 Agents should prefer adding behavior inside modules instead of creating large global folders like `services/` or `repositories/` at the project root.
@@ -145,9 +158,9 @@ Current CLI command groups:
 
 - `polepos start`
 - `polepos add module`
-- `polepos check`
 - `polepos add integration kafka`
 - `polepos add integration rabbitmq`
+- `polepos check`
 - `polepos db upgrade`
 - `polepos db revision -m "..."`
 - `polepos db downgrade`
@@ -167,6 +180,30 @@ If you add new CLI behavior:
 - update README command documentation
 - add repo tests
 - keep namespace structure coherent
+
+## Project Check Rules
+
+`polepos check` is the lifecycle contract validator for generated projects.
+It should stay read-only, deterministic, and file-based.
+
+Current layers:
+
+- core checks: project identity, generated structure, Alembic config, and managed markers
+- lifecycle checks: added module files, module exports, router wiring, model wiring, and generated tests
+- integration checks: Kafka, RabbitMQ, and LLM files, settings, env values, and dependencies
+
+When changing generated structure, module generation, integration generation,
+managed markers, or Alembic behavior:
+
+- update `pole_position/cli/services/project_checker.py`
+- update `pole_position/tests/test_check_command.py`
+- update `pole_position/tests/test_project_checker.py` when helper behavior changes
+- update `docs/project-checks.md`
+- update README if user-facing behavior changes
+
+Do not make `check` require a running database, broker, LLM provider, network
+access, or optional integration dependency. It should report drift without
+installing packages, applying migrations, or mutating generated projects.
 
 ## Database and Migration Rules
 
@@ -290,6 +327,8 @@ When you change behavior, prefer adding or updating tests under:
 - `pole_position/tests/test_cli.py`
 - `pole_position/tests/test_startproject.py`
 - `pole_position/tests/test_add_module.py`
+- `pole_position/tests/test_check_command.py`
+- `pole_position/tests/test_project_checker.py`
 - `pole_position/tests/test_db_commands.py`
 
 Typical validation command:
@@ -332,16 +371,26 @@ If you cannot run a heavier integration flow because a dependency is missing in 
 3. Add or update tests under `test_db_commands.py`
 4. Keep README command docs aligned
 
+### Change project check behavior
+
+1. Update `pole_position/cli/services/project_checker.py`
+2. Keep checks read-only and file-based
+3. Add or update tests under `test_check_command.py`
+4. Add or update helper tests under `test_project_checker.py` when needed
+5. Update `docs/project-checks.md`
+6. Update README if user-facing behavior changes
+
 ## Things That Do Not Exist Yet
 
 Do not assume these are implemented unless you add them:
 
 - `polepos remove module`
 - `polepos delete module`
-- auth foundation
-- Docker support
-- advanced JSON logging support
+- full auth workflow
 - production presets
+- `polepos check --json`
+- `polepos check --fix`
+- stable machine-readable check issue codes
 
 If you introduce one of these, document it clearly and add tests.
 

@@ -83,6 +83,7 @@ Use these files to understand the repo quickly:
 
 * [Architecture](docs/architecture.md)
 * [Feature Status](docs/feature-status.md)
+* [Project Checks](docs/project-checks.md)
 * [Examples Index](examples/README.md)
 * [Agent Guide](AGENTS.md)
 
@@ -242,6 +243,20 @@ polepos check
 project. It validates project identity, generated structure, Alembic config,
 managed markers, added module lifecycle wiring, and opt-in integration wiring
 used by commands such as `polepos add module` and `polepos add integration`.
+
+Use it after adding modules or integrations, after resolving merge conflicts in
+managed files, and before handing a project to another teammate or coding
+agent. The command is read-only: it reports drift but does not rewrite files,
+install dependencies, run migrations, or contact external services.
+
+The checks are organized into three layers:
+
+* Core checks for project identity, generated structure, Alembic files, and managed markers
+* Lifecycle checks for added module router/model/test wiring
+* Integration checks for Kafka, RabbitMQ, and LLM files, settings, env values, and dependencies
+
+See [Project Checks](docs/project-checks.md) for detailed user guidance and the
+agent-facing check contract.
 
 ### Database commands
 
