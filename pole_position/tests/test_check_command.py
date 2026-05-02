@@ -49,6 +49,30 @@ def test_check_works_from_nested_directory(tmp_path: Path) -> None:
     assert "PolePosition project check passed." in result.stdout
 
 
+def test_check_passes_after_added_standard_and_ai_prompt_modules(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    standard_result = run_cli(project_root, "add", "module", "garage")
+    ai_prompt_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
+
+    assert standard_result.returncode == 0
+    assert ai_prompt_result.returncode == 0
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode == 0
+    assert "PolePosition project check passed." in result.stdout
+
+
 def test_check_fails_outside_project(tmp_path: Path) -> None:
     result = run_cli(tmp_path, "check")
 
@@ -90,6 +114,95 @@ def test_check_reports_missing_core_path_after_loose_project_detection(tmp_path:
     assert "PolePosition project check failed." in result.stdout
     assert "Required generated path is missing" in result.stdout
     assert "api/router.py" in result.stdout
+
+
+def test_check_reports_missing_added_module_router_wiring(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_content = router_path.read_text(encoding="utf-8").replace(
+        'api_router.include_router(garage_router, prefix="/garage", tags=["garage"])',
+        "# garage router is wired manually",
+    )
+    router_path.write_text(router_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Lifecycle module 'garage' is missing API router include" in result.stdout
+    assert "api/router.py" in result.stdout
+
+
+def test_check_reports_missing_added_module_model_wiring(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    models_path = project_root / "src" / "myapp" / "db" / "models.py"
+    models_content = models_path.read_text(encoding="utf-8").replace(
+        "    from myapp.modules.garage import model  # noqa: F401\n",
+        "",
+    )
+    models_path.write_text(models_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Lifecycle module 'garage' is missing model import" in result.stdout
+    assert "db/models.py" in result.stdout
+
+
+def test_check_reports_missing_added_module_test_wiring(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    (project_root / "tests" / "unit" / "test_garage_service.py").unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Lifecycle module 'garage' is missing unit test" in result.stdout
+    assert "test_garage_service.py" in result.stdout
+
+
+def test_check_reports_missing_ai_prompt_module_files(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
+    assert add_result.returncode == 0
+
+    module_root = project_root / "src" / "myapp" / "modules" / "assistant"
+    (module_root / "orchestrator.py").unlink()
+    (module_root / "prompts.py").unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Lifecycle module 'assistant' is missing generated path" in result.stdout
+    assert "orchestrator.py" in result.stdout
+    assert "prompts.py" in result.stdout
+    assert "missing model import" not in result.stdout
 
 
 def test_check_reports_missing_alembic_config(tmp_path: Path) -> None:

@@ -240,7 +240,8 @@ polepos check
 
 `check` runs the core project health checks for the current PolePosition
 project. It validates project identity, generated structure, Alembic config,
-and managed markers used by commands such as `polepos add module`.
+managed markers, and added module lifecycle wiring used by commands such as
+`polepos add module`.
 
 ### Database commands
 
