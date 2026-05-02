@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from pole_position.cli.services.project_locator import find_package_root, find_project_root
-
 
 MANAGED_MARKERS = {
     "api/router.py": [
@@ -28,6 +26,75 @@ MANAGED_MARKERS = {
 }
 
 
+PROJECT_IDENTITY_PATHS = [
+    "pyproject.toml",
+    "alembic.ini",
+]
+
+PACKAGE_IDENTITY_PATHS = [
+    "app.py",
+    "settings.py",
+    "api",
+    "bootstrap",
+    "db",
+    "modules",
+]
+
+CORE_PROJECT_PATHS = [
+    ".env.example",
+    "README.md",
+    "tests/conftest.py",
+]
+
+CORE_PACKAGE_PATHS = [
+    "__init__.py",
+    "app.py",
+    "main.py",
+    "run.py",
+    "settings.py",
+    "api/__init__.py",
+    "api/router.py",
+    "api/deps.py",
+    "auth/__init__.py",
+    "auth/dependencies.py",
+    "auth/schemas.py",
+    "auth/service.py",
+    "auth/token.py",
+    "bootstrap/__init__.py",
+    "bootstrap/errors.py",
+    "bootstrap/lifespan.py",
+    "bootstrap/logging.py",
+    "bootstrap/middleware.py",
+    "db/__init__.py",
+    "db/base.py",
+    "db/models.py",
+    "db/session.py",
+    "domain/__init__.py",
+    "domain/exceptions.py",
+    "modules/__init__.py",
+    "modules/profile/__init__.py",
+    "modules/profile/router.py",
+    "modules/profile/schemas.py",
+    "modules/races/__init__.py",
+    "modules/races/model.py",
+    "modules/races/repository.py",
+    "modules/races/router.py",
+    "modules/races/schemas.py",
+    "modules/races/service.py",
+    "modules/status/__init__.py",
+    "modules/status/router.py",
+    "modules/status/schemas.py",
+    "modules/status/service.py",
+]
+
+ALEMBIC_PATHS = [
+    "alembic.ini",
+    "migrations/env.py",
+    "migrations/script.py.mako",
+    "migrations/versions",
+]
+
+
 @dataclass(frozen=True)
 class ProjectCheckResult:
     project_root: Path
@@ -44,10 +111,14 @@ class ProjectCheckResult:
 
 
 def check_project(cwd: Path | None = None) -> ProjectCheckResult:
-    project_root = find_project_root(cwd)
-    package_root = find_package_root(cwd)
+    return check_core_project(cwd)
+
+
+def check_core_project(cwd: Path | None = None) -> ProjectCheckResult:
+    project_root, package_root = _discover_core_project(cwd)
     problems: list[str] = []
 
+    _check_project_identity(problems, project_root, package_root)
     _check_generated_structure(problems, project_root, package_root)
     _check_alembic_config(problems, project_root)
     _check_managed_markers(problems, package_root)
@@ -59,37 +130,87 @@ def check_project(cwd: Path | None = None) -> ProjectCheckResult:
     )
 
 
+def _discover_core_project(cwd: Path | None = None) -> tuple[Path, Path]:
+    current = (cwd or Path.cwd()).resolve()
+
+    for candidate in (current, *current.parents):
+        package_root = _find_core_package_root_in(candidate)
+        if package_root is not None:
+            return candidate, package_root
+
+    raise RuntimeError("Current directory does not look like a PolePosition project.")
+
+
+def _find_core_package_root_in(project_root: Path) -> Path | None:
+    src_root = project_root / "src"
+    if not src_root.is_dir():
+        return None
+
+    candidates = [
+        path
+        for path in src_root.iterdir()
+        if (
+            path.is_dir()
+            and path.name.isidentifier()
+            and _has_core_project_signals(project_root, path)
+        )
+    ]
+
+    if len(candidates) != 1:
+        return None
+
+    return candidates[0]
+
+
+def _has_core_project_signals(project_root: Path, package_root: Path) -> bool:
+    project_signal_count = sum(
+        1
+        for relative_path in PROJECT_IDENTITY_PATHS
+        if (project_root / relative_path).exists()
+    )
+    package_signal_count = sum(
+        1
+        for relative_path in PACKAGE_IDENTITY_PATHS
+        if (package_root / relative_path).exists()
+    )
+
+    return project_signal_count >= 1 and package_signal_count >= 2
+
+
+def _check_project_identity(
+    problems: list[str],
+    project_root: Path,
+    package_root: Path,
+) -> None:
+    src_root = project_root / "src"
+
+    if not (project_root / "pyproject.toml").is_file():
+        problems.append(
+            f"Project identity file is missing: {project_root / 'pyproject.toml'}"
+        )
+
+    if not src_root.is_dir():
+        problems.append(f"Project src directory is missing: {src_root}")
+
+    if package_root.parent != src_root:
+        problems.append(
+            f"Application package is not under project src directory: {package_root}"
+        )
+
+    if not package_root.name.isidentifier():
+        problems.append(
+            f"Application package name is not a valid Python identifier: {package_root.name}"
+        )
+
+
 def _check_generated_structure(
     problems: list[str],
     project_root: Path,
     package_root: Path,
 ) -> None:
     required_paths = [
-        project_root / "pyproject.toml",
-        project_root / ".env.example",
-        project_root / "README.md",
-        project_root / "tests" / "conftest.py",
-        package_root / "app.py",
-        package_root / "main.py",
-        package_root / "run.py",
-        package_root / "settings.py",
-        package_root / "api" / "router.py",
-        package_root / "api" / "deps.py",
-        package_root / "auth" / "dependencies.py",
-        package_root / "auth" / "schemas.py",
-        package_root / "auth" / "service.py",
-        package_root / "auth" / "token.py",
-        package_root / "bootstrap" / "errors.py",
-        package_root / "bootstrap" / "lifespan.py",
-        package_root / "bootstrap" / "logging.py",
-        package_root / "bootstrap" / "middleware.py",
-        package_root / "db" / "base.py",
-        package_root / "db" / "models.py",
-        package_root / "db" / "session.py",
-        package_root / "domain" / "exceptions.py",
-        package_root / "modules" / "__init__.py",
-        package_root / "modules" / "races" / "router.py",
-        package_root / "modules" / "status" / "router.py",
+        *[project_root / relative_path for relative_path in CORE_PROJECT_PATHS],
+        *[package_root / relative_path for relative_path in CORE_PACKAGE_PATHS],
     ]
 
     for path in required_paths:
@@ -98,12 +219,7 @@ def _check_generated_structure(
 
 
 def _check_alembic_config(problems: list[str], project_root: Path) -> None:
-    required_paths = [
-        project_root / "alembic.ini",
-        project_root / "migrations" / "env.py",
-        project_root / "migrations" / "script.py.mako",
-        project_root / "migrations" / "versions",
-    ]
+    required_paths = [project_root / relative_path for relative_path in ALEMBIC_PATHS]
 
     for path in required_paths:
         if not path.exists():

@@ -5,6 +5,7 @@ from pole_position.cli.services.project_checker import (
     _check_alembic_config,
     _check_generated_structure,
     _check_managed_markers,
+    _check_project_identity,
 )
 
 
@@ -25,6 +26,18 @@ def test_project_check_result_properties(tmp_path: Path) -> None:
     assert failed_result.passed is False
 
 
+def test_project_identity_check_reports_missing_identity_file(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    package_root = project_root / "src" / "shop_api"
+    package_root.mkdir(parents=True)
+    problems: list[str] = []
+
+    _check_project_identity(problems, project_root, package_root)
+
+    assert any("Project identity file is missing" in problem for problem in problems)
+    assert any("pyproject.toml" in problem for problem in problems)
+
+
 def test_generated_structure_check_reports_missing_paths(tmp_path: Path) -> None:
     project_root = tmp_path / "shop-api"
     package_root = project_root / "src" / "shop_api"
@@ -32,7 +45,7 @@ def test_generated_structure_check_reports_missing_paths(tmp_path: Path) -> None
 
     _check_generated_structure(problems, project_root, package_root)
 
-    assert any("pyproject.toml" in problem for problem in problems)
+    assert any(".env.example" in problem for problem in problems)
     assert any("tests/conftest.py" in problem for problem in problems)
     assert any("src/shop_api/app.py" in problem for problem in problems)
     assert any("src/shop_api/modules/status/router.py" in problem for problem in problems)

@@ -238,8 +238,8 @@ inside the API process.
 polepos check
 ```
 
-`check` validates that the current project still looks like a PolePosition
-project. It checks project-root detection, generated structure, Alembic config,
+`check` runs the core project health checks for the current PolePosition
+project. It validates project identity, generated structure, Alembic config,
 and managed markers used by commands such as `polepos add module`.
 
 ### Database commands

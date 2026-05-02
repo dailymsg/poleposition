@@ -75,7 +75,7 @@ polepos db upgrade
 polepos check
   -> commands/check.py
   -> project_checker.py
-  -> generated structure + managed marker diagnostics
+  -> core project identity + generated structure + Alembic + managed marker diagnostics
 ```
 
 ## CLI Map

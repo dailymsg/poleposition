@@ -27,7 +27,7 @@ Instead, it clarifies whether a feature is:
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level, not full provider integrations yet. |
 | `polepos add integration kafka` | Growing | First messaging integration; producer, consumer factory, settings, env, and test double support are scaffolded. |
 | `polepos add integration rabbitmq` | Growing | Second messaging integration; publisher, queue factory, settings, env, and test double support are scaffolded. |
-| `polepos check` | Stable foundation | Validates generated structure, Alembic config, project detection, and managed markers. |
+| `polepos check` | Stable foundation | Runs core checks for project identity, generated structure, Alembic config, and managed markers. |
 | `polepos db ...` commands | Stable foundation | Good migration lifecycle wrapper around Alembic. |
 | Alembic migration support | Stable foundation | Generated projects are migration-first. |
 | Docker and PostgreSQL workflow | Growing | Good local runtime story; Docker e2e exists as opt-in smoke coverage. |

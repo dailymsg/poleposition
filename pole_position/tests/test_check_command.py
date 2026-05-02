@@ -76,6 +76,22 @@ def test_check_reports_missing_managed_marker(tmp_path: Path) -> None:
     assert "api/router.py" in result.stdout
 
 
+def test_check_reports_missing_core_path_after_loose_project_detection(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_path.unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "PolePosition project check failed." in result.stdout
+    assert "Required generated path is missing" in result.stdout
+    assert "api/router.py" in result.stdout
+
+
 def test_check_reports_missing_alembic_config(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
