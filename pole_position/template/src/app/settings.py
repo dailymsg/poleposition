@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     auth_access_token_expire_minutes: int = 60
     auth_issuer: str = "{{project_name}}"
     # polepos:auth-settings
+    # polepos:integration-settings
     # polepos:llm-settings
 
     model_config = SettingsConfigDict(

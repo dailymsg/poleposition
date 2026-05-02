@@ -19,12 +19,13 @@ Instead, it clarifies whether a feature is:
 
 | Area | Status | Notes |
 |---|---|---|
-| Project lifecycle CLI shape | Stable foundation | Product is organized around `start`, `add module`, and `db` workflows rather than a one-time template. |
+| Project lifecycle CLI shape | Stable foundation | Product is organized around `start`, `add module`, `add integration`, and `db` workflows rather than a one-time template. |
 | `polepos start` | Stable foundation | Core product entrypoint; generated project shape is now a major part of the product contract. |
 | Template rendering | Stable foundation | Supporting mechanism for lifecycle workflows; placeholder replacement and template packaging are in good shape. |
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level, not full provider integrations yet. |
+| `polepos add integration kafka` | Growing | First messaging integration; producer, consumer factory, settings, env, and test double support are scaffolded. |
 | `polepos db ...` commands | Stable foundation | Good migration lifecycle wrapper around Alembic. |
 | Alembic migration support | Stable foundation | Generated projects are migration-first. |
 | Docker and PostgreSQL workflow | Growing | Good local runtime story; Docker e2e exists as opt-in smoke coverage. |
@@ -47,6 +48,13 @@ This is one of the most important product surfaces.
 
 It is already useful, but it still assumes PolePosition-managed markers remain in place.
 That means it is powerful, but not fully free-form.
+
+### Messaging integrations
+
+Kafka is the first messaging integration because it fits enterprise event
+streaming workflows and FastAPI's async runtime. RabbitMQ should follow as the
+next transport using the same opt-in `add integration` shape rather than being
+enabled by default in `polepos start`.
 
 ### Auth foundation
 

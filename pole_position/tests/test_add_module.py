@@ -30,7 +30,80 @@ def test_add_command_shows_usage(tmp_path: Path):
 
     assert result.returncode == 0
     assert "Usage: polepos add <subcommand>" in result.stdout
+    assert "integration" in result.stdout
     assert "module" in result.stdout
+
+
+
+def test_add_kafka_integration_creates_files_and_updates_project(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "integration", "kafka")
+
+    assert result.returncode == 0
+    assert "Added integration: kafka" in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    kafka_root = package_root / "integrations" / "kafka"
+    expected_files = [
+        package_root / "integrations" / "__init__.py",
+        kafka_root / "__init__.py",
+        kafka_root / "consumer.py",
+        kafka_root / "factory.py",
+        kafka_root / "producer.py",
+        kafka_root / "schemas.py",
+        kafka_root / "testing.py",
+    ]
+    for path in expected_files:
+        assert path.exists(), f"Expected generated Kafka file is missing: {path}"
+
+    settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
+    env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+    pyproject_content = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    producer_content = (kafka_root / "producer.py").read_text(encoding="utf-8")
+    factory_content = (kafka_root / "factory.py").read_text(encoding="utf-8")
+    testing_content = (kafka_root / "testing.py").read_text(encoding="utf-8")
+
+    assert 'kafka_bootstrap_servers: str = "localhost:9092"' in settings_content
+    assert 'kafka_client_id: str = "myapp"' in settings_content
+    assert "kafka_request_timeout_ms: int = 40000" in settings_content
+    assert "KAFKA_BOOTSTRAP_SERVERS=localhost:9092" in env_content
+    assert "KAFKA_CLIENT_ID=myapp" in env_content
+    assert '"aiokafka>=0.12.0",' in pyproject_content
+    assert "from myapp.bootstrap.logging import get_logger" in producer_content
+    assert "class KafkaEventProducer:" in producer_content
+    assert "from aiokafka import AIOKafkaProducer" in factory_content
+    assert "from aiokafka import AIOKafkaConsumer" in factory_content
+    assert "class InMemoryKafkaEventProducer:" in testing_content
+    assert "{{" not in producer_content
+    assert "{{" not in factory_content
+
+
+def test_add_kafka_integration_rejects_duplicate(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    first_result = run_cli(project_root, "add", "integration", "kafka")
+    second_result = run_cli(project_root, "add", "integration", "kafka")
+
+    assert first_result.returncode == 0
+    assert second_result.returncode != 0
+    assert "Integration already exists: kafka" in second_result.stdout
+
+
+def test_add_integration_rejects_unknown_integration(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "integration", "rabbitmq")
+
+    assert result.returncode != 0
+    assert "Unsupported integration 'rabbitmq'" in result.stdout
+    assert "Integrations: kafka" in result.stdout
 
 
 def test_add_module_creates_module_files_and_updates_router(tmp_path: Path):

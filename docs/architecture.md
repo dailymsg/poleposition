@@ -14,11 +14,12 @@ It is meant to help both humans and coding agents answer the same questions quic
 
 PolePosition is a project lifecycle CLI, not only a one-time scaffold tool or template repository.
 
-Its value comes from three connected workflows:
+Its value comes from connected lifecycle workflows:
 
 1. `polepos start`
 2. `polepos add module`
-3. `polepos db ...`
+3. `polepos add integration ...`
+4. `polepos db ...`
 
 That means the product helps at:
 
@@ -56,6 +57,11 @@ polepos add module users
   -> module_templates.py
   -> generated module files + managed updates
 
+polepos add integration kafka
+  -> commands/add/integration.py
+  -> integration_creator.py
+  -> generated integration files + managed settings/dependency updates
+
 polepos db upgrade
   -> commands/db/upgrade.py
   -> db_runner.py
@@ -81,6 +87,7 @@ Current command groups:
 
 - `start`
 - `add module`
+- `add integration`
 - `db upgrade`
 - `db revision`
 - `db downgrade`
@@ -171,6 +178,20 @@ This file:
 - optionally adds LLM integration files
 - optionally patches settings and `.env.example`
 
+## `add integration` Architecture
+
+`polepos add integration ...` grows an existing project with external system
+helpers while keeping the base template lean.
+
+Current integrations:
+
+- `kafka`
+
+Kafka support is intentionally opt-in. It writes `integrations/kafka` helpers,
+adds Kafka settings and `.env.example` values, and updates the generated
+project dependency list with `aiokafka`. Consumer loops are left as explicit
+worker/runtime code instead of being started inside the FastAPI app process.
+
 ## Managed Block Contract
 
 `add module` depends on marker comments in generated files.
@@ -183,6 +204,8 @@ Current managed markers include:
 - `# polepos:module-exports`
 - `# polepos:auth-settings`
 - `# polepos:auth-env`
+- `# polepos:integration-settings`
+- `# polepos:integration-env`
 - `# polepos:llm-settings`
 - `# polepos:llm-env`
 
@@ -202,7 +225,8 @@ The most important managed files are:
 - `src/<package>/settings.py`
 - `.env.example`
 
-If these markers are removed or rearranged incorrectly, `polepos add module` may fail or stop updating the file automatically.
+If these markers are removed or rearranged incorrectly, `polepos add module` or
+`polepos add integration ...` may fail or stop updating the file automatically.
 
 ## Database Lifecycle
 

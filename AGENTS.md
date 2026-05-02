@@ -145,6 +145,7 @@ Current CLI command groups:
 
 - `polepos start`
 - `polepos add module`
+- `polepos add integration kafka`
 - `polepos db upgrade`
 - `polepos db revision -m "..."`
 - `polepos db downgrade`
@@ -244,6 +245,8 @@ Examples:
 - `# polepos:module-exports`
 - `# polepos:auth-settings`
 - `# polepos:auth-env`
+- `# polepos:integration-settings`
+- `# polepos:integration-env`
 - `# polepos:llm-settings`
 - `# polepos:llm-env`
 

@@ -180,6 +180,17 @@ polepos add module assistant --template ai-prompt
 `ai-prompt` adds a provider-agnostic LLM endpoint skeleton with module-local
 prompt orchestration and shared `integrations/llm` adapters.
 
+### Add integrations
+
+```bash
+polepos add integration kafka
+```
+
+Kafka integration adds `integrations/kafka` helpers for JSON event publishing,
+consumer construction, test doubles, Kafka settings, `.env.example` values, and
+the generated project's `aiokafka` dependency. Consumers are intentionally left
+as explicit worker/runtime code instead of being started inside the API process.
+
 ### Database commands
 
 ```bash
@@ -307,6 +318,7 @@ PolePosition is a lifecycle CLI, so the commands are meant to be used over time,
 
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure
 * `polepos add module` when you want to add a new REST/domain module or an AI prompt module to an existing project
+* `polepos add integration kafka` when you want Kafka producer and consumer wiring in an existing project
 * `polepos db upgrade` when you want to apply migrations to the database
 * `polepos db revision -m "..."` when you changed models and need a new migration
 * `polepos db downgrade` when you need to roll back a migration
@@ -334,6 +346,7 @@ polepos help
 polepos start <name> [--install] [--no-bytecode]
 polepos startproject <name> [--install] [--no-bytecode]
 polepos add module <name>
+polepos add integration kafka
 polepos db upgrade [target]
 polepos db revision -m "<message>"
 polepos db downgrade <target>
@@ -413,12 +426,14 @@ The CLI is intentionally lightweight and avoids heavy templating engines. Templa
 * [x] Project name validation
 * [x] Enterprise FastAPI project lifecycle foundation
 * [x] `polepos add module`
+* [x] `polepos add integration kafka`
 * [x] Alembic and database migrations
 * [x] Docker support
 * [x] `polepos db ...` commands
 * [ ] JSON logging support
 * [ ] Auth foundation
 * [ ] Production-ready presets
+* [ ] RabbitMQ integration
 
 ---
 

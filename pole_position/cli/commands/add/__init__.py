@@ -1,9 +1,11 @@
 from pole_position.cli.command import Command
+from pole_position.cli.commands.add.integration import command as integration_cmd
 from pole_position.cli.commands.add.module import command as module_cmd
 from pole_position.cli.registry import CommandRegistry
 
 
 subcommands = CommandRegistry()
+subcommands.register(integration_cmd)
 subcommands.register(module_cmd)
 
 

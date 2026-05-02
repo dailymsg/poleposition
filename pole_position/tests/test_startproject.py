@@ -209,8 +209,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "# polepos:model-imports" in (package_root / "db" / "models.py").read_text(encoding="utf-8")
     assert "# polepos:module-exports" in (package_root / "modules" / "__init__.py").read_text(encoding="utf-8")
     assert "# polepos:auth-settings" in settings_module
+    assert "# polepos:integration-settings" in settings_module
     assert "# polepos:llm-settings" in settings_module
     assert "# polepos:auth-env" in env_example
+    assert "# polepos:integration-env" in env_example
     assert "# polepos:llm-env" in env_example
     assert "from demo_app.api.router import api_router" in app_module
     assert 'uvicorn.run(' in run_module
