@@ -37,7 +37,7 @@ poleposition = "pole_position.cli.main:main"
 polepos = "pole_position.cli.main:main"
 
 [project.urls]
-Homepage = "https://github.com/erenertemden/poleposition"
+Homepage = "https://erenertemden.github.io/poleposition/"
 Repository = "https://github.com/erenertemden/poleposition"
 Issues = "https://github.com/erenertemden/poleposition/issues"
 

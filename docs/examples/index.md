@@ -5,6 +5,22 @@ rewrite, and how PolePosition's structure supports a real workflow.
 
 ## Available Examples
 
+### User Registration
+
+Shows how to turn a generated module into a real user registration REST API
+with command flow, file-by-file edits, password hashing, tests, and migration
+checks.
+
+Focus:
+
+- `polepos start account-api`
+- `polepos add module users`
+- `POST /api/v1/users/register`
+- module-local model, schema, repository, service, router, and test changes
+- Alembic migration review
+
+Read the site guide: [User Registration](user-registration.md)
+
 ### Auth Foundation
 
 Shows how the generated JWT authentication foundation protects routes before a

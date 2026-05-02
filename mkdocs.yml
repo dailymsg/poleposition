@@ -41,5 +41,6 @@ nav:
   - Feature Status: feature-status.md
   - Examples:
       - Overview: examples/index.md
+      - User Registration: examples/user-registration.md
       - Auth Foundation: examples/auth-foundation.md
       - HTML Swap: examples/html-swap.md
