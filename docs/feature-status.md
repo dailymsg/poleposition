@@ -1,6 +1,6 @@
 # Feature Status
 
-This file describes the current maturity of PolePosition features.
+This file describes the current maturity of PolePosition lifecycle features.
 
 The goal is not to label features as simply "done" or "not done".
 Instead, it clarifies whether a feature is:
@@ -19,8 +19,9 @@ Instead, it clarifies whether a feature is:
 
 | Area | Status | Notes |
 |---|---|---|
+| Project lifecycle CLI shape | Stable foundation | Product is organized around `start`, `add module`, and `db` workflows rather than a one-time template. |
 | `polepos start` | Stable foundation | Core product entrypoint; generated project shape is now a major part of the product contract. |
-| Template rendering | Stable foundation | Placeholder replacement and template packaging are in good shape. |
+| Template rendering | Stable foundation | Supporting mechanism for lifecycle workflows; placeholder replacement and template packaging are in good shape. |
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level, not full provider integrations yet. |
@@ -33,6 +34,12 @@ Instead, it clarifies whether a feature is:
 | Example scenarios | Growing | Good for onboarding and product understanding; should expand over time. |
 
 ## Important Clarifications
+
+### Templates
+
+Template files are part of how PolePosition ships project and module defaults.
+They should not be treated as the product boundary: the CLI lifecycle around
+starting, growing, validating, and migrating projects is the product shape.
 
 ### `add module`
 

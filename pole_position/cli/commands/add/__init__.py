@@ -19,6 +19,6 @@ def run(args: list[str]) -> None:
 command = Command(
     name="add",
     handler=run,
-    description="Add new code generation resources",
+    description="Grow the current project with new resources",
     subcommands=subcommands,
 )

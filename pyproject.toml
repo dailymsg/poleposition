@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "poleposition"
 version = "0.0.21"
-description = "CLI tool to put teams in pole position when starting enterprise FastAPI projects"
+description = "Project lifecycle CLI for starting and growing enterprise FastAPI projects"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 dependencies = []
@@ -14,6 +14,9 @@ license = { text = "MIT" }
 keywords = [
     "fastapi",
     "cli",
+    "project-lifecycle",
+    "lifecycle",
+    "migrations",
     "scaffold",
     "template",
     "starter",

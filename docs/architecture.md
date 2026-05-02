@@ -12,7 +12,7 @@ It is meant to help both humans and coding agents answer the same questions quic
 
 ## Product Shape
 
-PolePosition is not only a one-time scaffold tool.
+PolePosition is a project lifecycle CLI, not only a one-time scaffold tool or template repository.
 
 Its value comes from three connected workflows:
 
@@ -24,7 +24,10 @@ That means the product helps at:
 
 - project creation
 - codebase growth
+- project contract validation
 - schema lifecycle management
+
+Templates are a delivery mechanism for those workflows, not the product boundary.
 
 The generated project should stay FastAPI-native while still giving teams opinionated structure and defaults.
 

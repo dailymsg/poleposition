@@ -3,6 +3,7 @@ from pole_position.cli.registry import registry
 
 
 def run(args: list[str]) -> None:
+    print("PolePosition project lifecycle CLI for FastAPI projects.\n")
     print("Usage: polepos <command> [options]\n")
     print("Commands:")
 

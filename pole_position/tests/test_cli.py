@@ -13,6 +13,7 @@ def run_cli(*args):
 def test_help_command():
     result = run_cli("help")
     assert result.returncode == 0
+    assert "project lifecycle CLI" in result.stdout
     assert "Usage" in result.stdout
 
 

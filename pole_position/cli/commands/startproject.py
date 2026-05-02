@@ -86,5 +86,5 @@ command = Command(
     name="start",
     aliases=("startproject",),
     handler=run,
-    description="Create a new FastAPI project",
+    description="Start a new FastAPI project lifecycle",
 )
