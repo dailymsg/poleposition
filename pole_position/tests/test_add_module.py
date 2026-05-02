@@ -255,6 +255,7 @@ def test_add_module_creates_module_files_and_updates_router(tmp_path: Path):
 
     assert "from myapp.modules.garage.router import router as garage_router" in router_content
     assert 'api_router.include_router(garage_router, prefix="/garage", tags=["garage"])' in router_content
+    assert router_content.splitlines()[0] == "from fastapi import APIRouter"
     assert "from myapp.modules.garage import model" in db_models_content
     assert '"garage"' in modules_init_content
     assert 'client.post("/api/v1/garage/"' in integration_test_content

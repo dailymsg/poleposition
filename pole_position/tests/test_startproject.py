@@ -425,6 +425,19 @@ def test_packaging_includes_hidden_template_files() -> None:
     assert "include pole_position/template/.gitignore" in manifest
     assert "global-exclude __pycache__ *.py[cod]" in manifest
 
+
+def test_lockfile_version_matches_project_metadata() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    lockfile = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
+    poleposition_package = next(
+        package
+        for package in lockfile["package"]
+        if package["name"] == "poleposition"
+    )
+
+    assert poleposition_package["version"] == pyproject["project"]["version"]
+
+
 def test_install_flag(tmp_path: Path):
     from pole_position.cli.commands.startproject import run
 

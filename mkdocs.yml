@@ -1,0 +1,5 @@
+site_name: PolePosition
+site_url: https://erenertemden.github.io/poleposition
+theme:
+  name: material
+docs_dir: docs

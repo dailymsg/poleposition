@@ -1,6 +1,11 @@
 import subprocess
 import sys
 
+import pytest
+
+from pole_position.cli.command import Command
+from pole_position.cli.registry import CommandRegistry
+
 
 def run_cli(*args):
     return subprocess.run(
@@ -27,3 +32,39 @@ def test_unknown_command():
     result = run_cli("unknown")
     assert result.returncode != 0
     assert "Unknown command" in result.stdout
+
+
+def test_command_registry_allows_idempotent_registration():
+    registry = CommandRegistry()
+    command = Command(
+        name="example",
+        aliases=("sample",),
+        handler=lambda args: None,
+        description="Example command",
+    )
+
+    registry.register(command)
+    registry.register(command)
+
+    assert registry.get("example") is command
+    assert registry.get("sample") is command
+    assert registry.all() == [command]
+
+
+def test_command_registry_rejects_conflicting_registration():
+    registry = CommandRegistry()
+    command = Command(
+        name="example",
+        handler=lambda args: None,
+        description="Example command",
+    )
+    conflicting_command = Command(
+        name="example",
+        handler=lambda args: None,
+        description="Conflicting command",
+    )
+
+    registry.register(command)
+
+    with pytest.raises(RuntimeError, match="Command already registered: example"):
+        registry.register(conflicting_command)

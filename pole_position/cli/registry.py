@@ -7,8 +7,13 @@ class CommandRegistry:
 
     def register(self, command: Command) -> None:
         for name in (command.name, *command.aliases):
-            if name in self._commands:
+            existing = self._commands.get(name)
+            if existing == command:
+                continue
+
+            if existing is not None:
                 raise RuntimeError(f"Command already registered: {name}")
+
             self._commands[name] = command
 
     def get(self, name: str) -> Command | None:

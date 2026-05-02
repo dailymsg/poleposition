@@ -297,13 +297,25 @@ def _insert_sorted_line_before_marker(
     lines = path.read_text(encoding="utf-8").splitlines()
     marker_index = _find_marker_index(lines, marker, path)
 
-    managed_lines = [existing for existing in lines[:marker_index] if existing.startswith(match_prefix)]
+    managed_lines = [
+        existing
+        for existing in lines[:marker_index]
+        if existing.startswith(match_prefix)
+    ]
     if line in managed_lines:
         return
 
     managed_lines.append(line)
     managed_lines.sort()
-    preserved_prefix = [existing for existing in lines[:marker_index] if not existing.startswith(match_prefix)]
+    preserved_prefix = [
+        existing
+        for existing in lines[:marker_index]
+        if not existing.startswith(match_prefix)
+    ]
+
+    while preserved_prefix and preserved_prefix[0] == "":
+        preserved_prefix.pop(0)
+
     updated_lines = preserved_prefix + managed_lines + lines[marker_index:]
     path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
 
