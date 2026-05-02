@@ -1,0 +1,83 @@
+# Getting Started
+
+PolePosition is designed around a `uv`-first workflow, while still supporting a
+normal `pip` and virtualenv setup.
+
+## Install
+
+Install the CLI as a tool:
+
+```bash
+uv tool install poleposition
+```
+
+Or install with pip:
+
+```bash
+pip install poleposition
+```
+
+## Create a Project
+
+```bash
+polepos start shop-api
+cd shop-api
+cp .env.example .env
+uv sync
+polepos db upgrade
+uv run python -m shop_api.run
+```
+
+Open the generated FastAPI docs at:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+## Add a Module
+
+```bash
+polepos add module customers
+```
+
+The command creates a module under `src/shop_api/modules/customers/`, adds
+starter tests, wires the router, and registers model imports for Alembic
+metadata discovery.
+
+Refine the generated files for the real domain:
+
+- `model.py`
+- `schemas.py`
+- `service.py`
+- `repository.py`
+- `router.py`
+
+## Validate the Project Contract
+
+```bash
+polepos check
+```
+
+The check command is read-only and file-based. It reports lifecycle drift
+without installing dependencies, running migrations, starting services, or
+contacting external systems.
+
+## Create and Apply Migrations
+
+```bash
+polepos db revision -m "add customers table"
+polepos db upgrade
+```
+
+PolePosition generated projects are migration-first. Keep schema changes in
+Alembic instead of creating tables during application startup.
+
+## Docker Workflow
+
+Generated projects include a Docker setup with PostgreSQL:
+
+```bash
+cp .env.example .env
+docker compose up --build
+docker compose run --rm app uv run alembic upgrade head
+```

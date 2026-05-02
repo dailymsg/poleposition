@@ -81,12 +81,21 @@ PolePosition removes that overhead with CLI workflows that create the project, g
 
 Use these files to understand the repo quickly:
 
+* [Published Docs](https://erenertemden.github.io/poleposition/)
+* [Getting Started](docs/getting-started.md)
+* [CLI Reference](docs/cli.md)
 * [Architecture](docs/architecture.md)
 * [Feature Status](docs/feature-status.md)
 * [Project Checks](docs/project-checks.md)
 * [Examples Index](examples/README.md)
 * [Agent Guide](AGENTS.md)
 
+Build the documentation site locally:
+
+```bash
+python -m pip install -r requirements-docs.txt
+python -m mkdocs serve
+```
 
 ---
 

@@ -1,5 +1,45 @@
 site_name: PolePosition
-site_url: https://erenertemden.github.io/poleposition
+site_url: https://erenertemden.github.io/poleposition/
+site_description: Project lifecycle CLI for starting and growing enterprise FastAPI projects
+repo_url: https://github.com/erenertemden/poleposition
+repo_name: erenertemden/poleposition
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+
 theme:
   name: material
-docs_dir: docs
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - CLI Reference: cli.md
+  - Architecture: architecture.md
+  - Project Checks: project-checks.md
+  - Feature Status: feature-status.md
+  - Examples:
+      - Overview: examples/index.md
+      - Auth Foundation: examples/auth-foundation.md
+      - HTML Swap: examples/html-swap.md
