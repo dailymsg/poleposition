@@ -15,6 +15,7 @@ def test_help_command():
     assert result.returncode == 0
     assert "project lifecycle CLI" in result.stdout
     assert "Usage" in result.stdout
+    assert "check" in result.stdout
 
 
 def test_version_command():

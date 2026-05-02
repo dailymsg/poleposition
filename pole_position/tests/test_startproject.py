@@ -58,15 +58,6 @@ def test_existing_directory(tmp_path: Path):
     assert result.returncode != 0
     assert "already exists" in result.stdout
 
-def test_existing_directory(tmp_path: Path):
-    project_path = tmp_path / "myapp"
-    project_path.mkdir()
-
-    result = run_cli(tmp_path, "start", "myapp")
-
-    assert result.returncode != 0
-    assert "already exists" in result.stdout
-
 def test_package_name_normalization(tmp_path: Path):
     result = run_cli(tmp_path, "start", "my-app")
 
@@ -193,6 +184,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert 'name = "demo-app"' in pyproject
     assert '"PyJWT>=' in pyproject
     assert '"psycopg[binary]>=' in pyproject
+    assert "[project.optional-dependencies]" in pyproject
+    assert "dev = [" in pyproject
     assert 'build-backend = "hatchling.build"' in pyproject
     assert 'packages = ["src/demo_app"]' in pyproject
     assert 'CMD ["uv", "run", "python", "-m", "demo_app.run"]' in dockerfile
@@ -300,10 +293,12 @@ def test_generated_project_includes_alembic_support(tmp_path: Path):
     assert "from demo_app.db.models import import_models" in migrations_env
     assert "from demo_app.settings import get_settings" in migrations_env
     assert "target_metadata = Base.metadata" in migrations_env
-    assert "alembic upgrade head" in readme
+    assert "uv run alembic upgrade head" in readme
+    assert "python -m alembic upgrade head" in readme
     assert 'op.create_table(' in initial_migration
     assert '"races"' in initial_migration
-    assert 'alembic revision --autogenerate -m "add garage table"' in readme
+    assert 'uv run alembic revision --autogenerate -m "add garage table"' in readme
+    assert 'python -m alembic revision --autogenerate -m "add garage table"' in readme
     assert "{{project" not in migrations_env
 
 
@@ -353,8 +348,8 @@ def test_generated_project_is_migration_first(tmp_path: Path):
 
     assert "Base.metadata.create_all" not in lifespan
     assert "import_models()" in lifespan
-    assert "alembic upgrade head" in result.stdout
-    assert "alembic upgrade head" in readme
+    assert "uv run alembic upgrade head" in result.stdout
+    assert "uv run alembic upgrade head" in readme
 
 
 def test_no_bytecode_flag_updates_generated_run_instructions(tmp_path: Path):
@@ -368,14 +363,21 @@ def test_no_bytecode_flag_updates_generated_run_instructions(tmp_path: Path):
     migrations_env = (project_root / "migrations" / "env.py").read_text(encoding="utf-8")
     tests_conftest = (project_root / "tests" / "conftest.py").read_text(encoding="utf-8")
 
-    expected_command = "uv run python -m demo_app.run"
-    assert expected_command in result.stdout
-    assert expected_command in readme
-    assert "Configured generated runtime and migration entrypoints without Python bytecode writes." in result.stdout
+    expected_migration_command = "PYTHONDONTWRITEBYTECODE=1 uv run alembic upgrade head"
+    expected_pip_migration_command = "PYTHONDONTWRITEBYTECODE=1 python -m alembic upgrade head"
+    expected_run_command = "PYTHONDONTWRITEBYTECODE=1 uv run python -m demo_app.run"
+    assert expected_migration_command in result.stdout
+    assert expected_migration_command in readme
+    assert expected_pip_migration_command in readme
+    assert expected_run_command in result.stdout
+    assert expected_run_command in readme
+    assert "Configured generated local Python commands to start without bytecode writes." in result.stdout
     assert "generated with `--no-bytecode`" in readme
-    assert "sys.dont_write_bytecode = True" in run_module
-    assert "sys.dont_write_bytecode = True" in migrations_env
-    assert "sys.dont_write_bytecode = True" in tests_conftest
+    assert "PYTHONDONTWRITEBYTECODE=1" in readme
+    assert "{{no_bytecode_command_prefix}}" not in readme
+    assert "sys.dont_write_bytecode = True" not in run_module
+    assert "sys.dont_write_bytecode = True" not in migrations_env
+    assert "sys.dont_write_bytecode = True" not in tests_conftest
 
 
 def test_generated_gitignore_ignores_bytecode_artifacts(tmp_path: Path):
@@ -413,8 +415,10 @@ def test_packaging_includes_hidden_template_files() -> None:
     assert "template/.env.example" in package_data
     assert "template/.gitignore" in package_data
     assert "template/.dockerignore" in package_data
+    assert "cli/services/module_templates/files/**/*.tpl" in package_data
     assert "template/**/__pycache__/*" in exclude_package_data
     assert "template/**/*.pyc" in exclude_package_data
+    assert "recursive-include pole_position/cli/services/module_templates/files *.tpl" in manifest
     assert "recursive-include pole_position/template *" in manifest
     assert "include pole_position/template/.dockerignore" in manifest
     assert "include pole_position/template/.env.example" in manifest
@@ -424,10 +428,34 @@ def test_packaging_includes_hidden_template_files() -> None:
 def test_install_flag(tmp_path: Path):
     from pole_position.cli.commands.startproject import run
 
-    with patch("pole_position.cli.commands.startproject.install_project_dependencies") as mock_install:
+    with patch(
+        "pole_position.cli.commands.startproject.install_project_dependencies",
+        return_value="uv",
+    ) as mock_install:
         with pytest.MonkeyPatch.context() as mp:
             mp.chdir(tmp_path)
             run(["myapp", "--install"])
 
     mock_install.assert_called_once_with(project_path=Path("myapp"))
    
+
+def test_install_flag_prints_pip_next_steps_when_uv_is_unavailable(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from pole_position.cli.commands.startproject import run
+
+    with patch(
+        "pole_position.cli.commands.startproject.install_project_dependencies",
+        return_value="pip",
+    ):
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(tmp_path)
+            run(["myapp", "--install"])
+
+    captured = capsys.readouterr()
+    assert "Dependencies installed successfully with pip." in captured.out
+    assert "source .venv/bin/activate" in captured.out
+    assert "python -m alembic upgrade head" in captured.out
+    assert "python -m myapp.run" in captured.out
+    assert "uv run alembic upgrade head" not in captured.out

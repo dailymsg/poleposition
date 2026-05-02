@@ -19,13 +19,15 @@ Instead, it clarifies whether a feature is:
 
 | Area | Status | Notes |
 |---|---|---|
-| Project lifecycle CLI shape | Stable foundation | Product is organized around `start`, `add module`, `add integration`, and `db` workflows rather than a one-time template. |
+| Project lifecycle CLI shape | Stable foundation | Product is organized around `start`, `add module`, `add integration`, `check`, and `db` workflows rather than a one-time template. |
 | `polepos start` | Stable foundation | Core product entrypoint; generated project shape is now a major part of the product contract. |
 | Template rendering | Stable foundation | Supporting mechanism for lifecycle workflows; placeholder replacement and template packaging are in good shape. |
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level, not full provider integrations yet. |
 | `polepos add integration kafka` | Growing | First messaging integration; producer, consumer factory, settings, env, and test double support are scaffolded. |
+| `polepos add integration rabbitmq` | Growing | Second messaging integration; publisher, queue factory, settings, env, and test double support are scaffolded. |
+| `polepos check` | Stable foundation | Validates generated structure, Alembic config, project detection, and managed markers. |
 | `polepos db ...` commands | Stable foundation | Good migration lifecycle wrapper around Alembic. |
 | Alembic migration support | Stable foundation | Generated projects are migration-first. |
 | Docker and PostgreSQL workflow | Growing | Good local runtime story; Docker e2e exists as opt-in smoke coverage. |
@@ -40,7 +42,7 @@ Instead, it clarifies whether a feature is:
 
 Template files are part of how PolePosition ships project and module defaults.
 They should not be treated as the product boundary: the CLI lifecycle around
-starting, growing, validating, and migrating projects is the product shape.
+starting, growing, checking, and migrating projects is the product shape.
 
 ### `add module`
 
@@ -51,10 +53,10 @@ That means it is powerful, but not fully free-form.
 
 ### Messaging integrations
 
-Kafka is the first messaging integration because it fits enterprise event
-streaming workflows and FastAPI's async runtime. RabbitMQ should follow as the
-next transport using the same opt-in `add integration` shape rather than being
-enabled by default in `polepos start`.
+Kafka and RabbitMQ are opt-in messaging integrations rather than default
+`polepos start` behavior. Kafka covers event streaming workflows; RabbitMQ covers
+AMQP exchange/queue messaging. Both should remain explicit runtime or worker
+surfaces instead of being started automatically inside the API process.
 
 ### Auth foundation
 

@@ -1,0 +1,33 @@
+from pole_position.cli.services.module_templates.naming import to_class_name
+from pole_position.cli.services.module_templates.renderer import render_template
+from pole_position.cli.services.module_templates.spec import ModuleTemplate
+
+
+def build_standard_template(*, package_name: str, module_name: str) -> ModuleTemplate:
+    class_name = to_class_name(module_name)
+    context = {
+        "package_name": package_name,
+        "module_name": module_name,
+        "class_name": class_name,
+    }
+
+    return ModuleTemplate(
+        files={
+            "__init__.py": render_template("standard/__init__.py.tpl", context),
+            "model.py": render_template("standard/model.py.tpl", context),
+            "repository.py": render_template("standard/repository.py.tpl", context),
+            "schemas.py": render_template("standard/schemas.py.tpl", context),
+            "service.py": render_template("standard/service.py.tpl", context),
+            "router.py": render_template("standard/router.py.tpl", context),
+        },
+        integration_test_name=f"test_{module_name}.py",
+        integration_test_content=render_template(
+            "standard/tests/integration.py.tpl",
+            context,
+        ),
+        unit_test_name=f"test_{module_name}_service.py",
+        unit_test_content=render_template(
+            "standard/tests/unit.py.tpl",
+            context,
+        ),
+    )

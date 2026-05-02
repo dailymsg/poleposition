@@ -4,7 +4,7 @@
 
 A project lifecycle CLI that puts teams in pole position when starting, growing, and maintaining enterprise FastAPI projects.
 
-PolePosition helps you keep FastAPI's speed while avoiding the usual setup drag of enterprise backend work. It does more than render a project template: it gives teams commands for project creation, module growth, project validation, and migration workflows as the codebase evolves.
+PolePosition helps you keep [FastAPI](https://fastapi.tiangolo.com/)'s speed while avoiding the usual setup drag of enterprise backend work. It does more than render a project template: it gives teams commands for project creation, module growth, project checks, and migration workflows as the codebase evolves.
 
 Start a new project lifecycle:
 
@@ -29,13 +29,13 @@ polepos start myapp --no-bytecode
 $ polepos start myapp --install
 Created project: myapp
 
-Installing project dependencies with uv...
-Dependencies installed successfully.
+Installing project dependencies...
+Dependencies installed successfully with uv.
 
 Next steps:
   cd myapp
   cp .env.example .env
-  alembic upgrade head
+  uv run alembic upgrade head
   uv run python -m myapp.run
 ```
 
@@ -50,7 +50,7 @@ PolePosition provides:
 * A scalable project structure
 * Environment-based configuration
 * Alembic-based database migrations
-* Lifecycle commands for project creation, module growth, project validation, and database migrations
+* Lifecycle commands for project creation, module growth, project checks, and database migrations
 * Built-in logging
 * JWT-based endpoint authentication foundations
 * Testing setup
@@ -86,11 +86,14 @@ Use these files to understand the repo quickly:
 * [Examples Index](examples/README.md)
 * [Agent Guide](AGENTS.md)
 
+
 ---
 
 ## Installation
 
-PolePosition follows a `uv`-first workflow for installation, dependency sync, migrations, and local development.
+PolePosition recommends a `uv`-first workflow for installation, dependency
+sync, migrations, and local development. It also works with `pip` and a normal
+Python virtual environment.
 
 ```bash
 uv tool install poleposition
@@ -106,13 +109,30 @@ pip install poleposition
 
 ## Quick Start
 
+Recommended `uv` workflow:
+
 ```bash
 polepos start myapp --install
 cd myapp
 cp .env.example .env
-alembic upgrade head
+uv run alembic upgrade head
 
 uv run python -m myapp.run
+```
+
+Equivalent `pip` workflow:
+
+```bash
+pip install poleposition
+polepos start myapp
+cd myapp
+cp .env.example .env
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+python -m alembic upgrade head
+
+python -m myapp.run
 ```
 
 Or start the generated app with Docker and PostgreSQL:
@@ -125,8 +145,8 @@ docker compose run --rm app uv run alembic upgrade head
 Create and run migrations:
 
 ```bash
-alembic upgrade head
-alembic revision --autogenerate -m "add garage table"
+uv run alembic upgrade head
+uv run alembic revision --autogenerate -m "add garage table"
 ```
 
 Open your API documentation:
@@ -145,9 +165,11 @@ http://127.0.0.1:8000/docs
 polepos start myapp --install
 ```
 
-`--install` runs `uv sync` inside the generated project for you.
-`--no-bytecode` configures the generated runner, Alembic entrypoint, and test
-fixture setup to disable Python bytecode writes during common local workflows.
+`--install` runs `uv sync` when `uv` is available. If `uv` is not available, it
+creates `.venv` and installs the generated project with `pip`.
+`--no-bytecode` configures generated migration and runtime commands to start
+with `PYTHONDONTWRITEBYTECODE=1`, preventing bytecode cache writes from
+interpreter startup during common local workflows.
 
 Project names:
 
@@ -158,15 +180,32 @@ Project names:
 
 ### Manual setup
 
+With `uv`:
+
 ```bash
 polepos start myapp
 cd myapp
 
 cp .env.example .env
 uv sync
-alembic upgrade head
+uv run alembic upgrade head
 
 uv run python -m myapp.run
+```
+
+With `pip`:
+
+```bash
+polepos start myapp
+cd myapp
+
+cp .env.example .env
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+python -m alembic upgrade head
+
+python -m myapp.run
 ```
 
 ### Add modules
@@ -184,12 +223,24 @@ prompt orchestration and shared `integrations/llm` adapters.
 
 ```bash
 polepos add integration kafka
+polepos add integration rabbitmq
 ```
 
-Kafka integration adds `integrations/kafka` helpers for JSON event publishing,
-consumer construction, test doubles, Kafka settings, `.env.example` values, and
-the generated project's `aiokafka` dependency. Consumers are intentionally left
-as explicit worker/runtime code instead of being started inside the API process.
+Messaging integrations add helper modules for JSON message publishing, consumer
+construction, test doubles, settings, `.env.example` values, and transport
+dependencies. Kafka uses `aiokafka`; RabbitMQ uses `aio-pika`. Consumers are
+intentionally left as explicit worker/runtime code instead of being started
+inside the API process.
+
+### Project checks
+
+```bash
+polepos check
+```
+
+`check` validates that the current project still looks like a PolePosition
+project. It checks project-root detection, generated structure, Alembic config,
+and managed markers used by commands such as `polepos add module`.
 
 ### Database commands
 
@@ -198,6 +249,10 @@ polepos db upgrade
 polepos db revision -m "add garage table"
 polepos db downgrade -1
 ```
+
+Database commands prefer `uv run alembic ...` when `uv` is available. Without
+`uv`, they run Alembic through the active virtualenv, the project `.venv`, or
+the first `python` on `PATH`.
 
 ### Docker workflow
 
@@ -319,6 +374,8 @@ PolePosition is a lifecycle CLI, so the commands are meant to be used over time,
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure
 * `polepos add module` when you want to add a new REST/domain module or an AI prompt module to an existing project
 * `polepos add integration kafka` when you want Kafka producer and consumer wiring in an existing project
+* `polepos add integration rabbitmq` when you want RabbitMQ publisher and consumer wiring in an existing project
+* `polepos check` when you want to validate generated structure, Alembic config, and managed markers
 * `polepos db upgrade` when you want to apply migrations to the database
 * `polepos db revision -m "..."` when you changed models and need a new migration
 * `polepos db downgrade` when you need to roll back a migration
@@ -347,6 +404,8 @@ polepos start <name> [--install] [--no-bytecode]
 polepos startproject <name> [--install] [--no-bytecode]
 polepos add module <name>
 polepos add integration kafka
+polepos add integration rabbitmq
+polepos check
 polepos db upgrade [target]
 polepos db revision -m "<message>"
 polepos db downgrade <target>
@@ -412,7 +471,7 @@ GET /api/v1/status
 
 PolePosition is built around a few principles:
 
-* Lifecycle-oriented: supports project creation, growth, validation, and migrations
+* Lifecycle-oriented: supports project creation, growth, checks, and migrations
 * Minimal: no unnecessary abstractions
 * Opinionated: sensible defaults
 * Extensible: easy to grow into larger systems
@@ -423,17 +482,44 @@ The CLI is intentionally lightweight and avoids heavy templating engines. Templa
 
 ## Roadmap
 
+### Completed Foundations
+
 * [x] Project name validation
 * [x] Enterprise FastAPI project lifecycle foundation
-* [x] `polepos add module`
+* [x] `polepos add module` for standard modules
+* [x] `polepos add module --template ai-prompt`
 * [x] `polepos add integration kafka`
+* [x] `polepos add integration rabbitmq`
 * [x] Alembic and database migrations
-* [x] Docker support
+* [x] Docker and PostgreSQL local runtime support
 * [x] `polepos db ...` commands
-* [ ] JSON logging support
-* [ ] Auth foundation
+* [x] `polepos check`
+* [x] Settings-driven CORS support
+* [x] JWT-based endpoint authentication foundation
+* [x] Structured JSON logging support
+* [x] Example scenarios and architecture docs
+
+### Next Up
+
+* [ ] Stronger request-context logging
+  path, method, status code, duration, and deeper request correlation
+* [ ] Full auth workflow
+  login, password hashing, refresh tokens, and database-backed users
 * [ ] Production-ready presets
-* [ ] RabbitMQ integration
+  stronger env defaults, deployment guidance, and safer runtime conventions
+* [ ] `add module` ergonomics
+  better success output, more archetypes, and options like `--api-only`
+
+### Later Expansion
+
+* [ ] `ai-openapi` module template
+  provider-agnostic prompt orchestration plus external API tool patterns
+* [ ] Richer AI provider adapters
+  stronger out-of-the-box integrations beyond scaffold-level provider stubs
+* [ ] CI and quality presets
+  starter workflows for linting, tests, and release automation
+* [ ] Broader deployment presets
+  reverse proxy, worker/process guidance, and observability-friendly defaults
 
 ---
 

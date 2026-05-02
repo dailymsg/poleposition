@@ -21,16 +21,15 @@ def build_context(
     *,
     no_bytecode: bool = False,
 ) -> dict[str, str]:
-    bytecode_runtime_setup = (
-        "sys.dont_write_bytecode = True" if no_bytecode else "# Bytecode writes enabled."
-    )
+    no_bytecode_command_prefix = ""
     no_bytecode_readme_note = ""
 
     if no_bytecode:
+        no_bytecode_command_prefix = "PYTHONDONTWRITEBYTECODE=1 "
         no_bytecode_readme_note = (
-            "\nThis project was generated with `--no-bytecode`, so the default runner,\n"
-            "Alembic entrypoint, and test fixture setup disable Python bytecode writes\n"
-            "for common local workflows.\n"
+            "\nThis project was generated with `--no-bytecode`, so migration and runtime\n"
+            "commands in this README start with `PYTHONDONTWRITEBYTECODE=1` to prevent\n"
+            "bytecode cache writes from interpreter startup.\n"
         )
 
     return {
@@ -38,7 +37,7 @@ def build_context(
         "{{ package_name }}": package_name,
         "{{project_import_name}}": package_name,
         "{{ app_name }}": project_name,
-        "{{bytecode_runtime_setup}}": bytecode_runtime_setup,
+        "{{no_bytecode_command_prefix}}": no_bytecode_command_prefix,
         "{{no_bytecode_readme_note}}": no_bytecode_readme_note,
     }
 

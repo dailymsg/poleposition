@@ -25,7 +25,7 @@ That means the product helps at:
 
 - project creation
 - codebase growth
-- project contract validation
+- project contract checks
 - schema lifecycle management
 
 Templates are a delivery mechanism for those workflows, not the product boundary.
@@ -54,10 +54,15 @@ polepos start myapp
 polepos add module users
   -> commands/add/module.py
   -> module_creator.py
-  -> module_templates.py
+  -> module_templates/
   -> generated module files + managed updates
 
 polepos add integration kafka
+  -> commands/add/integration.py
+  -> integration_creator.py
+  -> generated integration files + managed settings/dependency updates
+
+polepos add integration rabbitmq
   -> commands/add/integration.py
   -> integration_creator.py
   -> generated integration files + managed settings/dependency updates
@@ -66,6 +71,11 @@ polepos db upgrade
   -> commands/db/upgrade.py
   -> db_runner.py
   -> Alembic in generated project
+
+polepos check
+  -> commands/check.py
+  -> project_checker.py
+  -> generated structure + managed marker diagnostics
 ```
 
 ## CLI Map
@@ -88,6 +98,7 @@ Current command groups:
 - `start`
 - `add module`
 - `add integration`
+- `check`
 - `db upgrade`
 - `db revision`
 - `db downgrade`
@@ -108,7 +119,7 @@ Main placeholders include:
 
 - `{{project_name}}`
 - `{{project_import_name}}`
-- `{{bytecode_runtime_setup}}`
+- `{{no_bytecode_command_prefix}}`
 - `{{no_bytecode_readme_note}}`
 
 Rendering logic lives in:
@@ -156,7 +167,7 @@ The responsibilities are:
 Template selection lives in:
 
 ```text
-pole_position/cli/services/module_templates.py
+pole_position/cli/services/module_templates/
 ```
 
 Current templates:
@@ -186,11 +197,13 @@ helpers while keeping the base template lean.
 Current integrations:
 
 - `kafka`
+- `rabbitmq`
 
-Kafka support is intentionally opt-in. It writes `integrations/kafka` helpers,
-adds Kafka settings and `.env.example` values, and updates the generated
-project dependency list with `aiokafka`. Consumer loops are left as explicit
-worker/runtime code instead of being started inside the FastAPI app process.
+Messaging support is intentionally opt-in. Kafka writes `integrations/kafka`
+helpers and adds `aiokafka`; RabbitMQ writes `integrations/rabbitmq` helpers
+and adds `aio-pika`. Both integrations patch settings and `.env.example`
+values. Consumer loops are left as explicit worker/runtime code instead of
+being started inside the FastAPI app process.
 
 ## Managed Block Contract
 

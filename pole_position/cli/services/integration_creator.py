@@ -4,7 +4,7 @@ from textwrap import dedent
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 
 
-SUPPORTED_INTEGRATIONS = ("kafka",)
+SUPPORTED_INTEGRATIONS = ("kafka", "rabbitmq")
 
 SETTINGS_INTEGRATION_MARKER = "    # polepos:integration-settings"
 SETTINGS_LLM_MARKER = "    # polepos:llm-settings"
@@ -31,10 +31,25 @@ def add_integration(integration_name: str, cwd: Path | None = None) -> None:
         integration_name=integration_name,
     )
 
-    _ensure_integration_files(package_root, package_name)
-    _ensure_kafka_settings(package_root / "settings.py", package_name)
-    _ensure_kafka_env(project_root / ".env.example", package_name)
-    _ensure_project_dependency(project_root / "pyproject.toml", "aiokafka>=0.12.0")
+    if integration_name == "kafka":
+        _ensure_integration_files(
+            package_root,
+            _kafka_integration_files(package_name),
+        )
+        _ensure_kafka_settings(package_root / "settings.py", package_name)
+        _ensure_kafka_env(project_root / ".env.example", package_name)
+        _ensure_project_dependency(project_root / "pyproject.toml", "aiokafka>=0.12.0")
+        return
+
+    if integration_name == "rabbitmq":
+        _ensure_integration_files(
+            package_root,
+            _rabbitmq_integration_files(package_name),
+        )
+        _ensure_rabbitmq_settings(package_root / "settings.py", package_name)
+        _ensure_rabbitmq_env(project_root / ".env.example", package_name)
+        _ensure_project_dependency(project_root / "pyproject.toml", "aio-pika>=9.0.0")
+        return
 
 
 def _validate_add_integration_preflight(
@@ -65,8 +80,8 @@ def _validate_add_integration_preflight(
         )
 
 
-def _ensure_integration_files(package_root: Path, package_name: str) -> None:
-    for relative_path, content in _kafka_integration_files(package_name).items():
+def _ensure_integration_files(package_root: Path, files: dict[str, str]) -> None:
+    for relative_path, content in files.items():
         path = package_root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
@@ -348,6 +363,318 @@ def _render_kafka_testing(package_name: str) -> str:
     )
 
 
+def _rabbitmq_integration_files(package_name: str) -> dict[str, str]:
+    return {
+        "integrations/__init__.py": "",
+        "integrations/rabbitmq/__init__.py": _render_rabbitmq_init(package_name),
+        "integrations/rabbitmq/consumer.py": _render_rabbitmq_consumer(package_name),
+        "integrations/rabbitmq/factory.py": _render_rabbitmq_factory(package_name),
+        "integrations/rabbitmq/publisher.py": _render_rabbitmq_publisher(package_name),
+        "integrations/rabbitmq/schemas.py": _render_rabbitmq_schemas(),
+        "integrations/rabbitmq/testing.py": _render_rabbitmq_testing(package_name),
+    }
+
+
+def _render_rabbitmq_init(package_name: str) -> str:
+    return dedent(
+        f'''\
+        from {package_name}.integrations.rabbitmq.factory import (
+            build_rabbitmq_event_publisher,
+            build_rabbitmq_queue,
+        )
+        from {package_name}.integrations.rabbitmq.publisher import RabbitMQEventPublisher
+        from {package_name}.integrations.rabbitmq.schemas import RabbitMQMessage
+        from {package_name}.integrations.rabbitmq.testing import InMemoryRabbitMQEventPublisher
+
+
+        __all__ = [
+            "RabbitMQMessage",
+            "RabbitMQEventPublisher",
+            "InMemoryRabbitMQEventPublisher",
+            "build_rabbitmq_event_publisher",
+            "build_rabbitmq_queue",
+        ]
+        '''
+    )
+
+
+def _render_rabbitmq_schemas() -> str:
+    return dedent(
+        '''\
+        import json
+        from typing import Any
+
+        from pydantic import BaseModel, Field
+
+
+        class RabbitMQMessage(BaseModel):
+            routing_key: str
+            value: dict[str, Any]
+            headers: dict[str, str] = Field(default_factory=dict)
+
+
+        def encode_message_value(message: RabbitMQMessage) -> bytes:
+            return json.dumps(
+                message.value,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+
+
+        def decode_message_value(value: bytes) -> dict[str, Any]:
+            return json.loads(value.decode("utf-8"))
+        '''
+    )
+
+
+def _render_rabbitmq_publisher(package_name: str) -> str:
+    return dedent(
+        f'''\
+        from collections.abc import Awaitable, Callable
+        from typing import Protocol
+
+        from {package_name}.bootstrap.logging import get_logger
+        from {package_name}.integrations.rabbitmq.schemas import (
+            RabbitMQMessage,
+            encode_message_value,
+        )
+
+
+        logger = get_logger(__name__)
+
+
+        class RabbitMQExchange(Protocol):
+            async def publish(self, message: object, routing_key: str) -> object:
+                ...
+
+
+        class RabbitMQChannel(Protocol):
+            async def declare_exchange(
+                self,
+                name: str,
+                type: str,
+                *,
+                durable: bool,
+            ) -> RabbitMQExchange:
+                ...
+
+
+        class RabbitMQConnection(Protocol):
+            async def channel(self) -> RabbitMQChannel:
+                ...
+
+            async def close(self) -> None:
+                ...
+
+
+        RabbitMQConnector = Callable[[], Awaitable[RabbitMQConnection]]
+
+
+        class RabbitMQEventPublisher:
+            def __init__(
+                self,
+                connector: RabbitMQConnector,
+                *,
+                exchange_name: str,
+                exchange_type: str,
+                exchange_durable: bool,
+            ) -> None:
+                self.connector = connector
+                self.exchange_name = exchange_name
+                self.exchange_type = exchange_type
+                self.exchange_durable = exchange_durable
+                self.connection: RabbitMQConnection | None = None
+                self.exchange: RabbitMQExchange | None = None
+
+            async def start(self) -> None:
+                self.connection = await self.connector()
+                channel = await self.connection.channel()
+                self.exchange = await channel.declare_exchange(
+                    self.exchange_name,
+                    self.exchange_type,
+                    durable=self.exchange_durable,
+                )
+
+            async def stop(self) -> None:
+                if self.connection is not None:
+                    await self.connection.close()
+                self.connection = None
+                self.exchange = None
+
+            async def publish(self, message: RabbitMQMessage) -> None:
+                if self.exchange is None:
+                    raise RuntimeError("RabbitMQ publisher has not been started.")
+
+                try:
+                    from aio_pika import DeliveryMode, Message
+                except ImportError as exc:
+                    raise RuntimeError(
+                        "RabbitMQ integration requires aio-pika. Run `uv sync` after "
+                        "`polepos add integration rabbitmq`."
+                    ) from exc
+
+                await self.exchange.publish(
+                    Message(
+                        encode_message_value(message),
+                        content_type="application/json",
+                        delivery_mode=DeliveryMode.PERSISTENT,
+                        headers=message.headers or None,
+                    ),
+                    message.routing_key,
+                )
+                logger.info(
+                    "Published RabbitMQ message",
+                    extra={{
+                        "routing_key": message.routing_key,
+                        "exchange": self.exchange_name,
+                    }},
+                )
+        '''
+    )
+
+
+def _render_rabbitmq_factory(package_name: str) -> str:
+    return dedent(
+        f'''\
+        from typing import Any
+
+        from {package_name}.integrations.rabbitmq.publisher import RabbitMQEventPublisher
+        from {package_name}.settings import get_settings
+
+
+        def build_rabbitmq_event_publisher() -> RabbitMQEventPublisher:
+            settings = get_settings()
+
+            try:
+                from aio_pika import connect_robust
+            except ImportError as exc:
+                raise RuntimeError(
+                    "RabbitMQ integration requires aio-pika. Run `uv sync` after "
+                    "`polepos add integration rabbitmq`."
+                ) from exc
+
+            async def connect():
+                return await connect_robust(
+                    settings.rabbitmq_url,
+                    client_properties={{"connection_name": settings.rabbitmq_client_id}},
+                )
+
+            return RabbitMQEventPublisher(
+                connect,
+                exchange_name=settings.rabbitmq_exchange,
+                exchange_type=settings.rabbitmq_exchange_type,
+                exchange_durable=settings.rabbitmq_exchange_durable,
+            )
+
+
+        async def build_rabbitmq_queue(
+            *,
+            queue_name: str | None = None,
+            routing_key: str | None = None,
+        ) -> tuple[Any, Any]:
+            settings = get_settings()
+
+            try:
+                from aio_pika import connect_robust
+            except ImportError as exc:
+                raise RuntimeError(
+                    "RabbitMQ integration requires aio-pika. Run `uv sync` after "
+                    "`polepos add integration rabbitmq`."
+                ) from exc
+
+            connection = await connect_robust(
+                settings.rabbitmq_url,
+                client_properties={{"connection_name": settings.rabbitmq_client_id}},
+            )
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=settings.rabbitmq_prefetch_count)
+            exchange = await channel.declare_exchange(
+                settings.rabbitmq_exchange,
+                settings.rabbitmq_exchange_type,
+                durable=settings.rabbitmq_exchange_durable,
+            )
+            queue = await channel.declare_queue(
+                queue_name or settings.rabbitmq_default_queue,
+                durable=settings.rabbitmq_queue_durable,
+            )
+            await queue.bind(
+                exchange,
+                routing_key or settings.rabbitmq_default_routing_key,
+            )
+            return connection, queue
+        '''
+    )
+
+
+def _render_rabbitmq_consumer(package_name: str) -> str:
+    return dedent(
+        f'''\
+        from collections.abc import Awaitable, Callable
+        from typing import Any, Protocol
+
+        from {package_name}.bootstrap.logging import get_logger
+        from {package_name}.integrations.rabbitmq.schemas import decode_message_value
+
+
+        logger = get_logger(__name__)
+
+
+        class RabbitMQIncomingMessage(Protocol):
+            body: bytes
+            routing_key: str
+
+            def process(self):
+                ...
+
+
+        class RabbitMQQueue(Protocol):
+            def iterator(self):
+                ...
+
+
+        MessageHandler = Callable[[dict[str, Any], str], Awaitable[None]]
+
+
+        async def consume_json_messages(
+            queue: RabbitMQQueue,
+            handler: MessageHandler,
+        ) -> None:
+            async with queue.iterator() as queue_iterator:
+                async for message in queue_iterator:
+                    async with message.process():
+                        payload = decode_message_value(message.body)
+                        await handler(payload, message.routing_key)
+                        logger.info(
+                            "Consumed RabbitMQ message",
+                            extra={{"routing_key": message.routing_key}},
+                        )
+        '''
+    )
+
+
+def _render_rabbitmq_testing(package_name: str) -> str:
+    return dedent(
+        f'''\
+        from {package_name}.integrations.rabbitmq.schemas import RabbitMQMessage
+
+
+        class InMemoryRabbitMQEventPublisher:
+            def __init__(self) -> None:
+                self.messages: list[RabbitMQMessage] = []
+                self.started = False
+
+            async def start(self) -> None:
+                self.started = True
+
+            async def stop(self) -> None:
+                self.started = False
+
+            async def publish(self, message: RabbitMQMessage) -> None:
+                self.messages.append(message)
+        '''
+    )
+
+
 def _ensure_kafka_settings(path: Path, package_name: str) -> None:
     content = path.read_text(encoding="utf-8")
     if "kafka_bootstrap_servers:" in content:
@@ -399,6 +726,62 @@ def _kafka_env_block(package_name: str) -> list[str]:
         "KAFKA_ACKS=all",
         "# KAFKA_COMPRESSION_TYPE=",
         "KAFKA_REQUEST_TIMEOUT_MS=40000",
+    ]
+
+
+def _ensure_rabbitmq_settings(path: Path, package_name: str) -> None:
+    content = path.read_text(encoding="utf-8")
+    if "rabbitmq_url:" in content:
+        return
+
+    _insert_block_before_marker_or_anchor(
+        path=path,
+        block=_rabbitmq_settings_block(package_name),
+        markers=[SETTINGS_INTEGRATION_MARKER, SETTINGS_LLM_MARKER],
+        anchor="    model_config = SettingsConfigDict(",
+    )
+
+
+def _rabbitmq_settings_block(package_name: str) -> list[str]:
+    return [
+        "    rabbitmq_enabled: bool = False",
+        '    rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"',
+        f'    rabbitmq_client_id: str = "{package_name}"',
+        f'    rabbitmq_exchange: str = "{package_name}.events"',
+        '    rabbitmq_exchange_type: str = "topic"',
+        "    rabbitmq_exchange_durable: bool = True",
+        f'    rabbitmq_default_routing_key: str = "{package_name}.event"',
+        f'    rabbitmq_default_queue: str = "{package_name}.events"',
+        "    rabbitmq_queue_durable: bool = True",
+        "    rabbitmq_prefetch_count: int = 10",
+    ]
+
+
+def _ensure_rabbitmq_env(path: Path, package_name: str) -> None:
+    content = path.read_text(encoding="utf-8")
+    if "RABBITMQ_URL=" in content:
+        return
+
+    _insert_block_before_marker_or_anchor(
+        path=path,
+        block=_rabbitmq_env_block(package_name),
+        markers=[ENV_INTEGRATION_MARKER, ENV_LLM_MARKER],
+        anchor=None,
+    )
+
+
+def _rabbitmq_env_block(package_name: str) -> list[str]:
+    return [
+        "RABBITMQ_ENABLED=false",
+        "RABBITMQ_URL=amqp://guest:guest@localhost:5672/",
+        f"RABBITMQ_CLIENT_ID={package_name}",
+        f"RABBITMQ_EXCHANGE={package_name}.events",
+        "RABBITMQ_EXCHANGE_TYPE=topic",
+        "RABBITMQ_EXCHANGE_DURABLE=true",
+        f"RABBITMQ_DEFAULT_ROUTING_KEY={package_name}.event",
+        f"RABBITMQ_DEFAULT_QUEUE={package_name}.events",
+        "RABBITMQ_QUEUE_DURABLE=true",
+        "RABBITMQ_PREFETCH_COUNT=10",
     ]
 
 

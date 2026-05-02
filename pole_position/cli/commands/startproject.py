@@ -15,6 +15,7 @@ USAGE = "Usage: polepos start <project_name> [--install] [--no-bytecode]"
 def run(args: list[str]) -> None:
     install = False
     no_bytecode = False
+    installer: str | None = None
     filtered_args: list[str] = []
 
     for arg in args:
@@ -58,14 +59,16 @@ def run(args: list[str]) -> None:
     )
     print(f"Created project: {project_name}")
 
+    command_prefix = "PYTHONDONTWRITEBYTECODE=1 " if no_bytecode else ""
+
     if no_bytecode:
-        print("Configured generated runtime and migration entrypoints without Python bytecode writes.")
+        print("Configured generated local Python commands to start without bytecode writes.")
 
     if install:
         try:
-            print("Installing project dependencies with uv...")
-            install_project_dependencies(project_path=project_path)
-            print("Dependencies installed successfully.")
+            print("Installing project dependencies...")
+            installer = install_project_dependencies(project_path=project_path)
+            print(f"Dependencies installed successfully with {installer}.")
         except RuntimeError as exc:
             print(str(exc))
             raise SystemExit(1)
@@ -75,11 +78,17 @@ def run(args: list[str]) -> None:
     print(f"  cd {project_name}")
     print("  cp .env.example .env")
 
+    if installer == "pip":
+        print("  source .venv/bin/activate")
+        print(f"  {command_prefix}python -m alembic upgrade head")
+        print(f"  {command_prefix}python -m {package_name}.run")
+        return
+
     if not install:
         print("  uv sync")
 
-    print("  alembic upgrade head")
-    print(f"  uv run python -m {package_name}.run")
+    print(f"  {command_prefix}uv run alembic upgrade head")
+    print(f"  {command_prefix}uv run python -m {package_name}.run")
 
 
 command = Command(

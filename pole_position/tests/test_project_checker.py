@@ -1,0 +1,141 @@
+from pathlib import Path
+
+from pole_position.cli.services.project_checker import (
+    ProjectCheckResult,
+    _check_alembic_config,
+    _check_generated_structure,
+    _check_managed_markers,
+)
+
+
+def test_project_check_result_properties(tmp_path: Path) -> None:
+    result = ProjectCheckResult(
+        project_root=tmp_path,
+        package_root=tmp_path / "src" / "shop_api",
+        problems=[],
+    )
+    failed_result = ProjectCheckResult(
+        project_root=tmp_path,
+        package_root=tmp_path / "src" / "shop_api",
+        problems=["broken"],
+    )
+
+    assert result.package_name == "shop_api"
+    assert result.passed is True
+    assert failed_result.passed is False
+
+
+def test_generated_structure_check_reports_missing_paths(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    package_root = project_root / "src" / "shop_api"
+    problems: list[str] = []
+
+    _check_generated_structure(problems, project_root, package_root)
+
+    assert any("pyproject.toml" in problem for problem in problems)
+    assert any("tests/conftest.py" in problem for problem in problems)
+    assert any("src/shop_api/app.py" in problem for problem in problems)
+    assert any("src/shop_api/modules/status/router.py" in problem for problem in problems)
+
+
+def test_alembic_config_check_reports_missing_paths(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    problems: list[str] = []
+
+    _check_alembic_config(problems, project_root)
+
+    assert any("alembic.ini" in problem for problem in problems)
+    assert any("migrations/env.py" in problem for problem in problems)
+    assert any("migrations/versions" in problem for problem in problems)
+
+
+def test_managed_marker_check_reports_missing_files(tmp_path: Path) -> None:
+    package_root = tmp_path / "shop-api" / "src" / "shop_api"
+    problems: list[str] = []
+
+    _check_managed_markers(problems, package_root)
+
+    assert any("api/router.py" in problem for problem in problems)
+    assert any("db/models.py" in problem for problem in problems)
+    assert any(".env.example" in problem for problem in problems)
+
+
+def test_managed_marker_check_reports_missing_markers(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    package_root = project_root / "src" / "shop_api"
+    _write_marker_files_without_all_markers(project_root, package_root)
+    problems: list[str] = []
+
+    _check_managed_markers(problems, package_root)
+
+    assert any("# polepos:router-includes" in problem for problem in problems)
+    assert any("# polepos:integration-settings" in problem for problem in problems)
+    assert any("# polepos:llm-settings" in problem for problem in problems)
+    assert any("# polepos:integration-env" in problem for problem in problems)
+    assert any("# polepos:llm-env" in problem for problem in problems)
+
+
+def test_managed_marker_check_passes_with_all_markers(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    package_root = project_root / "src" / "shop_api"
+    _write_marker_files_with_all_markers(project_root, package_root)
+    problems: list[str] = []
+
+    _check_managed_markers(problems, package_root)
+
+    assert problems == []
+
+
+def _write_marker_files_without_all_markers(project_root: Path, package_root: Path) -> None:
+    _write_text(
+        package_root / "api" / "router.py",
+        "# polepos:router-imports\n",
+    )
+    _write_text(
+        package_root / "db" / "models.py",
+        "    # polepos:model-imports\n",
+    )
+    _write_text(
+        package_root / "modules" / "__init__.py",
+        "    # polepos:module-exports\n",
+    )
+    _write_text(
+        package_root / "settings.py",
+        "    # polepos:auth-settings\n",
+    )
+    _write_text(
+        project_root / ".env.example",
+        "# polepos:auth-env\n",
+    )
+
+
+def _write_marker_files_with_all_markers(project_root: Path, package_root: Path) -> None:
+    _write_text(
+        package_root / "api" / "router.py",
+        "# polepos:router-imports\n# polepos:router-includes\n",
+    )
+    _write_text(
+        package_root / "db" / "models.py",
+        "    # polepos:model-imports\n",
+    )
+    _write_text(
+        package_root / "modules" / "__init__.py",
+        "    # polepos:module-exports\n",
+    )
+    _write_text(
+        package_root / "settings.py",
+        (
+            "    # polepos:auth-settings\n"
+            "    # polepos:integration-settings\n"
+            "    # polepos:llm-settings\n"
+        ),
+    )
+    _write_text(
+        project_root / ".env.example",
+        "# polepos:auth-env\n# polepos:integration-env\n# polepos:llm-env\n",
+    )
+
+
+def _write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")

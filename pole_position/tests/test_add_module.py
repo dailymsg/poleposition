@@ -34,7 +34,6 @@ def test_add_command_shows_usage(tmp_path: Path):
     assert "module" in result.stdout
 
 
-
 def test_add_kafka_integration_creates_files_and_updates_project(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -94,16 +93,130 @@ def test_add_kafka_integration_rejects_duplicate(tmp_path: Path):
     assert "Integration already exists: kafka" in second_result.stdout
 
 
-def test_add_integration_rejects_unknown_integration(tmp_path: Path):
+def test_add_rabbitmq_integration_creates_files_and_updates_project(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
 
     project_root = tmp_path / "myapp"
     result = run_cli(project_root, "add", "integration", "rabbitmq")
 
+    assert result.returncode == 0
+    assert "Added integration: rabbitmq" in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    rabbitmq_root = package_root / "integrations" / "rabbitmq"
+    expected_files = [
+        package_root / "integrations" / "__init__.py",
+        rabbitmq_root / "__init__.py",
+        rabbitmq_root / "consumer.py",
+        rabbitmq_root / "factory.py",
+        rabbitmq_root / "publisher.py",
+        rabbitmq_root / "schemas.py",
+        rabbitmq_root / "testing.py",
+    ]
+    for path in expected_files:
+        assert path.exists(), f"Expected generated RabbitMQ file is missing: {path}"
+
+    settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
+    env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+    pyproject_content = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    publisher_content = (rabbitmq_root / "publisher.py").read_text(encoding="utf-8")
+    factory_content = (rabbitmq_root / "factory.py").read_text(encoding="utf-8")
+    testing_content = (rabbitmq_root / "testing.py").read_text(encoding="utf-8")
+
+    assert 'rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"' in settings_content
+    assert 'rabbitmq_client_id: str = "myapp"' in settings_content
+    assert "rabbitmq_prefetch_count: int = 10" in settings_content
+    assert "RABBITMQ_URL=amqp://guest:guest@localhost:5672/" in env_content
+    assert "RABBITMQ_CLIENT_ID=myapp" in env_content
+    assert '"aio-pika>=9.0.0",' in pyproject_content
+    assert "from myapp.bootstrap.logging import get_logger" in publisher_content
+    assert "class RabbitMQEventPublisher:" in publisher_content
+    assert "from aio_pika import connect_robust" in factory_content
+    assert "class InMemoryRabbitMQEventPublisher:" in testing_content
+    assert "{{" not in publisher_content
+    assert "{{" not in factory_content
+
+
+def test_add_rabbitmq_integration_rejects_duplicate(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    first_result = run_cli(project_root, "add", "integration", "rabbitmq")
+    second_result = run_cli(project_root, "add", "integration", "rabbitmq")
+
+    assert first_result.returncode == 0
+    assert second_result.returncode != 0
+    assert "Integration already exists: rabbitmq" in second_result.stdout
+
+
+def test_add_kafka_and_rabbitmq_integrations_can_coexist(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    kafka_result = run_cli(project_root, "add", "integration", "kafka")
+    rabbitmq_result = run_cli(project_root, "add", "integration", "rabbitmq")
+
+    assert kafka_result.returncode == 0
+    assert rabbitmq_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    pyproject_content = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
+    env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+
+    assert (package_root / "integrations" / "kafka" / "producer.py").exists()
+    assert (package_root / "integrations" / "rabbitmq" / "publisher.py").exists()
+    assert pyproject_content.count('"aiokafka>=0.12.0",') == 1
+    assert pyproject_content.count('"aio-pika>=9.0.0",') == 1
+    assert settings_content.count("kafka_bootstrap_servers:") == 1
+    assert settings_content.count("rabbitmq_url:") == 1
+    assert env_content.count("KAFKA_BOOTSTRAP_SERVERS=") == 1
+    assert env_content.count("RABBITMQ_URL=") == 1
+
+
+def test_add_integration_rejects_unknown_integration(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "integration", "redis")
+
     assert result.returncode != 0
-    assert "Unsupported integration 'rabbitmq'" in result.stdout
-    assert "Integrations: kafka" in result.stdout
+    assert "Unsupported integration 'redis'" in result.stdout
+    assert "Integrations: kafka, rabbitmq" in result.stdout
+
+
+def test_module_templates_render_without_leftover_placeholders() -> None:
+    from pole_position.cli.services.module_templates import (
+        build_module_template,
+        llm_integration_files,
+    )
+
+    standard_template = build_module_template(
+        template="standard",
+        package_name="myapp",
+        module_name="garage",
+    )
+    ai_template = build_module_template(
+        template="ai-prompt",
+        package_name="myapp",
+        module_name="assistant",
+    )
+    rendered_content = [
+        *standard_template.files.values(),
+        standard_template.integration_test_content,
+        standard_template.unit_test_content,
+        *ai_template.files.values(),
+        ai_template.integration_test_content,
+        ai_template.unit_test_content,
+        *llm_integration_files("myapp").values(),
+    ]
+
+    assert all("{{" not in content for content in rendered_content)
+    assert all("}}" not in content for content in rendered_content)
 
 
 def test_add_module_creates_module_files_and_updates_router(tmp_path: Path):
@@ -248,6 +361,30 @@ def test_add_module_works_with_custom_content_around_markers(tmp_path: Path):
     assert "# custom model note" in models_content
     assert '"garage"' in modules_init_content
     assert "# custom exports note" in modules_init_content
+
+
+def test_add_module_preflight_fails_before_writing_when_marker_is_missing(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    models_path = package_root / "db" / "models.py"
+    models_content = models_path.read_text(encoding="utf-8").replace(
+        "    # polepos:model-imports",
+        "    # custom model imports are managed manually",
+    )
+    models_path.write_text(models_content, encoding="utf-8")
+
+    result = run_cli(project_root, "add", "module", "garage")
+
+    assert result.returncode != 0
+    assert "Cannot add module because the project layout is not ready" in result.stdout
+    assert "Required managed marker '    # polepos:model-imports' is missing" in result.stdout
+    assert "db/models.py" in result.stdout
+    assert not (package_root / "modules" / "garage").exists()
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+    assert not (project_root / "tests" / "unit" / "test_garage_service.py").exists()
 
 
 def test_add_module_with_ai_prompt_template_creates_llm_module_files(tmp_path: Path):

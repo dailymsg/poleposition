@@ -102,12 +102,81 @@ def test_run_alembic_command_uses_project_root_from_nested_directory(tmp_path: P
 
     from pole_position.cli.services.db_runner import run_alembic_command
 
-    with patch("pole_position.cli.services.db_runner.shutil.which", return_value="/usr/bin/alembic"):
+    with patch("pole_position.cli.services.db_runner.shutil.which", return_value="/usr/bin/uv"):
         with patch("pole_position.cli.services.db_runner.subprocess.run") as mock_run:
             run_alembic_command("upgrade", ["head"], cwd=nested_dir)
 
     mock_run.assert_called_once_with(
-        ["alembic", "upgrade", "head"],
+        ["uv", "run", "alembic", "upgrade", "head"],
+        cwd=tmp_path / "myapp",
+        check=True,
+    )
+
+
+def test_run_alembic_command_falls_back_to_active_virtualenv_python(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    active_venv = tmp_path / ".active-venv"
+    active_python = active_venv / "bin" / "python"
+    active_python.parent.mkdir(parents=True)
+    active_python.write_text("", encoding="utf-8")
+
+    from pole_position.cli.services.db_runner import run_alembic_command
+
+    with patch("pole_position.cli.services.db_runner.shutil.which", return_value=None):
+        with patch.dict(os.environ, {"VIRTUAL_ENV": str(active_venv)}):
+            with patch("pole_position.cli.services.db_runner.subprocess.run") as mock_run:
+                run_alembic_command("upgrade", ["head"], cwd=tmp_path / "myapp")
+
+    mock_run.assert_called_once_with(
+        [str(active_python), "-m", "alembic", "upgrade", "head"],
+        cwd=tmp_path / "myapp",
+        check=True,
+    )
+
+
+def test_run_alembic_command_falls_back_to_project_venv_python(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    project_python = project_root / ".venv" / "bin" / "python"
+    project_python.parent.mkdir(parents=True)
+    project_python.write_text("", encoding="utf-8")
+
+    from pole_position.cli.services.db_runner import run_alembic_command
+
+    with patch("pole_position.cli.services.db_runner.shutil.which", return_value=None):
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("pole_position.cli.services.db_runner.subprocess.run") as mock_run:
+                run_alembic_command("revision", ["--autogenerate", "-m", "add cars"], cwd=project_root)
+
+    mock_run.assert_called_once_with(
+        [str(project_python), "-m", "alembic", "revision", "--autogenerate", "-m", "add cars"],
+        cwd=project_root,
+        check=True,
+    )
+
+
+def test_run_alembic_command_falls_back_to_path_python(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    from pole_position.cli.services.db_runner import run_alembic_command
+
+    def fake_which(command: str) -> str | None:
+        if command == "python":
+            return "/usr/bin/python"
+        return None
+
+    with patch("pole_position.cli.services.db_runner.shutil.which", side_effect=fake_which):
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("pole_position.cli.services.db_runner.subprocess.run") as mock_run:
+                run_alembic_command("downgrade", ["-1"], cwd=tmp_path / "myapp")
+
+    mock_run.assert_called_once_with(
+        ["/usr/bin/python", "-m", "alembic", "downgrade", "-1"],
         cwd=tmp_path / "myapp",
         check=True,
     )

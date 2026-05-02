@@ -1,7 +1,3 @@
-import sys
-
-{{bytecode_runtime_setup}}
-
 import uvicorn
 
 from {{project_import_name}}.bootstrap.logging import print_startup_table

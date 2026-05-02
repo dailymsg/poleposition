@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "poleposition"
-version = "0.0.21"
+version = "0.0.22"
 description = "Project lifecycle CLI for starting and growing enterprise FastAPI projects"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -46,6 +46,7 @@ include = ["pole_position*"]
 
 [tool.setuptools.package-data]
 pole_position = [
+    "cli/services/module_templates/files/**/*.tpl",
     "template/**/*",
     "template/.dockerignore",
     "template/.env.example",

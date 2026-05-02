@@ -145,7 +145,9 @@ Current CLI command groups:
 
 - `polepos start`
 - `polepos add module`
+- `polepos check`
 - `polepos add integration kafka`
+- `polepos add integration rabbitmq`
 - `polepos db upgrade`
 - `polepos db revision -m "..."`
 - `polepos db downgrade`

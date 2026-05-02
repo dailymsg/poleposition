@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 from pole_position.cli.services.module_templates import (
+    ModuleTemplate,
     SUPPORTED_MODULE_TEMPLATES,
     build_module_template,
     llm_env_block,
@@ -35,8 +36,14 @@ def add_module(module_name: str, template: str = "standard", cwd: Path | None = 
         module_name=module_name,
     )
 
-    if module_root.exists():
-        raise RuntimeError(f"Module already exists: {module_name}")
+    _validate_add_module_preflight(
+        project_root=project_root,
+        package_root=package_root,
+        modules_root=modules_root,
+        module_root=module_root,
+        module_name=module_name,
+        template_spec=template_spec,
+    )
 
     _write_module_files(module_root, template_spec.files)
     _write_module_tests(project_root / "tests", template_spec)
@@ -49,6 +56,120 @@ def add_module(module_name: str, template: str = "standard", cwd: Path | None = 
     if template_spec.ensure_llm_settings:
         _ensure_llm_settings(package_root / "settings.py")
         _ensure_llm_env(project_root / ".env.example")
+
+
+def _validate_add_module_preflight(
+    *,
+    project_root: Path,
+    package_root: Path,
+    modules_root: Path,
+    module_root: Path,
+    module_name: str,
+    template_spec: ModuleTemplate,
+) -> None:
+    problems: list[str] = []
+    tests_root = project_root / "tests"
+
+    if module_root.exists():
+        problems.append(f"Module already exists: {module_name}")
+
+    _collect_existing_generated_file(
+        problems,
+        tests_root / "integration" / template_spec.integration_test_name,
+    )
+    _collect_existing_generated_file(
+        problems,
+        tests_root / "unit" / template_spec.unit_test_name,
+    )
+
+    _collect_missing_marker(
+        problems,
+        modules_root / "__init__.py",
+        MODULE_EXPORTS_MARKER,
+    )
+    _collect_missing_marker(
+        problems,
+        package_root / "api" / "router.py",
+        ROUTER_IMPORTS_MARKER,
+    )
+    _collect_missing_marker(
+        problems,
+        package_root / "api" / "router.py",
+        ROUTER_INCLUDES_MARKER,
+    )
+
+    if template_spec.update_db_models:
+        _collect_missing_marker(
+            problems,
+            package_root / "db" / "models.py",
+            MODEL_IMPORTS_MARKER,
+        )
+
+    if template_spec.ensure_llm_settings:
+        _collect_missing_marker_unless_content_exists(
+            problems,
+            package_root / "settings.py",
+            marker=SETTINGS_LLM_MARKER,
+            existing_content="llm_provider:",
+        )
+        _collect_missing_marker_unless_content_exists(
+            problems,
+            project_root / ".env.example",
+            marker=ENV_LLM_MARKER,
+            existing_content="LLM_PROVIDER=",
+        )
+
+    if problems:
+        formatted_problems = "\n".join(f"- {problem}" for problem in problems)
+        raise RuntimeError(
+            "Cannot add module because the project layout is not ready:\n"
+            f"{formatted_problems}"
+        )
+
+
+def _collect_existing_generated_file(problems: list[str], path: Path) -> None:
+    if path.exists():
+        problems.append(f"Generated file already exists: {path}")
+
+
+def _collect_missing_marker(problems: list[str], path: Path, marker: str) -> None:
+    lines = _read_managed_file_lines(problems, path)
+    if lines is None:
+        return
+
+    if marker not in lines:
+        problems.append(f"Required managed marker '{marker}' is missing in {path}")
+
+
+def _collect_missing_marker_unless_content_exists(
+    problems: list[str],
+    path: Path,
+    *,
+    marker: str,
+    existing_content: str,
+) -> None:
+    content = _read_managed_file_text(problems, path)
+    if content is None or existing_content in content:
+        return
+
+    if marker not in content.splitlines():
+        problems.append(f"Required managed marker '{marker}' is missing in {path}")
+
+
+def _read_managed_file_text(problems: list[str], path: Path) -> str | None:
+    if not path.is_file():
+        problems.append(f"Required managed file is missing: {path}")
+        return None
+
+    return path.read_text(encoding="utf-8")
+
+
+def _read_managed_file_lines(problems: list[str], path: Path) -> list[str] | None:
+    content = _read_managed_file_text(problems, path)
+    if content is None:
+        return None
+
+    return content.splitlines()
 
 
 def _write_module_files(module_root: Path, files: dict[str, str]) -> None:
