@@ -1,5 +1,9 @@
 # PolePosition
 
+[![PyPI version](https://img.shields.io/pypi/v/poleposition)](https://pypi.org/project/poleposition)
+[![Python](https://img.shields.io/pypi/pyversions/poleposition)](https://pypi.org/project/poleposition)
+[![License](https://img.shields.io/github/license/erenertem/poleposition)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
+
 ![PolePosition logo](https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/logo/poleposition-python-logo.svg)
 
 A project lifecycle CLI that puts teams in pole position when starting, growing, and maintaining enterprise FastAPI projects.
@@ -17,9 +21,6 @@ If you prefer not to generate Python bytecode while developing locally:
 ```bash
 polepos start myapp --no-bytecode
 ```
-[![PyPI version](https://img.shields.io/pypi/v/poleposition)](https://pypi.org/project/poleposition)
-[![Python](https://img.shields.io/pypi/pyversions/poleposition)](https://pypi.org/project/poleposition)
-[![License](https://img.shields.io/github/license/erenertem/poleposition)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
 
 ---
 

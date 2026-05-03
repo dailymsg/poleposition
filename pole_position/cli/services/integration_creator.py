@@ -1,5 +1,4 @@
 from pathlib import Path
-from textwrap import dedent
 
 from pole_position.cli.services.integration_specs import (
     IntegrationContract,
@@ -8,6 +7,7 @@ from pole_position.cli.services.integration_specs import (
     SUPPORTED_INTEGRATIONS,
     get_creatable_integration_contract,
 )
+from pole_position.cli.services.module_templates.renderer import render_template
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 
 
@@ -101,593 +101,73 @@ def _files_for_contract(
     return {file_name: files[file_name] for file_name in contract.file_names}
 
 
+def _render_integration_template(relative_path: str, package_name: str) -> str:
+    return render_template(
+        f"integrations/{relative_path}.tpl",
+        {"package_name": package_name},
+    )
+
+
 def _kafka_integration_files(package_name: str) -> dict[str, str]:
     files = {
         "integrations/__init__.py": "",
-        "integrations/kafka/__init__.py": _render_kafka_init(package_name),
-        "integrations/kafka/consumer.py": _render_kafka_consumer(package_name),
-        "integrations/kafka/factory.py": _render_kafka_factory(package_name),
-        "integrations/kafka/producer.py": _render_kafka_producer(package_name),
-        "integrations/kafka/schemas.py": _render_kafka_schemas(),
-        "integrations/kafka/testing.py": _render_kafka_testing(package_name),
+        "integrations/kafka/__init__.py": _render_integration_template(
+            "kafka/__init__.py",
+            package_name,
+        ),
+        "integrations/kafka/consumer.py": _render_integration_template(
+            "kafka/consumer.py",
+            package_name,
+        ),
+        "integrations/kafka/factory.py": _render_integration_template(
+            "kafka/factory.py",
+            package_name,
+        ),
+        "integrations/kafka/producer.py": _render_integration_template(
+            "kafka/producer.py",
+            package_name,
+        ),
+        "integrations/kafka/schemas.py": _render_integration_template(
+            "kafka/schemas.py",
+            package_name,
+        ),
+        "integrations/kafka/testing.py": _render_integration_template(
+            "kafka/testing.py",
+            package_name,
+        ),
     }
     return _files_for_contract(KAFKA_INTEGRATION_CONTRACT, files)
-
-
-def _render_kafka_init(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from {package_name}.integrations.kafka.factory import (
-            build_kafka_consumer,
-            build_kafka_event_producer,
-        )
-        from {package_name}.integrations.kafka.producer import KafkaEventProducer
-        from {package_name}.integrations.kafka.schemas import KafkaEvent
-        from {package_name}.integrations.kafka.testing import InMemoryKafkaEventProducer
-
-
-        __all__ = [
-            "KafkaEvent",
-            "KafkaEventProducer",
-            "InMemoryKafkaEventProducer",
-            "build_kafka_consumer",
-            "build_kafka_event_producer",
-        ]
-        '''
-    )
-
-
-def _render_kafka_schemas() -> str:
-    return dedent(
-        '''\
-        import json
-        from typing import Any
-
-        from pydantic import BaseModel, Field
-
-
-        class KafkaEvent(BaseModel):
-            topic: str
-            value: dict[str, Any]
-            key: str | None = None
-            headers: dict[str, str] = Field(default_factory=dict)
-
-
-        def encode_event_value(event: KafkaEvent) -> bytes:
-            return json.dumps(
-                event.value,
-                separators=(",", ":"),
-                sort_keys=True,
-            ).encode("utf-8")
-
-
-        def encode_event_key(event: KafkaEvent) -> bytes | None:
-            if event.key is None:
-                return None
-
-            return event.key.encode("utf-8")
-
-
-        def encode_event_headers(event: KafkaEvent) -> list[tuple[str, bytes]] | None:
-            if not event.headers:
-                return None
-
-            return [
-                (name, value.encode("utf-8"))
-                for name, value in sorted(event.headers.items())
-            ]
-
-
-        def decode_event_value(value: bytes) -> dict[str, Any]:
-            return json.loads(value.decode("utf-8"))
-        '''
-    )
-
-
-def _render_kafka_producer(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from typing import Protocol
-
-        from {package_name}.bootstrap.logging import get_logger
-        from {package_name}.integrations.kafka.schemas import (
-            KafkaEvent,
-            encode_event_headers,
-            encode_event_key,
-            encode_event_value,
-        )
-
-
-        logger = get_logger(__name__)
-
-
-        class KafkaProducerClient(Protocol):
-            async def start(self) -> None:
-                ...
-
-            async def stop(self) -> None:
-                ...
-
-            async def send_and_wait(
-                self,
-                topic: str,
-                value: bytes,
-                *,
-                key: bytes | None = None,
-                headers: list[tuple[str, bytes]] | None = None,
-            ) -> object:
-                ...
-
-
-        class KafkaEventProducer:
-            def __init__(self, client: KafkaProducerClient) -> None:
-                self.client = client
-
-            async def start(self) -> None:
-                await self.client.start()
-
-            async def stop(self) -> None:
-                await self.client.stop()
-
-            async def publish(self, event: KafkaEvent) -> None:
-                await self.client.send_and_wait(
-                    event.topic,
-                    encode_event_value(event),
-                    key=encode_event_key(event),
-                    headers=encode_event_headers(event),
-                )
-                logger.info(
-                    "Published Kafka event",
-                    extra={{
-                        "topic": event.topic,
-                        "event_key": event.key or "-",
-                    }},
-                )
-        '''
-    )
-
-
-def _render_kafka_factory(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from {package_name}.integrations.kafka.producer import KafkaEventProducer
-        from {package_name}.settings import get_settings
-
-
-        def build_kafka_event_producer() -> KafkaEventProducer:
-            settings = get_settings()
-
-            try:
-                from aiokafka import AIOKafkaProducer
-            except ImportError as exc:
-                raise RuntimeError(
-                    "Kafka integration requires aiokafka. Run `uv sync` after "
-                    "`polepos add integration kafka`."
-                ) from exc
-
-            return KafkaEventProducer(
-                AIOKafkaProducer(
-                    bootstrap_servers=settings.kafka_bootstrap_servers,
-                    client_id=settings.kafka_client_id,
-                    acks=settings.kafka_acks,
-                    compression_type=settings.kafka_compression_type or None,
-                    request_timeout_ms=settings.kafka_request_timeout_ms,
-                )
-            )
-
-
-        def build_kafka_consumer(*topics: str):
-            settings = get_settings()
-
-            try:
-                from aiokafka import AIOKafkaConsumer
-            except ImportError as exc:
-                raise RuntimeError(
-                    "Kafka integration requires aiokafka. Run `uv sync` after "
-                    "`polepos add integration kafka`."
-                ) from exc
-
-            return AIOKafkaConsumer(
-                *topics,
-                bootstrap_servers=settings.kafka_bootstrap_servers,
-                client_id=settings.kafka_client_id,
-                group_id=settings.kafka_group_id,
-                auto_offset_reset=settings.kafka_auto_offset_reset,
-            )
-        '''
-    )
-
-
-def _render_kafka_consumer(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from collections.abc import Awaitable, Callable
-        from typing import Any, Protocol
-
-        from {package_name}.bootstrap.logging import get_logger
-        from {package_name}.integrations.kafka.schemas import decode_event_value
-
-
-        logger = get_logger(__name__)
-
-
-        class KafkaMessage(Protocol):
-            topic: str
-            value: bytes
-            key: bytes | None
-
-
-        class KafkaConsumerClient(Protocol):
-            async def start(self) -> None:
-                ...
-
-            async def stop(self) -> None:
-                ...
-
-            def __aiter__(self):
-                ...
-
-
-        EventHandler = Callable[[str, dict[str, Any], str | None], Awaitable[None]]
-
-
-        async def consume_json_messages(
-            consumer: KafkaConsumerClient,
-            handler: EventHandler,
-        ) -> None:
-            await consumer.start()
-            try:
-                async for message in consumer:
-                    key = message.key.decode("utf-8") if message.key else None
-                    payload = decode_event_value(message.value)
-                    await handler(message.topic, payload, key)
-                    logger.info(
-                        "Consumed Kafka event",
-                        extra={{
-                            "topic": message.topic,
-                            "event_key": key or "-",
-                        }},
-                    )
-            finally:
-                await consumer.stop()
-        '''
-    )
-
-
-def _render_kafka_testing(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from {package_name}.integrations.kafka.schemas import KafkaEvent
-
-
-        class InMemoryKafkaEventProducer:
-            def __init__(self) -> None:
-                self.events: list[KafkaEvent] = []
-                self.started = False
-
-            async def start(self) -> None:
-                self.started = True
-
-            async def stop(self) -> None:
-                self.started = False
-
-            async def publish(self, event: KafkaEvent) -> None:
-                self.events.append(event)
-        '''
-    )
 
 
 def _rabbitmq_integration_files(package_name: str) -> dict[str, str]:
     files = {
         "integrations/__init__.py": "",
-        "integrations/rabbitmq/__init__.py": _render_rabbitmq_init(package_name),
-        "integrations/rabbitmq/consumer.py": _render_rabbitmq_consumer(package_name),
-        "integrations/rabbitmq/factory.py": _render_rabbitmq_factory(package_name),
-        "integrations/rabbitmq/publisher.py": _render_rabbitmq_publisher(package_name),
-        "integrations/rabbitmq/schemas.py": _render_rabbitmq_schemas(),
-        "integrations/rabbitmq/testing.py": _render_rabbitmq_testing(package_name),
+        "integrations/rabbitmq/__init__.py": _render_integration_template(
+            "rabbitmq/__init__.py",
+            package_name,
+        ),
+        "integrations/rabbitmq/consumer.py": _render_integration_template(
+            "rabbitmq/consumer.py",
+            package_name,
+        ),
+        "integrations/rabbitmq/factory.py": _render_integration_template(
+            "rabbitmq/factory.py",
+            package_name,
+        ),
+        "integrations/rabbitmq/publisher.py": _render_integration_template(
+            "rabbitmq/publisher.py",
+            package_name,
+        ),
+        "integrations/rabbitmq/schemas.py": _render_integration_template(
+            "rabbitmq/schemas.py",
+            package_name,
+        ),
+        "integrations/rabbitmq/testing.py": _render_integration_template(
+            "rabbitmq/testing.py",
+            package_name,
+        ),
     }
     return _files_for_contract(RABBITMQ_INTEGRATION_CONTRACT, files)
-
-
-def _render_rabbitmq_init(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from {package_name}.integrations.rabbitmq.factory import (
-            build_rabbitmq_event_publisher,
-            build_rabbitmq_queue,
-        )
-        from {package_name}.integrations.rabbitmq.publisher import RabbitMQEventPublisher
-        from {package_name}.integrations.rabbitmq.schemas import RabbitMQMessage
-        from {package_name}.integrations.rabbitmq.testing import InMemoryRabbitMQEventPublisher
-
-
-        __all__ = [
-            "RabbitMQMessage",
-            "RabbitMQEventPublisher",
-            "InMemoryRabbitMQEventPublisher",
-            "build_rabbitmq_event_publisher",
-            "build_rabbitmq_queue",
-        ]
-        '''
-    )
-
-
-def _render_rabbitmq_schemas() -> str:
-    return dedent(
-        '''\
-        import json
-        from typing import Any
-
-        from pydantic import BaseModel, Field
-
-
-        class RabbitMQMessage(BaseModel):
-            routing_key: str
-            value: dict[str, Any]
-            headers: dict[str, str] = Field(default_factory=dict)
-
-
-        def encode_message_value(message: RabbitMQMessage) -> bytes:
-            return json.dumps(
-                message.value,
-                separators=(",", ":"),
-                sort_keys=True,
-            ).encode("utf-8")
-
-
-        def decode_message_value(value: bytes) -> dict[str, Any]:
-            return json.loads(value.decode("utf-8"))
-        '''
-    )
-
-
-def _render_rabbitmq_publisher(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from collections.abc import Awaitable, Callable
-        from typing import Protocol
-
-        from {package_name}.bootstrap.logging import get_logger
-        from {package_name}.integrations.rabbitmq.schemas import (
-            RabbitMQMessage,
-            encode_message_value,
-        )
-
-
-        logger = get_logger(__name__)
-
-
-        class RabbitMQExchange(Protocol):
-            async def publish(self, message: object, routing_key: str) -> object:
-                ...
-
-
-        class RabbitMQChannel(Protocol):
-            async def declare_exchange(
-                self,
-                name: str,
-                type: str,
-                *,
-                durable: bool,
-            ) -> RabbitMQExchange:
-                ...
-
-
-        class RabbitMQConnection(Protocol):
-            async def channel(self) -> RabbitMQChannel:
-                ...
-
-            async def close(self) -> None:
-                ...
-
-
-        RabbitMQConnector = Callable[[], Awaitable[RabbitMQConnection]]
-
-
-        class RabbitMQEventPublisher:
-            def __init__(
-                self,
-                connector: RabbitMQConnector,
-                *,
-                exchange_name: str,
-                exchange_type: str,
-                exchange_durable: bool,
-            ) -> None:
-                self.connector = connector
-                self.exchange_name = exchange_name
-                self.exchange_type = exchange_type
-                self.exchange_durable = exchange_durable
-                self.connection: RabbitMQConnection | None = None
-                self.exchange: RabbitMQExchange | None = None
-
-            async def start(self) -> None:
-                self.connection = await self.connector()
-                channel = await self.connection.channel()
-                self.exchange = await channel.declare_exchange(
-                    self.exchange_name,
-                    self.exchange_type,
-                    durable=self.exchange_durable,
-                )
-
-            async def stop(self) -> None:
-                if self.connection is not None:
-                    await self.connection.close()
-                self.connection = None
-                self.exchange = None
-
-            async def publish(self, message: RabbitMQMessage) -> None:
-                if self.exchange is None:
-                    raise RuntimeError("RabbitMQ publisher has not been started.")
-
-                try:
-                    from aio_pika import DeliveryMode, Message
-                except ImportError as exc:
-                    raise RuntimeError(
-                        "RabbitMQ integration requires aio-pika. Run `uv sync` after "
-                        "`polepos add integration rabbitmq`."
-                    ) from exc
-
-                await self.exchange.publish(
-                    Message(
-                        encode_message_value(message),
-                        content_type="application/json",
-                        delivery_mode=DeliveryMode.PERSISTENT,
-                        headers=message.headers or None,
-                    ),
-                    message.routing_key,
-                )
-                logger.info(
-                    "Published RabbitMQ message",
-                    extra={{
-                        "routing_key": message.routing_key,
-                        "exchange": self.exchange_name,
-                    }},
-                )
-        '''
-    )
-
-
-def _render_rabbitmq_factory(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from typing import Any
-
-        from {package_name}.integrations.rabbitmq.publisher import RabbitMQEventPublisher
-        from {package_name}.settings import get_settings
-
-
-        def build_rabbitmq_event_publisher() -> RabbitMQEventPublisher:
-            settings = get_settings()
-
-            try:
-                from aio_pika import connect_robust
-            except ImportError as exc:
-                raise RuntimeError(
-                    "RabbitMQ integration requires aio-pika. Run `uv sync` after "
-                    "`polepos add integration rabbitmq`."
-                ) from exc
-
-            async def connect():
-                return await connect_robust(
-                    settings.rabbitmq_url,
-                    client_properties={{"connection_name": settings.rabbitmq_client_id}},
-                )
-
-            return RabbitMQEventPublisher(
-                connect,
-                exchange_name=settings.rabbitmq_exchange,
-                exchange_type=settings.rabbitmq_exchange_type,
-                exchange_durable=settings.rabbitmq_exchange_durable,
-            )
-
-
-        async def build_rabbitmq_queue(
-            *,
-            queue_name: str | None = None,
-            routing_key: str | None = None,
-        ) -> tuple[Any, Any]:
-            settings = get_settings()
-
-            try:
-                from aio_pika import connect_robust
-            except ImportError as exc:
-                raise RuntimeError(
-                    "RabbitMQ integration requires aio-pika. Run `uv sync` after "
-                    "`polepos add integration rabbitmq`."
-                ) from exc
-
-            connection = await connect_robust(
-                settings.rabbitmq_url,
-                client_properties={{"connection_name": settings.rabbitmq_client_id}},
-            )
-            channel = await connection.channel()
-            await channel.set_qos(prefetch_count=settings.rabbitmq_prefetch_count)
-            exchange = await channel.declare_exchange(
-                settings.rabbitmq_exchange,
-                settings.rabbitmq_exchange_type,
-                durable=settings.rabbitmq_exchange_durable,
-            )
-            queue = await channel.declare_queue(
-                queue_name or settings.rabbitmq_default_queue,
-                durable=settings.rabbitmq_queue_durable,
-            )
-            await queue.bind(
-                exchange,
-                routing_key or settings.rabbitmq_default_routing_key,
-            )
-            return connection, queue
-        '''
-    )
-
-
-def _render_rabbitmq_consumer(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from collections.abc import Awaitable, Callable
-        from typing import Any, Protocol
-
-        from {package_name}.bootstrap.logging import get_logger
-        from {package_name}.integrations.rabbitmq.schemas import decode_message_value
-
-
-        logger = get_logger(__name__)
-
-
-        class RabbitMQIncomingMessage(Protocol):
-            body: bytes
-            routing_key: str
-
-            def process(self):
-                ...
-
-
-        class RabbitMQQueue(Protocol):
-            def iterator(self):
-                ...
-
-
-        MessageHandler = Callable[[dict[str, Any], str], Awaitable[None]]
-
-
-        async def consume_json_messages(
-            queue: RabbitMQQueue,
-            handler: MessageHandler,
-        ) -> None:
-            async with queue.iterator() as queue_iterator:
-                async for message in queue_iterator:
-                    async with message.process():
-                        payload = decode_message_value(message.body)
-                        await handler(payload, message.routing_key)
-                        logger.info(
-                            "Consumed RabbitMQ message",
-                            extra={{"routing_key": message.routing_key}},
-                        )
-        '''
-    )
-
-
-def _render_rabbitmq_testing(package_name: str) -> str:
-    return dedent(
-        f'''\
-        from {package_name}.integrations.rabbitmq.schemas import RabbitMQMessage
-
-
-        class InMemoryRabbitMQEventPublisher:
-            def __init__(self) -> None:
-                self.messages: list[RabbitMQMessage] = []
-                self.started = False
-
-            async def start(self) -> None:
-                self.started = True
-
-            async def stop(self) -> None:
-                self.started = False
-
-            async def publish(self, message: RabbitMQMessage) -> None:
-                self.messages.append(message)
-        '''
-    )
 
 
 def _ensure_kafka_settings(path: Path, package_name: str) -> None:

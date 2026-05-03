@@ -37,6 +37,10 @@ def test_generated_integration_files_match_contracts() -> None:
     assert tuple(kafka_files) == KAFKA_INTEGRATION_CONTRACT.file_names
     assert tuple(rabbitmq_files) == RABBITMQ_INTEGRATION_CONTRACT.file_names
     assert tuple(llm_files) == LLM_INTEGRATION_CONTRACT.file_names
+    assert "{{" not in "\n".join(kafka_files.values())
+    assert "}}" not in "\n".join(kafka_files.values())
+    assert "{{" not in "\n".join(rabbitmq_files.values())
+    assert "}}" not in "\n".join(rabbitmq_files.values())
 
 
 def test_non_creatable_integration_is_not_accepted_by_add_command_contract() -> None:
