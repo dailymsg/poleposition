@@ -37,6 +37,7 @@ nav:
   - Getting Started: getting-started.md
   - CLI Reference: cli.md
   - Architecture: architecture.md
+  - Architecture Diagram: architecture-diagram.md
   - Project Checks: project-checks.md
   - Feature Status: feature-status.md
   - Examples:
