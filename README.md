@@ -496,6 +496,7 @@ myapp/
 │     ├─ db/
 │     ├─ domain/
 │     └─ modules/
+│        ├─ profile/
 │        ├─ status/
 │        └─ races/
 └─ tests/
