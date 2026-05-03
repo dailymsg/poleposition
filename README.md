@@ -407,7 +407,7 @@ PolePosition is a lifecycle CLI, so the commands are meant to be used over time,
 * `polepos add module` when you want to add a new REST/domain module or an AI prompt module to an existing project
 * `polepos add integration kafka` when you want Kafka producer and consumer wiring in an existing project
 * `polepos add integration rabbitmq` when you want RabbitMQ publisher and consumer wiring in an existing project
-* `polepos check` when you want to validate generated structure, Alembic config, managed markers, module wiring, and integration wiring
+* `polepos check` when you want to validate the project contract: generated structure, Alembic config, managed markers, module wiring, and integration wiring
 * `polepos db upgrade` when you want to apply migrations to the database
 * `polepos db revision -m "..."` when you changed models and need a new migration
 * `polepos db downgrade` when you need to roll back a migration
@@ -516,7 +516,7 @@ The CLI is intentionally lightweight and avoids heavy templating engines. Templa
 
 ### Completed Foundations
 
-* [x] Project name validation
+* [x] `polepos start` project name validation
 * [x] Enterprise FastAPI project lifecycle foundation
 * [x] `polepos add module` for standard modules
 * [x] `polepos add module --template ai-prompt`
@@ -525,7 +525,7 @@ The CLI is intentionally lightweight and avoids heavy templating engines. Templa
 * [x] Alembic and database migrations
 * [x] Docker and PostgreSQL local runtime support
 * [x] `polepos db ...` commands
-* [x] `polepos check`
+* [x] Project contract validation through `polepos check`
 * [x] Settings-driven CORS support
 * [x] JWT-based endpoint authentication foundation
 * [x] Structured JSON logging support

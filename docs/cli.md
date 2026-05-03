@@ -48,6 +48,9 @@ polepos check
 added module wiring, generated tests, and supported integration scaffolds. It
 works from nested directories inside a PolePosition project.
 
+PolePosition does not currently provide a separate `polepos validate` command.
+Project contract validation is handled by `polepos check`.
+
 ## Database Commands
 
 ```bash
