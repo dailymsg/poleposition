@@ -1,8 +1,14 @@
 # PolePosition
 
-[![PyPI version](https://img.shields.io/pypi/v/poleposition)](https://pypi.org/project/poleposition)
-[![Python](https://img.shields.io/pypi/pyversions/poleposition)](https://pypi.org/project/poleposition)
-[![License](https://img.shields.io/github/license/erenertem/poleposition)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/poleposition?label=PyPI)](https://pypi.org/project/poleposition)
+[![Python versions](https://img.shields.io/pypi/pyversions/poleposition?label=Python)](https://pypi.org/project/poleposition)
+[![Package status](https://img.shields.io/pypi/status/poleposition?label=Status)](https://pypi.org/project/poleposition)
+[![Downloads](https://img.shields.io/pypi/dm/poleposition?label=Downloads)](https://pypi.org/project/poleposition)
+[![License](https://img.shields.io/github/license/erenertemden/poleposition?label=License)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-published-blue)](https://erenertemden.github.io/poleposition/)
+[![FastAPI native](https://img.shields.io/badge/FastAPI-native-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![uv first](https://img.shields.io/badge/workflow-uv--first-261230)](https://docs.astral.sh/uv/)
+[![Alembic migrations](https://img.shields.io/badge/database-Alembic%20migrations-orange)](https://alembic.sqlalchemy.org/)
 
 ![PolePosition logo](https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/logo/poleposition-python-logo.svg)
 
