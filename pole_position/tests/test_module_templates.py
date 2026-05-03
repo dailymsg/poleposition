@@ -3,6 +3,7 @@ import pytest
 from pole_position.cli.services.module_templates import (
     SUPPORTED_MODULE_TEMPLATES,
     build_module_template,
+    get_module_template_contract,
     llm_env_block,
     llm_integration_files,
     llm_settings_block,
@@ -38,49 +39,37 @@ def test_render_template_replaces_context_values() -> None:
 
 
 def test_standard_template_contract() -> None:
+    contract = get_module_template_contract("standard")
     template = build_module_template(
         template="standard",
         package_name="shop_api",
         module_name="customers",
     )
 
-    assert set(template.files) == {
-        "__init__.py",
-        "model.py",
-        "repository.py",
-        "router.py",
-        "schemas.py",
-        "service.py",
-    }
-    assert template.integration_test_name == "test_customers.py"
-    assert template.unit_test_name == "test_customers_service.py"
-    assert template.update_db_models is True
-    assert template.ensure_llm_integrations is False
-    assert template.ensure_llm_settings is False
+    assert set(template.files) == set(contract.file_names)
+    assert template.integration_test_name == contract.integration_test_name("customers")
+    assert template.unit_test_name == contract.unit_test_name("customers")
+    assert template.update_db_models is contract.update_db_models
+    assert template.ensure_llm_integrations is contract.ensure_llm_integrations
+    assert template.ensure_llm_settings is contract.ensure_llm_settings
     assert "from shop_api.bootstrap.logging import get_logger" in template.files["service.py"]
     assert 'client.post("/api/v1/customers/"' in template.integration_test_content
 
 
 def test_ai_prompt_template_contract() -> None:
+    contract = get_module_template_contract("ai-prompt")
     template = build_module_template(
         template="ai-prompt",
         package_name="shop_api",
         module_name="assistant",
     )
 
-    assert set(template.files) == {
-        "__init__.py",
-        "orchestrator.py",
-        "prompts.py",
-        "router.py",
-        "schemas.py",
-        "service.py",
-    }
-    assert template.integration_test_name == "test_assistant.py"
-    assert template.unit_test_name == "test_assistant_orchestrator.py"
-    assert template.update_db_models is False
-    assert template.ensure_llm_integrations is True
-    assert template.ensure_llm_settings is True
+    assert set(template.files) == set(contract.file_names)
+    assert template.integration_test_name == contract.integration_test_name("assistant")
+    assert template.unit_test_name == contract.unit_test_name("assistant")
+    assert template.update_db_models is contract.update_db_models
+    assert template.ensure_llm_integrations is contract.ensure_llm_integrations
+    assert template.ensure_llm_settings is contract.ensure_llm_settings
     assert "get_llm_provider" in template.files["orchestrator.py"]
     assert '"/api/v1/assistant/respond"' in template.integration_test_content
 

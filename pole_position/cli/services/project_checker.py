@@ -1,6 +1,17 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from pole_position.cli.services.integration_specs import (
+    CHECKED_INTEGRATION_CONTRACTS,
+    IntegrationContract,
+)
+from pole_position.cli.services.module_templates import (
+    DEFAULT_MODULE_TEMPLATE,
+    ModuleTemplateContract,
+    get_module_template_contract,
+    module_template_detection_contracts,
+)
+
 
 MANAGED_MARKERS = {
     "api/router.py": [
@@ -99,128 +110,6 @@ ALEMBIC_PATHS = [
     "migrations/script.py.mako",
     "migrations/versions",
 ]
-
-STANDARD_MODULE_PATHS = [
-    "__init__.py",
-    "model.py",
-    "repository.py",
-    "router.py",
-    "schemas.py",
-    "service.py",
-]
-
-AI_PROMPT_MODULE_PATHS = [
-    "__init__.py",
-    "orchestrator.py",
-    "prompts.py",
-    "router.py",
-    "schemas.py",
-    "service.py",
-]
-
-INTEGRATION_SPECS = {
-    "kafka": {
-        "dependency": "aiokafka>=0.12.0",
-        "files": [
-            "integrations/__init__.py",
-            "integrations/kafka/__init__.py",
-            "integrations/kafka/consumer.py",
-            "integrations/kafka/factory.py",
-            "integrations/kafka/producer.py",
-            "integrations/kafka/schemas.py",
-            "integrations/kafka/testing.py",
-        ],
-        "settings": [
-            "kafka_enabled",
-            "kafka_bootstrap_servers",
-            "kafka_client_id",
-            "kafka_default_topic",
-            "kafka_group_id",
-            "kafka_auto_offset_reset",
-            "kafka_acks",
-            "kafka_compression_type",
-            "kafka_request_timeout_ms",
-        ],
-        "env": [
-            "KAFKA_ENABLED",
-            "KAFKA_BOOTSTRAP_SERVERS",
-            "KAFKA_CLIENT_ID",
-            "KAFKA_DEFAULT_TOPIC",
-            "KAFKA_GROUP_ID",
-            "KAFKA_AUTO_OFFSET_RESET",
-            "KAFKA_ACKS",
-            "KAFKA_COMPRESSION_TYPE",
-            "KAFKA_REQUEST_TIMEOUT_MS",
-        ],
-    },
-    "rabbitmq": {
-        "dependency": "aio-pika>=9.0.0",
-        "files": [
-            "integrations/__init__.py",
-            "integrations/rabbitmq/__init__.py",
-            "integrations/rabbitmq/consumer.py",
-            "integrations/rabbitmq/factory.py",
-            "integrations/rabbitmq/publisher.py",
-            "integrations/rabbitmq/schemas.py",
-            "integrations/rabbitmq/testing.py",
-        ],
-        "settings": [
-            "rabbitmq_enabled",
-            "rabbitmq_url",
-            "rabbitmq_client_id",
-            "rabbitmq_exchange",
-            "rabbitmq_exchange_type",
-            "rabbitmq_exchange_durable",
-            "rabbitmq_default_routing_key",
-            "rabbitmq_default_queue",
-            "rabbitmq_queue_durable",
-            "rabbitmq_prefetch_count",
-        ],
-        "env": [
-            "RABBITMQ_ENABLED",
-            "RABBITMQ_URL",
-            "RABBITMQ_CLIENT_ID",
-            "RABBITMQ_EXCHANGE",
-            "RABBITMQ_EXCHANGE_TYPE",
-            "RABBITMQ_EXCHANGE_DURABLE",
-            "RABBITMQ_DEFAULT_ROUTING_KEY",
-            "RABBITMQ_DEFAULT_QUEUE",
-            "RABBITMQ_QUEUE_DURABLE",
-            "RABBITMQ_PREFETCH_COUNT",
-        ],
-    },
-    "llm": {
-        "dependency": None,
-        "files": [
-            "integrations/__init__.py",
-            "integrations/llm/__init__.py",
-            "integrations/llm/anthropic_client.py",
-            "integrations/llm/factory.py",
-            "integrations/llm/openai_client.py",
-            "integrations/llm/provider.py",
-            "integrations/llm/schemas.py",
-        ],
-        "settings": [
-            "llm_provider",
-            "llm_model",
-            "llm_api_key",
-            "llm_base_url",
-            "llm_timeout_seconds",
-            "llm_temperature",
-            "llm_max_tokens",
-        ],
-        "env": [
-            "LLM_PROVIDER",
-            "LLM_MODEL",
-            "LLM_API_KEY",
-            "LLM_BASE_URL",
-            "LLM_TIMEOUT_SECONDS",
-            "LLM_TEMPERATURE",
-            "LLM_MAX_TOKENS",
-        ],
-    },
-}
-
 
 @dataclass(frozen=True)
 class ProjectCheckResult:
@@ -417,11 +306,9 @@ def _check_added_module_wiring(
         return
 
     module_kind = _detect_module_kind(project_root, module_root)
-    required_paths = (
-        AI_PROMPT_MODULE_PATHS if module_kind == "ai-prompt" else STANDARD_MODULE_PATHS
-    )
+    template_contract = get_module_template_contract(module_kind)
 
-    for relative_path in required_paths:
+    for relative_path in template_contract.file_names:
         path = module_root / relative_path
         if not path.exists():
             problems.append(
@@ -430,35 +317,26 @@ def _check_added_module_wiring(
 
     _check_module_export(problems, package_root, module_name)
     _check_module_router_wiring(problems, package_root, module_name)
-    if module_kind == "standard":
+    if template_contract.update_db_models:
         _check_module_model_wiring(problems, package_root, module_name)
-    _check_module_tests(problems, project_root, module_name, module_kind)
+    _check_module_tests(problems, project_root, module_name, template_contract)
 
 
 def _detect_module_kind(project_root: Path, module_root: Path) -> str:
     module_name = module_root.name
-    ai_prompt_unit_test = (
-        project_root / "tests" / "unit" / f"test_{module_name}_orchestrator.py"
-    )
-    standard_unit_test = (
-        project_root / "tests" / "unit" / f"test_{module_name}_service.py"
-    )
 
-    if (
-        (module_root / "orchestrator.py").exists()
-        or (module_root / "prompts.py").exists()
-        or ai_prompt_unit_test.exists()
-    ):
-        return "ai-prompt"
+    for contract in module_template_detection_contracts():
+        unit_test = project_root / "tests" / "unit" / contract.unit_test_name(module_name)
+        if unit_test.exists():
+            return contract.name
 
-    if (
-        (module_root / "model.py").exists()
-        or (module_root / "repository.py").exists()
-        or standard_unit_test.exists()
-    ):
-        return "standard"
+        if any(
+            (module_root / file_name).exists()
+            for file_name in contract.detection_file_names
+        ):
+            return contract.name
 
-    return "standard"
+    return DEFAULT_MODULE_TEMPLATE
 
 
 def _check_module_export(
@@ -537,15 +415,17 @@ def _check_module_tests(
     problems: list[str],
     project_root: Path,
     module_name: str,
-    module_kind: str,
+    template_contract: ModuleTemplateContract,
 ) -> None:
-    integration_test = project_root / "tests" / "integration" / f"test_{module_name}.py"
-    unit_test_name = (
-        f"test_{module_name}_orchestrator.py"
-        if module_kind == "ai-prompt"
-        else f"test_{module_name}_service.py"
+    integration_test = (
+        project_root
+        / "tests"
+        / "integration"
+        / template_contract.integration_test_name(module_name)
     )
-    unit_test = project_root / "tests" / "unit" / unit_test_name
+    unit_test = (
+        project_root / "tests" / "unit" / template_contract.unit_test_name(module_name)
+    )
 
     if not integration_test.exists():
         problems.append(
@@ -568,10 +448,9 @@ def _check_integration_wiring(
     env_content = _read_file_text(project_root / ".env.example")
     pyproject_content = _read_file_text(project_root / "pyproject.toml")
 
-    for integration_name, spec in INTEGRATION_SPECS.items():
+    for contract in CHECKED_INTEGRATION_CONTRACTS:
         if not _has_integration_signal(
-            integration_name=integration_name,
-            spec=spec,
+            contract=contract,
             project_root=project_root,
             package_root=package_root,
             settings_content=settings_content,
@@ -583,46 +462,41 @@ def _check_integration_wiring(
         _check_integration_files(
             problems=problems,
             package_root=package_root,
-            integration_name=integration_name,
-            files=spec["files"],
+            contract=contract,
         )
         _check_integration_dependency(
             problems=problems,
             project_root=project_root,
-            integration_name=integration_name,
-            dependency=spec["dependency"],
+            contract=contract,
             pyproject_content=pyproject_content,
         )
         _check_integration_settings(
             problems=problems,
             package_root=package_root,
-            integration_name=integration_name,
-            settings=spec["settings"],
+            contract=contract,
             settings_content=settings_content,
         )
         _check_integration_env(
             problems=problems,
             project_root=project_root,
-            integration_name=integration_name,
-            env=spec["env"],
+            contract=contract,
             env_content=env_content,
         )
 
 
 def _has_integration_signal(
     *,
-    integration_name: str,
-    spec,
+    contract: IntegrationContract,
     project_root: Path,
     package_root: Path,
     settings_content: str | None,
     env_content: str | None,
     pyproject_content: str | None,
 ) -> bool:
-    if (package_root / "integrations" / integration_name).exists():
+    if (package_root / "integrations" / contract.name).exists():
         return True
 
-    dependency = spec["dependency"]
+    dependency = contract.dependency
     if (
         isinstance(dependency, str)
         and pyproject_content is not None
@@ -631,16 +505,16 @@ def _has_integration_signal(
         return True
 
     if settings_content is not None:
-        for setting in spec["settings"]:
+        for setting in contract.settings:
             if f"{setting}:" in settings_content:
                 return True
 
     if env_content is not None:
-        for env_name in spec["env"]:
+        for env_name in contract.env:
             if f"{env_name}=" in env_content:
                 return True
 
-    if integration_name == "llm":
+    if contract.name == "llm":
         return _has_ai_prompt_module(project_root, package_root)
 
     return False
@@ -664,14 +538,13 @@ def _check_integration_files(
     *,
     problems: list[str],
     package_root: Path,
-    integration_name: str,
-    files,
+    contract: IntegrationContract,
 ) -> None:
-    for relative_path in files:
+    for relative_path in contract.file_names:
         path = package_root / relative_path
         if not path.exists():
             problems.append(
-                f"Integration '{integration_name}' is missing generated file: {path}"
+                f"Integration '{contract.name}' is missing generated file: {path}"
             )
 
 
@@ -679,10 +552,10 @@ def _check_integration_dependency(
     *,
     problems: list[str],
     project_root: Path,
-    integration_name: str,
-    dependency,
+    contract: IntegrationContract,
     pyproject_content: str | None,
 ) -> None:
+    dependency = contract.dependency
     if not isinstance(dependency, str):
         return
 
@@ -691,7 +564,7 @@ def _check_integration_dependency(
 
     if dependency not in pyproject_content:
         problems.append(
-            f"Integration '{integration_name}' is missing dependency in "
+            f"Integration '{contract.name}' is missing dependency in "
             f"{project_root / 'pyproject.toml'}: {dependency}"
         )
 
@@ -700,18 +573,17 @@ def _check_integration_settings(
     *,
     problems: list[str],
     package_root: Path,
-    integration_name: str,
-    settings,
+    contract: IntegrationContract,
     settings_content: str | None,
 ) -> None:
     if settings_content is None:
         return
 
     settings_path = package_root / "settings.py"
-    for setting in settings:
+    for setting in contract.settings:
         if f"{setting}:" not in settings_content:
             problems.append(
-                f"Integration '{integration_name}' is missing setting in "
+                f"Integration '{contract.name}' is missing setting in "
                 f"{settings_path}: {setting}"
             )
 
@@ -720,18 +592,17 @@ def _check_integration_env(
     *,
     problems: list[str],
     project_root: Path,
-    integration_name: str,
-    env,
+    contract: IntegrationContract,
     env_content: str | None,
 ) -> None:
     if env_content is None:
         return
 
     env_path = project_root / ".env.example"
-    for env_name in env:
+    for env_name in contract.env:
         if f"{env_name}=" not in env_content:
             problems.append(
-                f"Integration '{integration_name}' is missing env value in "
+                f"Integration '{contract.name}' is missing env value in "
                 f"{env_path}: {env_name}"
             )
 

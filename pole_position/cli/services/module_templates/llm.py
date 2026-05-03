@@ -1,10 +1,11 @@
+from pole_position.cli.services.integration_specs import LLM_INTEGRATION_CONTRACT
 from pole_position.cli.services.module_templates.renderer import render_template
 
 
 def llm_integration_files(package_name: str) -> dict[str, str]:
     context = {"package_name": package_name}
 
-    return {
+    files = {
         "integrations/__init__.py": render_template("llm/integrations_init.py.tpl", context),
         "integrations/llm/__init__.py": render_template("llm/__init__.py.tpl", context),
         "integrations/llm/schemas.py": render_template("llm/schemas.py.tpl", context),
@@ -15,6 +16,16 @@ def llm_integration_files(package_name: str) -> dict[str, str]:
             "llm/anthropic_client.py.tpl",
             context,
         ),
+    }
+
+    missing = set(LLM_INTEGRATION_CONTRACT.file_names) - set(files)
+    extra = set(files) - set(LLM_INTEGRATION_CONTRACT.file_names)
+    if missing or extra:
+        raise RuntimeError("LLM integration file contract drifted.")
+
+    return {
+        file_name: files[file_name]
+        for file_name in LLM_INTEGRATION_CONTRACT.file_names
     }
 
 

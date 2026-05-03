@@ -1,10 +1,15 @@
 from pathlib import Path
 from textwrap import dedent
 
+from pole_position.cli.services.integration_specs import (
+    IntegrationContract,
+    KAFKA_INTEGRATION_CONTRACT,
+    RABBITMQ_INTEGRATION_CONTRACT,
+    SUPPORTED_INTEGRATIONS,
+    get_creatable_integration_contract,
+)
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 
-
-SUPPORTED_INTEGRATIONS = ("kafka", "rabbitmq")
 
 SETTINGS_INTEGRATION_MARKER = "    # polepos:integration-settings"
 SETTINGS_LLM_MARKER = "    # polepos:llm-settings"
@@ -13,42 +18,38 @@ ENV_LLM_MARKER = "# polepos:llm-env"
 
 
 def add_integration(integration_name: str, cwd: Path | None = None) -> None:
-    if integration_name not in SUPPORTED_INTEGRATIONS:
-        supported = ", ".join(SUPPORTED_INTEGRATIONS)
-        raise ValueError(
-            f"Unsupported integration '{integration_name}'. Expected one of: {supported}."
-        )
+    contract = get_creatable_integration_contract(integration_name)
 
     project_root = find_project_root(cwd)
     package_root = find_package_root(cwd)
     package_name = package_root.name
-    integration_root = package_root / "integrations" / integration_name
+    integration_root = package_root / "integrations" / contract.name
 
     _validate_add_integration_preflight(
         project_root=project_root,
         package_root=package_root,
         integration_root=integration_root,
-        integration_name=integration_name,
+        integration_name=contract.name,
     )
 
-    if integration_name == "kafka":
+    if contract.name == "kafka":
         _ensure_integration_files(
             package_root,
             _kafka_integration_files(package_name),
         )
         _ensure_kafka_settings(package_root / "settings.py", package_name)
         _ensure_kafka_env(project_root / ".env.example", package_name)
-        _ensure_project_dependency(project_root / "pyproject.toml", "aiokafka>=0.12.0")
+        _ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
         return
 
-    if integration_name == "rabbitmq":
+    if contract.name == "rabbitmq":
         _ensure_integration_files(
             package_root,
             _rabbitmq_integration_files(package_name),
         )
         _ensure_rabbitmq_settings(package_root / "settings.py", package_name)
         _ensure_rabbitmq_env(project_root / ".env.example", package_name)
-        _ensure_project_dependency(project_root / "pyproject.toml", "aio-pika>=9.0.0")
+        _ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
         return
 
 
@@ -88,8 +89,20 @@ def _ensure_integration_files(package_root: Path, files: dict[str, str]) -> None
             path.write_text(content, encoding="utf-8")
 
 
+def _files_for_contract(
+    contract: IntegrationContract,
+    files: dict[str, str],
+) -> dict[str, str]:
+    missing = set(contract.file_names) - set(files)
+    extra = set(files) - set(contract.file_names)
+    if missing or extra:
+        raise RuntimeError(f"Integration file contract drifted: {contract.name}")
+
+    return {file_name: files[file_name] for file_name in contract.file_names}
+
+
 def _kafka_integration_files(package_name: str) -> dict[str, str]:
-    return {
+    files = {
         "integrations/__init__.py": "",
         "integrations/kafka/__init__.py": _render_kafka_init(package_name),
         "integrations/kafka/consumer.py": _render_kafka_consumer(package_name),
@@ -98,6 +111,7 @@ def _kafka_integration_files(package_name: str) -> dict[str, str]:
         "integrations/kafka/schemas.py": _render_kafka_schemas(),
         "integrations/kafka/testing.py": _render_kafka_testing(package_name),
     }
+    return _files_for_contract(KAFKA_INTEGRATION_CONTRACT, files)
 
 
 def _render_kafka_init(package_name: str) -> str:
@@ -364,7 +378,7 @@ def _render_kafka_testing(package_name: str) -> str:
 
 
 def _rabbitmq_integration_files(package_name: str) -> dict[str, str]:
-    return {
+    files = {
         "integrations/__init__.py": "",
         "integrations/rabbitmq/__init__.py": _render_rabbitmq_init(package_name),
         "integrations/rabbitmq/consumer.py": _render_rabbitmq_consumer(package_name),
@@ -373,6 +387,7 @@ def _rabbitmq_integration_files(package_name: str) -> dict[str, str]:
         "integrations/rabbitmq/schemas.py": _render_rabbitmq_schemas(),
         "integrations/rabbitmq/testing.py": _render_rabbitmq_testing(package_name),
     }
+    return _files_for_contract(RABBITMQ_INTEGRATION_CONTRACT, files)
 
 
 def _render_rabbitmq_init(package_name: str) -> str:
@@ -785,7 +800,10 @@ def _rabbitmq_env_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_project_dependency(path: Path, dependency: str) -> None:
+def _ensure_project_dependency(path: Path, dependency: str | None) -> None:
+    if dependency is None:
+        return
+
     content = path.read_text(encoding="utf-8")
     dependency_line = f'    "{dependency}",'
 
