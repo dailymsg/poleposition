@@ -12,8 +12,8 @@ Instead, it clarifies whether a feature is:
 ## Status Levels
 
 - `Stable foundation`: good default, broadly usable, expected to stay
-- `Growing`: useful and real, but likely to evolve
-- `Partial by design`: intentionally scoped down for now
+- `Growing`: useful and real, with a documented current scope
+- `Partial by design`: intentionally scoped down in the current product
 
 ## Current Status
 
@@ -24,7 +24,7 @@ Instead, it clarifies whether a feature is:
 | Template rendering | Stable foundation | Supporting mechanism for lifecycle workflows; placeholder replacement and template packaging are in good shape. |
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
-| `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level, not full provider integrations yet. |
+| `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level boundaries for real provider integration. |
 | `polepos add module` with `api-only` | Growing | Useful lightweight module archetype for routes that do not need model, repository, or database wiring. |
 | `polepos add integration kafka` | Growing | First messaging integration; producer, consumer factory, settings, env, and test double support are scaffolded. |
 | `polepos add integration rabbitmq` | Growing | Second messaging integration; publisher, queue factory, settings, env, and test double support are scaffolded. |
@@ -32,10 +32,10 @@ Instead, it clarifies whether a feature is:
 | `polepos db ...` commands | Stable foundation | Good migration lifecycle wrapper around Alembic. |
 | Alembic migration support | Stable foundation | Generated projects are migration-first. |
 | Docker and PostgreSQL workflow | Growing | Good local runtime story; Docker e2e exists as opt-in smoke coverage. |
-| Auth foundation | Partial by design | Strong route-boundary pattern; not yet a complete login/user management system. |
-| JSON logging support | Stable foundation | Works as a runtime format choice; deeper request-context enrichment can still improve. |
+| Auth foundation | Partial by design | Strong route-boundary pattern scoped to endpoint protection rather than full login/user management. |
+| JSON logging support | Stable foundation | Works as a runtime format choice. |
 | CORS support | Stable foundation | Settings-driven and production-aware. |
-| Example scenarios | Growing | Good for onboarding and product understanding; should expand over time. |
+| Example scenarios | Growing | Scenario guides for onboarding and product understanding. |
 
 ## Important Clarifications
 
@@ -49,12 +49,9 @@ starting, growing, checking, and migrating projects is the product shape.
 
 This is one of the most important product surfaces.
 
-It is already useful, but it still assumes PolePosition-managed markers remain in place.
-That means it is powerful, but not fully free-form.
-
-Near-term improvements should continue focusing on ergonomics rather than
-expanding the top-level command surface: clearer guidance in command output,
-additional module archetypes, and scoped generation options.
+It uses PolePosition-managed markers as its insertion contract.
+That makes generated updates predictable while keeping surrounding project code
+editable.
 
 ### Messaging integrations
 
@@ -76,23 +73,19 @@ It currently validates:
 - added module lifecycle wiring
 - Kafka, RabbitMQ, and LLM opt-in integration wiring
 
-The command is intentionally read-only and file-based. It should remain safe to
-run from local development, CI, and agent workflows without requiring a running
+The command is intentionally read-only and file-based. It is safe to run from
+local development, CI, and agent workflows without requiring a running
 database, message broker, LLM provider, or optional integration dependency.
-
-Future improvements should focus on better output and automation surfaces such
-as `--json`, issue codes, severity levels, and possibly a limited `--fix` mode
-for safe marker restoration.
 
 ### Auth foundation
 
-The current auth layer solves:
+The current auth layer covers:
 
 - public vs protected endpoint boundaries
 - current user resolution
 - simple role-gated authorization
 
-It does not yet solve:
+It is scoped away from:
 
 - login
 - password storage
@@ -103,20 +96,10 @@ It does not yet solve:
 ### AI prompt modules
 
 The current `ai-prompt` template is intentionally provider-agnostic.
-That is a strength, but it also means provider adapters are not yet full out-of-the-box integrations.
+That is a strength, and it keeps provider adapters at scaffold level.
 
 This is best understood as:
 
 - a solid module architecture
 - a useful orchestration pattern
 - a starting point for real provider integration
-
-## Recommended Interpretation For Contributors
-
-When deciding how to change the repo:
-
-- preserve `Stable foundation` areas carefully
-- improve `Growing` areas without overcomplicating them
-- avoid presenting `Partial by design` areas as complete systems
-
-That balance is important for keeping product messaging honest while still building a strong platform.

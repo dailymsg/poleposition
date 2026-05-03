@@ -223,36 +223,3 @@ should stay fast, file-based, deterministic, and safe to run in CI.
 Do not use `check` to hide FastAPI behavior behind a framework. It should
 validate PolePosition-managed project shape while keeping the generated app
 explicit and understandable.
-
-When adding a new integration, define its check contract in the same shape:
-
-- activation signals
-- generated files
-- dependencies
-- settings keys
-- env keys
-- tests for a clean project
-- tests for at least one missing file
-- tests for at least one missing dependency, setting, or env value when relevant
-
-When adding a new module template, define its lifecycle contract:
-
-- generated module files
-- router wiring expectations
-- database model wiring expectations, if any
-- generated test names
-- shared integration side effects, if any
-
-## Current Limits
-
-`polepos check` intentionally does not yet provide:
-
-- `--json`
-- `--fix`
-- severity levels
-- stable machine-readable issue codes
-- AST-level parsing of settings or router wiring
-- dependency version range normalization
-
-Those are good future directions, but the current behavior is intentionally
-simple and transparent.

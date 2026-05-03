@@ -337,7 +337,7 @@ That gives the team:
 - a public route example
 - an authenticated route example
 - an authorization example
-- a consistent way to protect future endpoints
+- a consistent way to protect new endpoints
 
 ## Summary
 

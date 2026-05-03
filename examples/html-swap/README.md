@@ -3,7 +3,7 @@
 This guide shows a realistic PolePosition workflow for a user who wants to:
 
 1. create a FastAPI project with PolePosition
-2. generate a module with `polepos add module html`
+2. generate an API-focused module with `polepos add module html --api-only`
 3. accept HTML through an API endpoint
 4. replace links inside that HTML
 5. store swap history in PostgreSQL
@@ -16,7 +16,9 @@ The goal is a focused transformation endpoint backed by PostgreSQL:
 POST /api/v1/html/swap
 ```
 
-This is a good example of how PolePosition can speed up project structure and routing when the final module is not generic CRUD, but still benefits from a real database-backed audit trail.
+This is a good example of how PolePosition can speed up project structure and
+routing when the final module is not generic CRUD, but still benefits from a
+real database-backed audit trail.
 
 ## Scenario Goal
 
@@ -106,10 +108,10 @@ In this PostgreSQL-backed version of the scenario, the database is part of the r
 
 ## Step 2: Generate the Module
 
-Create a module named `html`:
+Create an API-focused module named `html`:
 
 ```bash
-polepos add module html
+polepos add module html --api-only
 ```
 
 PolePosition will generate:
@@ -117,26 +119,24 @@ PolePosition will generate:
 ```text
 src/html_tools/modules/html/
   __init__.py
-  model.py
-  repository.py
   router.py
   schemas.py
   service.py
 tests/integration/test_html.py
-tests/unit/test_html_service.py
+tests/unit/test_html_api_service.py
 ```
 
 It will also update:
 
 ```text
 src/html_tools/api/router.py
-src/html_tools/db/models.py
 src/html_tools/modules/__init__.py
 ```
 
 ## Step 3: Decide What to Keep
 
-For this PostgreSQL-backed use case, the generated standard module is actually a good fit.
+For this transformation endpoint, the API-only module is the best starting
+point because it skips generic CRUD and database files.
 
 The endpoint is not primarily about:
 
@@ -152,18 +152,20 @@ It is primarily about:
 - keeping swap history in PostgreSQL
 - returning transformed HTML
 
-So the user should treat the generated module as a starting scaffold, then reshape it around the real workflow.
+So the user should treat the generated module as a starting scaffold, then
+reshape it around the real workflow.
 
 For this scenario:
 
 - `router.py` stays
 - `schemas.py` stays
 - `service.py` stays
-- `model.py` stays
-- `repository.py` stays
+- `model.py` is added for swap history
+- `repository.py` is added for persistence
 
 The user does not keep the generated code as-is.
-Instead, they rewrite those files to match the HTML swap domain.
+Instead, they rewrite the API files and add persistence files that match the
+HTML swap domain.
 
 ## Step 4: Add an HTML Parser Dependency
 
@@ -219,7 +221,7 @@ But if the consumer expects HTML directly, raw `text/html` is the cleaner choice
 
 ## Step 6: Rewrite `schemas.py`
 
-The generated CRUD schemas should be replaced with transformation-focused schemas.
+The starter API schemas should be replaced with transformation-focused schemas.
 
 Example:
 
@@ -250,7 +252,7 @@ Why this shape works:
 - the service layer stays predictable
 - the API can return both transformed HTML metadata and a database record id
 
-## Step 7: Rewrite `model.py`
+## Step 7: Add `model.py`
 
 Now the module should store swap history in PostgreSQL.
 
@@ -284,7 +286,7 @@ Why this is useful:
 - the team can inspect historical transformations
 - the API stays stateless for clients while the backend keeps useful records
 
-## Step 8: Rewrite `repository.py`
+## Step 8: Add `repository.py`
 
 The repository should save completed swap operations.
 
@@ -380,7 +382,7 @@ This keeps the business logic in the service layer, which matches the PolePositi
 
 ## Step 10: Rewrite `router.py`
 
-The generated CRUD router should become a transformation endpoint.
+The starter API router should become a transformation endpoint.
 
 Example:
 
@@ -416,18 +418,21 @@ Even though the client receives raw HTML, the backend still persists the swap op
 
 ## Step 11: Create a Migration
 
-Because the module now uses PostgreSQL, the user should create and apply a migration after rewriting `model.py`:
+Because the module now uses PostgreSQL, the user should create and apply a
+migration after adding `model.py`:
 
 ```bash
 polepos db revision -m "create html swaps table"
 polepos db upgrade
 ```
 
-This step is essential because the rewritten `model.py` is now part of the application contract.
+This step is essential because the new `model.py` is now part of the
+application contract.
 
 ## Step 12: Rewrite the Integration Test
 
-The generated CRUD integration test should be replaced with an HTML transformation test.
+The generated API-only integration test should be replaced with an HTML
+transformation test.
 
 Example:
 
@@ -458,8 +463,9 @@ def test_swap_html_links(client: TestClient) -> None:
     assert "https://old.example.com/pricing" not in response.text
 ```
 
-This verifies the real user goal instead of the generated CRUD default.
-If the user wants deeper coverage, they can also assert that a row was written to the database.
+This verifies the real user goal instead of the generated API-only default.
+If the user wants deeper coverage, they can also assert that a row was written
+to the database.
 
 ## Step 13: Rewrite the Unit Test
 
@@ -468,12 +474,16 @@ The unit test should focus on the transformation rule itself.
 Example:
 
 ```python
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 from html_tools.modules.html.schemas import HtmlSwapRequest, LinkReplacement
 from html_tools.modules.html.service import HtmlService
 
 
 def test_swap_links_replaces_matching_anchor_targets() -> None:
-    service = HtmlService()
+    service = HtmlService(Mock())
+    service.repository.create.return_value = SimpleNamespace(id=1)
     payload = HtmlSwapRequest(
         html=(
             "<html><body>"
@@ -490,11 +500,14 @@ def test_swap_links_replaces_matching_anchor_targets() -> None:
 
     result = service.swap_links(payload)
 
-    assert "https://new.example.com/contact" in result
-    assert "https://old.example.com/contact" not in result
+    assert "https://new.example.com/contact" in result.html
+    assert "https://old.example.com/contact" not in result.html
+    assert result.updated_links == 1
+    service.repository.create.assert_called_once()
 ```
 
-If the user wants, they can also mock the repository and assert that `create(...)` was called with the transformed HTML.
+If the user wants deeper coverage, they can also inspect the repository call
+arguments and assert that `create(...)` received the transformed HTML.
 
 ## Step 14: Run the Module
 
@@ -537,43 +550,28 @@ It also helps when the user wants a specialized backend module with:
 - predictable tests
 - a scalable project layout
 
-The generated `standard` module is still helpful here because it removes setup work:
+The generated `api-only` module is helpful here because it removes setup work
+without creating generic database files that this endpoint may not need at
+first:
 
 - route registration is done
 - tests are already scaffolded
 - the module is already wired into the app
-- database wiring already exists
-- Alembic is already in place
+- there are no generic CRUD model or repository files to delete
+- Alembic is still available when the scenario grows into PostgreSQL-backed
+  history
 
 The user only needs to reshape the generated module around the real business goal.
-
-## Current Limitation
-
-Today this scenario still starts from the `standard` module template, which means the user rewrites generic CRUD files into HTML-swap-specific shapes.
-
-That suggests a future improvement for PolePosition:
-
-```bash
-polepos add module html --api-only
-```
-
-or
-
-```bash
-polepos add module html --template transformer
-```
-
-That would make this kind of HTML-processing endpoint even faster to build.
 
 ## Summary
 
 The detailed user flow is:
 
 1. create the project
-2. add the `html` module
+2. add the API-only `html` module
 3. point the project at PostgreSQL
-4. rewrite the generated model and repository for swap history
-5. replace generated CRUD schemas with transformation-focused request and result shapes
+4. add a model and repository for swap history
+5. replace starter API schemas with transformation-focused request and result shapes
 6. implement link swapping in the service layer
 7. persist completed swaps in PostgreSQL
 8. expose `POST /api/v1/html/swap`

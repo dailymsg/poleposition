@@ -32,7 +32,7 @@ DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/html_tools
 ## Generate the Module
 
 ```bash
-polepos add module html
+polepos add module html --api-only
 ```
 
 PolePosition creates:
@@ -40,25 +40,23 @@ PolePosition creates:
 ```text
 src/html_tools/modules/html/
   __init__.py
-  model.py
-  repository.py
   router.py
   schemas.py
   service.py
 tests/integration/test_html.py
-tests/unit/test_html_service.py
+tests/unit/test_html_api_service.py
 ```
 
 ## Reshape the Module
 
-Keep the generated module boundary, then rewrite the internals for the real
+Keep the generated module boundary, then reshape the internals for the real
 workflow:
 
 - `schemas.py` defines the HTML swap request contract
 - `service.py` parses HTML and performs replacements
-- `model.py` stores swap history
-- `repository.py` persists operations
 - `router.py` exposes `POST /api/v1/html/swap`
+- add `model.py` when swap history becomes part of the contract
+- add `repository.py` to persist completed operations
 
 Use a parser dependency instead of string replacement:
 

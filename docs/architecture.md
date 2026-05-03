@@ -238,8 +238,8 @@ Current check layers:
 - lifecycle checks: added module files, exports, router wiring, model wiring, and generated tests
 - integration checks: Kafka, RabbitMQ, and LLM files, dependencies, settings keys, and env keys
 
-Core-only behavior is kept available through `check_core_project()` so future
-CLI modes can reuse the foundation without lifecycle or integration checks.
+Core-only behavior is available through `check_core_project()` for internal
+callers that need the foundation without lifecycle or integration checks.
 The public `check_project()` path runs the full current contract.
 
 For the detailed user guide and agent-facing contract, see:

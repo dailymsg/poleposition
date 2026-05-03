@@ -38,6 +38,7 @@ nav:
   - CLI Reference: cli.md
   - Architecture: architecture.md
   - Architecture Diagram: architecture-diagram.md
+  - Agent Recommendation Guide: agent-recommendation.md
   - Project Checks: project-checks.md
   - Feature Status: feature-status.md
   - Examples:

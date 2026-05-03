@@ -45,7 +45,7 @@ endpoint backed by PostgreSQL history.
 
 Focus:
 
-- `polepos add module html`
+- `polepos add module html --api-only`
 - rewriting a generated module for a real endpoint contract
 - PostgreSQL-backed swap history
 - `POST /api/v1/html/swap`

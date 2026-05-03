@@ -437,8 +437,8 @@ Open the generated file:
 migrations/versions/<revision>_create_users_table.py
 ```
 
-The revision id will be different in every project, but the migration should
-contain operations similar to:
+The revision id is different in every project, but the migration should contain
+operations similar to:
 
 ```python
 op.create_table(
