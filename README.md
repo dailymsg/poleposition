@@ -1,4 +1,4 @@
-# PolePosition
+# PolePosition | A lifecycle CLI for FastAPI projects
 
 [![PyPI version](https://img.shields.io/pypi/v/poleposition?label=PyPI)](https://pypi.org/project/poleposition)
 [![Python versions](https://img.shields.io/pypi/pyversions/poleposition?label=Python)](https://pypi.org/project/poleposition)
