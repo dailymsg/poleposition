@@ -72,7 +72,7 @@ Less boilerplate at project creation. Less lifecycle friction as the app grows.
 
 ## Coming From Spring Boot or ASP.NET Core?
 
-PolePosition is useful for teams coming from Spring Boot or ASP.NET Core who
+PolePosition is useful for teams coming from [Spring Boot](https://spring.io/projects/spring-boot) or [ASP.NET Core](https://dotnet.microsoft.com/en-us/apps/aspnet) who
 like explicit project structure, migration workflows, configuration boundaries,
 logging conventions, tests, and module-oriented growth, but want to keep the
 speed and directness of FastAPI.
@@ -135,6 +135,7 @@ Use these files to understand the repo quickly:
 * [Feature Status](docs/feature-status.md)
 * [Project Checks](docs/project-checks.md)
 * [Examples Index](examples/README.md)
+* [Changelog](CHANGELOG.md)
 * [Agent Guide](AGENTS.md)
 
 Build the documentation site locally:
@@ -161,6 +162,20 @@ or
 ```bash
 pip install poleposition
 ```
+
+---
+
+## Python Support
+
+The PolePosition CLI supports Python `>=3.10`.
+
+Generated FastAPI projects target Python `>=3.11`, as declared in the generated
+project `pyproject.toml`. This lets the CLI remain lightweight while generated
+applications use a modern FastAPI, Pydantic, SQLAlchemy, and Alembic baseline.
+
+The repository CI currently runs the CLI test suite on Python `3.10`, `3.11`,
+`3.12`, `3.13`, and `3.14`. Generated-project e2e coverage runs on Python
+`3.11`.
 
 ---
 
