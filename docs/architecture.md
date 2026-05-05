@@ -213,6 +213,11 @@ and adds `aio-pika`. Both integrations patch settings and `.env.example`
 values. Consumer loops are left as explicit worker/runtime code instead of
 being started inside the FastAPI app process.
 
+Integration dependency patching targets `[project].dependencies` in
+`pyproject.toml`. It tolerates normal TOML formatting differences such as
+inline or multi-line arrays, but it does not patch dependency groups or
+tool-specific dependency lists.
+
 ## `check` Architecture
 
 `polepos check` is the lifecycle contract validator. It keeps project

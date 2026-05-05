@@ -1,0 +1,263 @@
+import re
+from pathlib import Path
+
+
+SECTION_HEADER_PATTERN = re.compile(r"^\s*\[([^\]]+)\]\s*(?:#.*)?$")
+DEPENDENCIES_ARRAY_PATTERN = re.compile(
+    r"^(?P<indent>\s*)dependencies\s*=\s*\[(?P<rest>.*)$"
+)
+DEPENDENCY_ENTRY_PATTERN = re.compile(
+    r"^(?P<indent>\s*)(?P<quote>[\"'])(?P<value>.+?)(?P=quote)\s*,?\s*(?:#.*)?$"
+)
+ARRAY_END_PATTERN = re.compile(r"^\s*\]\s*(?:#.*)?$")
+
+
+def ensure_project_dependency(path: Path, dependency: str | None) -> None:
+    if dependency is None:
+        return
+
+    content = path.read_text(encoding="utf-8")
+    lines = content.splitlines()
+    project_start, project_end = _find_project_section(lines, path)
+    array_start, array_end, array_indent, inline_values = _find_project_dependencies(
+        lines,
+        project_start,
+        project_end,
+        path,
+    )
+    existing_dependencies = _dependency_values(
+        lines=lines,
+        start_index=array_start,
+        end_index=array_end,
+        inline_values=inline_values,
+    )
+
+    if dependency in existing_dependencies:
+        return
+
+    if inline_values is not None:
+        _replace_inline_dependencies_array(
+            lines=lines,
+            start_index=array_start,
+            end_index=array_end,
+            array_indent=array_indent,
+            dependencies=[*inline_values, dependency],
+        )
+    else:
+        _insert_dependency_line(
+            lines=lines,
+            start_index=array_start,
+            end_index=array_end,
+            array_indent=array_indent,
+            dependency=dependency,
+        )
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _find_project_section(lines: list[str], path: Path) -> tuple[int, int]:
+    for index, line in enumerate(lines):
+        match = SECTION_HEADER_PATTERN.match(line)
+        if match is None or match.group(1).strip() != "project":
+            continue
+
+        for end_index in range(index + 1, len(lines)):
+            if SECTION_HEADER_PATTERN.match(lines[end_index]):
+                return index + 1, end_index
+
+        return index + 1, len(lines)
+
+    raise RuntimeError(f"Unsupported dependency layout: {path}")
+
+
+def _find_project_dependencies(
+    lines: list[str],
+    project_start: int,
+    project_end: int,
+    path: Path,
+) -> tuple[int, int, str, list[str] | None]:
+    for index in range(project_start, project_end):
+        match = DEPENDENCIES_ARRAY_PATTERN.match(lines[index])
+        if match is None:
+            continue
+
+        inline_values = _parse_inline_dependency_values(match.group("rest"))
+        if inline_values is not None:
+            return index, index, match.group("indent"), inline_values
+
+        end_index = _find_array_end_index(
+            lines=lines,
+            start_index=index,
+            stop_index=project_end,
+            path=path,
+        )
+        return index, end_index, match.group("indent"), None
+
+    raise RuntimeError(f"Unsupported dependency layout: {path}")
+
+
+def _parse_inline_dependency_values(rest: str) -> list[str] | None:
+    close_index = _find_unquoted_closing_bracket(rest)
+    if close_index is None:
+        return None
+
+    return _quoted_values(rest[:close_index])
+
+
+def _find_unquoted_closing_bracket(text: str) -> int | None:
+    quote: str | None = None
+    escaped = False
+
+    for index, char in enumerate(text):
+        if quote is not None:
+            if quote == '"' and char == "\\" and not escaped:
+                escaped = True
+                continue
+            if char == quote and not escaped:
+                quote = None
+            escaped = False
+            continue
+
+        if char in {"'", '"'}:
+            quote = char
+            continue
+
+        if char == "]":
+            return index
+
+    return None
+
+
+def _quoted_values(text: str) -> list[str]:
+    values: list[str] = []
+    index = 0
+
+    while index < len(text):
+        quote = text[index]
+        if quote not in {"'", '"'}:
+            index += 1
+            continue
+
+        index += 1
+        value: list[str] = []
+        escaped = False
+        while index < len(text):
+            char = text[index]
+            if quote == '"' and char == "\\" and not escaped:
+                escaped = True
+                value.append(char)
+                index += 1
+                continue
+            if char == quote and not escaped:
+                break
+            value.append(char)
+            escaped = False
+            index += 1
+
+        values.append("".join(value))
+        index += 1
+
+    return values
+
+
+def _dependency_values(
+    *,
+    lines: list[str],
+    start_index: int,
+    end_index: int,
+    inline_values: list[str] | None,
+) -> list[str]:
+    if inline_values is not None:
+        return inline_values
+
+    values: list[str] = []
+    for line in lines[start_index + 1 : end_index]:
+        value = _dependency_value_from_line(line)
+        if value is not None:
+            values.append(value)
+    return values
+
+
+def _dependency_value_from_line(line: str) -> str | None:
+    match = DEPENDENCY_ENTRY_PATTERN.match(line)
+    if match is None:
+        return None
+    return match.group("value")
+
+
+def _replace_inline_dependencies_array(
+    *,
+    lines: list[str],
+    start_index: int,
+    end_index: int,
+    array_indent: str,
+    dependencies: list[str],
+) -> None:
+    entry_indent = f"{array_indent}    "
+    entries = _dependency_lines(
+        dependencies=dependencies,
+        entry_indent=entry_indent,
+    )
+    lines[start_index : end_index + 1] = [
+        f"{array_indent}dependencies = [",
+        *entries,
+        f"{array_indent}]",
+    ]
+
+
+def _insert_dependency_line(
+    *,
+    lines: list[str],
+    start_index: int,
+    end_index: int,
+    array_indent: str,
+    dependency: str,
+) -> None:
+    entry_indent = _dependency_entry_indent(lines, start_index, end_index, array_indent)
+    dependency_line = f'{entry_indent}"{dependency}",'
+    insert_at = end_index
+
+    for index in range(start_index + 1, end_index):
+        existing_dependency = _dependency_value_from_line(lines[index])
+        if existing_dependency is None:
+            continue
+        if dependency.lower() < existing_dependency.lower():
+            insert_at = index
+            break
+
+    lines.insert(insert_at, dependency_line)
+
+
+def _dependency_entry_indent(
+    lines: list[str],
+    start_index: int,
+    end_index: int,
+    array_indent: str,
+) -> str:
+    for line in lines[start_index + 1 : end_index]:
+        match = DEPENDENCY_ENTRY_PATTERN.match(line)
+        if match is not None:
+            return match.group("indent")
+
+    return f"{array_indent}    "
+
+
+def _dependency_lines(*, dependencies: list[str], entry_indent: str) -> list[str]:
+    return [
+        f'{entry_indent}"{dependency}",'
+        for dependency in sorted(dependencies, key=str.lower)
+    ]
+
+
+def _find_array_end_index(
+    *,
+    lines: list[str],
+    start_index: int,
+    stop_index: int,
+    path: Path,
+) -> int:
+    for index in range(start_index + 1, stop_index):
+        if ARRAY_END_PATTERN.match(lines[index]):
+            return index
+
+    raise RuntimeError(f"Unsupported dependency layout: {path}")

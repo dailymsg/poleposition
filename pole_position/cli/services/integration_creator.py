@@ -9,6 +9,7 @@ from pole_position.cli.services.integration_specs import (
 )
 from pole_position.cli.services.module_templates.renderer import render_template
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
+from pole_position.cli.services.pyproject_editor import ensure_project_dependency
 
 
 SETTINGS_INTEGRATION_MARKER = "    # polepos:integration-settings"
@@ -39,7 +40,7 @@ def add_integration(integration_name: str, cwd: Path | None = None) -> None:
         )
         _ensure_kafka_settings(package_root / "settings.py", package_name)
         _ensure_kafka_env(project_root / ".env.example", package_name)
-        _ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
+        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
         return
 
     if contract.name == "rabbitmq":
@@ -49,7 +50,7 @@ def add_integration(integration_name: str, cwd: Path | None = None) -> None:
         )
         _ensure_rabbitmq_settings(package_root / "settings.py", package_name)
         _ensure_rabbitmq_env(project_root / ".env.example", package_name)
-        _ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
+        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
         return
 
 
@@ -298,28 +299,6 @@ def _rabbitmq_env_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_project_dependency(path: Path, dependency: str | None) -> None:
-    if dependency is None:
-        return
-
-    content = path.read_text(encoding="utf-8")
-    dependency_line = f'    "{dependency}",'
-
-    if dependency_line in content:
-        return
-
-    lines = content.splitlines()
-    start_index = _find_line_index(lines, "dependencies = [", path)
-    end_index = _find_array_end_index(lines, start_index, path)
-
-    entries = [line for line in lines[start_index + 1 : end_index] if line.strip()]
-    entries.append(dependency_line)
-    entries.sort(key=lambda line: line.strip().lower())
-
-    lines[start_index + 1 : end_index] = entries
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def _insert_block_before_marker_or_anchor(
     *,
     path: Path,
@@ -343,18 +322,3 @@ def _insert_block_before_marker_or_anchor(
 
     lines[insert_at:insert_at] = block + [""]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def _find_line_index(lines: list[str], line: str, path: Path) -> int:
-    try:
-        return lines.index(line)
-    except ValueError as exc:
-        raise RuntimeError(f"Unsupported dependency layout: {path}") from exc
-
-
-def _find_array_end_index(lines: list[str], start_index: int, path: Path) -> int:
-    for index in range(start_index + 1, len(lines)):
-        if lines[index] == "]":
-            return index
-
-    raise RuntimeError(f"Unsupported dependency layout: {path}")
