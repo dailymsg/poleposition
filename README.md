@@ -10,9 +10,11 @@
 [![uv first](https://img.shields.io/badge/workflow-uv--first-261230)](https://docs.astral.sh/uv/)
 [![Alembic migrations](https://img.shields.io/badge/database-Alembic%20migrations-orange)](https://alembic.sqlalchemy.org/)
 
-![PolePosition logo](https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/logo/poleposition-python-logo.svg)
+![PolePosition logo](https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/logo/poleposition-python-logo.jpg)
 
 A project lifecycle CLI that puts teams in pole position when starting, growing, and maintaining enterprise FastAPI projects.
+
+FastAPI speed, Spring/.NET-style project discipline, without turning FastAPI into a heavy framework.
 
 PolePosition helps you keep [FastAPI](https://fastapi.tiangolo.com/)'s speed while avoiding the usual setup drag of enterprise backend work. It does more than render a project template: it gives teams commands for project creation, module growth, project checks, and migration workflows as the codebase evolves.
 
@@ -65,6 +67,19 @@ PolePosition provides:
 * A ready-to-run FastAPI application
 
 Less boilerplate at project creation. Less lifecycle friction as the app grows.
+
+---
+
+## Coming From Spring Boot or ASP.NET Core?
+
+PolePosition is useful for teams coming from Spring Boot or ASP.NET Core who
+like explicit project structure, migration workflows, configuration boundaries,
+logging conventions, tests, and module-oriented growth, but want to keep the
+speed and directness of FastAPI.
+
+It is not a heavy framework on top of FastAPI. It gives FastAPI projects a
+predictable lifecycle: start the project, add modules, validate structure, and
+manage migrations without hiding the application code.
 
 ---
 
