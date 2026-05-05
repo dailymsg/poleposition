@@ -181,6 +181,54 @@ If you add new CLI behavior:
 - add repo tests
 - keep namespace structure coherent
 
+## Commit Message Standard
+
+Use Conventional Commits for repository commits:
+
+```text
+<type>(<scope>): <summary>
+```
+
+Use a scope when it clarifies the product surface or code area. Keep the summary
+short, imperative, and lower-case after the type. Prefer 72 characters or fewer
+for the subject line.
+
+Preferred types:
+
+- `feat`: user-facing capability or generated-project behavior
+- `fix`: bug fix or behavior correction
+- `docs`: documentation-only change
+- `test`: test-only change
+- `refactor`: structure change without intended behavior change
+- `chore`: maintenance that does not affect users
+- `build`: packaging, build, or dependency metadata
+- `ci`: CI or release automation
+- `perf`: performance improvement
+
+Preferred scopes:
+
+- `cli`
+- `start`
+- `add`
+- `check`
+- `db`
+- `template`
+- `docs`
+- `tests`
+
+Examples:
+
+```text
+feat(template): add generated agent guidance
+fix(add): require integration managed markers before patching
+refactor(add): harden pyproject dependency patching
+docs: clarify project validation via polepos check
+test(check): cover missing integration env markers
+```
+
+Add a short body when the change needs rationale, migration notes, or a behavior
+summary. Do not use vague subjects such as `updates`, `fix stuff`, or `wip`.
+
 ## Project Check Rules
 
 `polepos check` is the lifecycle contract validator for generated projects.
