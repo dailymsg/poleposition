@@ -47,6 +47,7 @@ include = ["pole_position*"]
 [tool.setuptools.package-data]
 pole_position = [
     "cli/services/module_templates/files/**/*.tpl",
+    "template/AGENTS.md",
     "template/**/*",
     "template/.dockerignore",
     "template/.env.example",

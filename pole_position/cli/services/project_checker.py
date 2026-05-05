@@ -59,6 +59,7 @@ PACKAGE_IDENTITY_PATHS = [
 
 CORE_PROJECT_PATHS = [
     ".env.example",
+    "AGENTS.md",
     "README.md",
     "tests/conftest.py",
 ]

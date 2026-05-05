@@ -1,5 +1,6 @@
 recursive-include pole_position/cli/services/module_templates/files *.tpl
 recursive-include pole_position/template *
+include pole_position/template/AGENTS.md
 include pole_position/template/.dockerignore
 include pole_position/template/.env.example
 include pole_position/template/.gitignore

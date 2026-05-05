@@ -99,6 +99,7 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
     package_root = project_root / "src" / "myapp"
 
     expected_paths = [
+        project_root / "AGENTS.md",
         project_root / "Dockerfile",
         project_root / ".dockerignore",
         project_root / "compose.yaml",
@@ -159,6 +160,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     package_root = project_root / "src" / "demo_app"
 
     env_example = (project_root / ".env.example").read_text(encoding="utf-8")
+    agents_guide = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     app_module = (package_root / "app.py").read_text(encoding="utf-8")
     run_module = (package_root / "run.py").read_text(encoding="utf-8")
     settings_module = (package_root / "settings.py").read_text(encoding="utf-8")
@@ -182,6 +184,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     auth_token = (package_root / "auth" / "token.py").read_text(encoding="utf-8")
 
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
+    assert "This file is for coding agents working in this PolePosition-generated" in agents_guide
+    assert "`polepos add module <name>`" in agents_guide
+    assert "`polepos check`" in agents_guide
+    assert "{{project" not in agents_guide
     assert "CORS_ENABLED=true" in env_example
     assert 'CORS_ALLOW_ORIGINS=["http://localhost:3000"' in env_example
     assert "# CORS_ALLOW_ORIGIN_REGEX=" in env_example
@@ -436,6 +442,7 @@ def test_packaging_includes_hidden_template_files() -> None:
     ]
     manifest = (REPO_ROOT / "MANIFEST.in").read_text(encoding="utf-8")
 
+    assert "template/AGENTS.md" in package_data
     assert "template/.env.example" in package_data
     assert "template/.gitignore" in package_data
     assert "template/.dockerignore" in package_data
@@ -444,6 +451,7 @@ def test_packaging_includes_hidden_template_files() -> None:
     assert "template/**/*.pyc" in exclude_package_data
     assert "recursive-include pole_position/cli/services/module_templates/files *.tpl" in manifest
     assert "recursive-include pole_position/template *" in manifest
+    assert "include pole_position/template/AGENTS.md" in manifest
     assert "include pole_position/template/.dockerignore" in manifest
     assert "include pole_position/template/.env.example" in manifest
     assert "include pole_position/template/.gitignore" in manifest

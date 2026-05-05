@@ -71,7 +71,7 @@ directory is unknown.
 
 Core generated paths include the package entrypoints, settings, bootstrap
 files, API files, database files, domain files, starter modules, test
-conftest, README, and `.env.example`.
+conftest, README, `AGENTS.md`, and `.env.example`.
 
 Alembic paths include:
 

@@ -46,6 +46,7 @@ def test_generated_structure_check_reports_missing_paths(tmp_path: Path) -> None
     _check_generated_structure(problems, project_root, package_root)
 
     assert any(".env.example" in problem for problem in problems)
+    assert any("AGENTS.md" in problem for problem in problems)
     assert any("tests/conftest.py" in problem for problem in problems)
     assert any("src/shop_api/app.py" in problem for problem in problems)
     assert any("src/shop_api/modules/status/router.py" in problem for problem in problems)
