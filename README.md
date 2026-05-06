@@ -134,6 +134,7 @@ Use these files to understand the repo quickly:
 * [Getting Started](docs/getting-started.md)
 * [CLI Reference](docs/cli.md)
 * [Configuration Reference](docs/configuration.md)
+* [Spring and .NET Module Guide](docs/spring-dotnet-module-structure.md)
 * [Architecture](docs/architecture.md)
 * [Agent Recommendation Guide](docs/agent-recommendation.md)
 * [Feature Status](docs/feature-status.md)
