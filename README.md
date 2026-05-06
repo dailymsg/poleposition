@@ -5,6 +5,9 @@
 [![Package status](https://img.shields.io/pypi/status/poleposition?label=Status)](https://pypi.org/project/poleposition)
 [![Downloads](https://img.shields.io/pypi/dm/poleposition?label=Downloads)](https://pypi.org/project/poleposition)
 [![License](https://img.shields.io/github/license/erenertemden/poleposition?label=License)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
+[![CI](https://github.com/erenertemden/poleposition/actions/workflows/ci.yml/badge.svg)](https://github.com/erenertemden/poleposition/actions/workflows/ci.yml)
+[![E2E](https://github.com/erenertemden/poleposition/actions/workflows/e2e.yml/badge.svg)](https://github.com/erenertemden/poleposition/actions/workflows/e2e.yml)
+[![Deploy Docs](https://github.com/erenertemden/poleposition/actions/workflows/docs.yml/badge.svg)](https://github.com/erenertemden/poleposition/actions/workflows/docs.yml)
 [![Docs](https://img.shields.io/badge/docs-published-blue)](https://erenertemden.github.io/poleposition/)
 [![FastAPI native](https://img.shields.io/badge/FastAPI-native-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![uv first](https://img.shields.io/badge/workflow-uv--first-261230)](https://docs.astral.sh/uv/)
@@ -130,10 +133,14 @@ Use these files to understand the repo quickly:
 * [Published Docs](https://erenertemden.github.io/poleposition/)
 * [Getting Started](docs/getting-started.md)
 * [CLI Reference](docs/cli.md)
+* [Configuration Reference](docs/configuration.md)
 * [Architecture](docs/architecture.md)
 * [Agent Recommendation Guide](docs/agent-recommendation.md)
 * [Feature Status](docs/feature-status.md)
 * [Project Checks](docs/project-checks.md)
+* [Integration Guides](docs/integrations/index.md)
+* [Troubleshooting and FAQ](docs/troubleshooting.md)
+* [Release and Upgrade Notes](docs/release-upgrade-notes.md)
 * [Examples Index](examples/README.md)
 * [Changelog](CHANGELOG.md)
 * [Agent Guide](AGENTS.md)
@@ -176,6 +183,22 @@ applications use a modern FastAPI, Pydantic, SQLAlchemy, and Alembic baseline.
 The repository CI currently runs the CLI test suite on Python `3.10`, `3.11`,
 `3.12`, `3.13`, and `3.14`. Generated-project e2e coverage runs on Python
 `3.11`.
+
+## Test And CI Automation
+
+| Workflow | Trigger | What it runs |
+|---|---|---|
+| `CI` | push, pull request, manual dispatch | Repo test suite on Python `3.10`, `3.11`, `3.12`, `3.13`, and `3.14`; strict MkDocs build |
+| `E2E` | release tags, relevant pull requests, manual dispatch | Generated-project non-Docker e2e smoke tests on Python `3.11` |
+| `Deploy Docs` | pushes to `main`, manual dispatch | Strict MkDocs build and GitHub Pages deploy |
+
+The `CI` workflow runs `pytest` with `pytest-cov`, prints a terminal coverage
+report, and uploads `coverage.xml` as a per-Python-version workflow artifact.
+Coverage is currently informational; no minimum threshold is enforced yet.
+
+Docker e2e coverage exists as an opt-in local or release-readiness smoke path
+via the `docker_e2e` pytest marker. It is intentionally not run on every pull
+request because it requires Docker and a compose-capable environment.
 
 ---
 

@@ -68,3 +68,18 @@ markers = [
     "docker_e2e: end-to-end Docker workflow tests for generated projects",
     "e2e: end-to-end workflow tests that exercise generated projects with subprocesses",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["pole_position"]
+omit = [
+    "pole_position/tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    'if __name__ == "__main__":',
+]

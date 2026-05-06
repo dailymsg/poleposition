@@ -34,6 +34,9 @@ Open the generated FastAPI docs at:
 http://127.0.0.1:8000/docs
 ```
 
+For all generated `.env` values, see the
+[Configuration Reference](configuration.md).
+
 ## Add a Module
 
 ```bash
@@ -71,6 +74,9 @@ polepos db upgrade
 
 PolePosition generated projects are migration-first. Keep schema changes in
 Alembic instead of creating tables during application startup.
+
+If something drifts, run `polepos check` and use the
+[Troubleshooting and FAQ](troubleshooting.md) guide.
 
 ## Docker Workflow
 

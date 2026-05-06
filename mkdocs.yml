@@ -36,13 +36,21 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - CLI Reference: cli.md
+  - Configuration Reference: configuration.md
   - Architecture: architecture.md
   - Architecture Diagram: architecture-diagram.md
   - Agent Recommendation Guide: agent-recommendation.md
   - Project Checks: project-checks.md
   - Feature Status: feature-status.md
+  - Integrations:
+      - Overview: integrations/index.md
+      - Kafka: integrations/kafka.md
+      - RabbitMQ: integrations/rabbitmq.md
+      - LLM: integrations/llm.md
   - Examples:
       - Overview: examples/index.md
       - User Registration: examples/user-registration.md
       - Auth Foundation: examples/auth-foundation.md
       - HTML Swap: examples/html-swap.md
+  - Troubleshooting and FAQ: troubleshooting.md
+  - Release and Upgrade Notes: release-upgrade-notes.md

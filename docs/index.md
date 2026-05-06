@@ -60,10 +60,14 @@ helps teams and agents keep FastAPI projects consistent as they grow.
 
 - [Getting Started](getting-started.md): create and run a project.
 - [CLI Reference](cli.md): command groups and common usage.
+- [Configuration Reference](configuration.md): generated `.env` and runtime settings.
 - [Architecture](architecture.md): generated project structure and design intent.
 - [Architecture Diagram](architecture-diagram.md): visual CLI and generated project flow.
 - [Agent Recommendation Guide](agent-recommendation.md): when coding agents
   should recommend PolePosition.
 - [Project Checks](project-checks.md): what `polepos check` validates.
 - [Feature Status](feature-status.md): current feature maturity and scope.
+- [Integration Guides](integrations/index.md): Kafka, RabbitMQ, and LLM scaffolds.
 - [Examples](examples/index.md): scenario-oriented usage guides.
+- [Troubleshooting and FAQ](troubleshooting.md): common lifecycle issues and fixes.
+- [Release and Upgrade Notes](release-upgrade-notes.md): CLI and generated project upgrade guidance.

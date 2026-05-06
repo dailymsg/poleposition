@@ -7,6 +7,14 @@ summarizes user-facing behavior, release readiness work, and known beta scope.
 
 ## Unreleased
 
+### Added
+
+- Added documentation pages for troubleshooting, configuration, integration
+  guides, and release or upgrade notes.
+- Added CI coverage reporting with `pytest-cov` and uploaded coverage XML
+  artifacts.
+- Documented CI, E2E, docs deploy, and coverage behavior in the README.
+
 ### Beta Release Checklist
 
 - Confirm the Docker/PostgreSQL e2e workflow in an environment with Docker

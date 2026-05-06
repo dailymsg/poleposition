@@ -44,6 +44,9 @@ polepos add integration rabbitmq
 Integration commands add opt-in adapter scaffolds, settings, environment
 examples, transport dependencies, and lightweight test doubles.
 
+See the [Integration Guides](integrations/index.md) for Kafka, RabbitMQ, and LLM
+scaffold details.
+
 ## Check a Project
 
 ```bash
@@ -68,6 +71,9 @@ polepos db downgrade -1
 Database commands prefer `uv run alembic ...` when `uv` is available. Without
 `uv`, they fall back to the active virtualenv, the project `.venv`, or the
 first `python` on `PATH`.
+
+For generated `.env` values, see the
+[Configuration Reference](configuration.md).
 
 ## Help and Version
 
