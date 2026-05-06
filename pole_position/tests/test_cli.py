@@ -28,6 +28,19 @@ def test_version_command():
     assert result.returncode == 0
 
 
+def test_version_help_shows_usage():
+    result = run_cli("version", "--help")
+    assert result.returncode == 0
+    assert "Usage: polepos version" in result.stdout
+
+
+def test_version_rejects_extra_argument():
+    result = run_cli("version", "extra")
+    assert result.returncode != 0
+    assert "Unexpected argument: extra" in result.stdout
+    assert "Usage: polepos version" in result.stdout
+
+
 def test_unknown_command():
     result = run_cli("unknown")
     assert result.returncode != 0

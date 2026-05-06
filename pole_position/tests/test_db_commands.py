@@ -38,6 +38,17 @@ def test_db_command_shows_usage(tmp_path: Path):
     assert "downgrade" in result.stdout
 
 
+def test_db_help_shows_namespace_usage(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos db <subcommand>" in result.stdout
+    assert "Unknown command" not in result.stdout
+    assert "upgrade" in result.stdout
+    assert "revision" in result.stdout
+    assert "downgrade" in result.stdout
+
+
 def test_db_upgrade_defaults_to_head(tmp_path: Path):
     from pole_position.cli.commands.db.upgrade import run
 

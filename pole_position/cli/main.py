@@ -6,6 +6,9 @@ from pole_position.cli.registry import CommandRegistry
 from pole_position.cli.registry import registry
 
 
+HELP_OPTIONS = {"-h", "--help"}
+
+
 def main() -> None:
     register_commands()
 
@@ -28,6 +31,10 @@ def dispatch_command(command_registry: CommandRegistry, args: list[str]) -> None
         raise SystemExit(1)
 
     command_args = args[1:]
+
+    if command.subcommands is not None and command_args and command_args[0] in HELP_OPTIONS:
+        print_command_usage(command)
+        return
 
     if command.subcommands is not None and command_args:
         dispatch_command(command.subcommands, command_args)

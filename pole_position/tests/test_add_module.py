@@ -34,6 +34,16 @@ def test_add_command_shows_usage(tmp_path: Path):
     assert "module" in result.stdout
 
 
+def test_add_help_shows_namespace_usage(tmp_path: Path):
+    result = run_cli(tmp_path, "add", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos add <subcommand>" in result.stdout
+    assert "Unknown command" not in result.stdout
+    assert "integration" in result.stdout
+    assert "module" in result.stdout
+
+
 def test_add_kafka_integration_creates_files_and_updates_project(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
