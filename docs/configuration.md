@@ -33,6 +33,8 @@ polepos db revision -m "add customers table"
 polepos db upgrade
 ```
 
+For the full workflow, see [Database and Migrations](database.md).
+
 ## Runtime
 
 | Setting | Default | Purpose |
@@ -147,4 +149,3 @@ Important values:
 - `LLM_TIMEOUT_SECONDS`
 - `LLM_TEMPERATURE`
 - `LLM_MAX_TOKENS`
-

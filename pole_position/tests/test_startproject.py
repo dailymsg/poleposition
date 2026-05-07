@@ -327,12 +327,11 @@ def test_generated_project_includes_alembic_support(tmp_path: Path):
     assert "from demo_app.db.models import import_models" in migrations_env
     assert "from demo_app.settings import get_settings" in migrations_env
     assert "target_metadata = Base.metadata" in migrations_env
-    assert "uv run alembic upgrade head" in readme
-    assert "python -m alembic upgrade head" in readme
+    assert "polepos db upgrade" in readme
     assert 'op.create_table(' in initial_migration
     assert '"races"' in initial_migration
+    assert 'polepos db revision -m "add garage table"' in readme
     assert 'uv run alembic revision --autogenerate -m "add garage table"' in readme
-    assert 'python -m alembic revision --autogenerate -m "add garage table"' in readme
     assert "{{project" not in migrations_env
 
 
@@ -382,8 +381,8 @@ def test_generated_project_is_migration_first(tmp_path: Path):
 
     assert "Base.metadata.create_all" not in lifespan
     assert "import_models()" in lifespan
-    assert "uv run alembic upgrade head" in result.stdout
-    assert "uv run alembic upgrade head" in readme
+    assert "polepos db upgrade" in result.stdout
+    assert "polepos db upgrade" in readme
 
 
 def test_no_bytecode_flag_updates_generated_run_instructions(tmp_path: Path):
@@ -397,12 +396,10 @@ def test_no_bytecode_flag_updates_generated_run_instructions(tmp_path: Path):
     migrations_env = (project_root / "migrations" / "env.py").read_text(encoding="utf-8")
     tests_conftest = (project_root / "tests" / "conftest.py").read_text(encoding="utf-8")
 
-    expected_migration_command = "PYTHONDONTWRITEBYTECODE=1 uv run alembic upgrade head"
-    expected_pip_migration_command = "PYTHONDONTWRITEBYTECODE=1 python -m alembic upgrade head"
+    expected_migration_command = "PYTHONDONTWRITEBYTECODE=1 polepos db upgrade"
     expected_run_command = "PYTHONDONTWRITEBYTECODE=1 uv run python -m demo_app.run"
     assert expected_migration_command in result.stdout
     assert expected_migration_command in readme
-    assert expected_pip_migration_command in readme
     assert expected_run_command in result.stdout
     assert expected_run_command in readme
     assert "Configured generated local Python commands to start without bytecode writes." in result.stdout
@@ -505,6 +502,7 @@ def test_install_flag_prints_pip_next_steps_when_uv_is_unavailable(
     captured = capsys.readouterr()
     assert "Dependencies installed successfully with pip." in captured.out
     assert "source .venv/bin/activate" in captured.out
-    assert "python -m alembic upgrade head" in captured.out
+    assert "polepos db upgrade" in captured.out
     assert "python -m myapp.run" in captured.out
     assert "uv run alembic upgrade head" not in captured.out
+    assert "python -m alembic upgrade head" not in captured.out

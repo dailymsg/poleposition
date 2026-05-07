@@ -11,11 +11,17 @@ summarizes user-facing behavior, release readiness work, and known beta scope.
 
 - Added documentation pages for troubleshooting, configuration, integration
   guides, and release or upgrade notes.
+- Added a database and migrations guide for the `polepos db` lifecycle.
 - Added a Spring Boot and ASP.NET Core module structure guide for teams new to
   PolePosition and FastAPI.
 - Added CI coverage reporting with `pytest-cov` and uploaded coverage XML
   artifacts.
 - Documented CI, E2E, docs deploy, and coverage behavior in the README.
+
+### Changed
+
+- Aligned project creation next steps and generated README migration workflow
+  around `polepos db upgrade`.
 
 ### Beta Release Checklist
 

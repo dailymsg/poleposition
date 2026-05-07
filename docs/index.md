@@ -67,6 +67,7 @@ helps teams and agents keep FastAPI projects consistent as they grow.
 - [Getting Started](getting-started.md): create and run a project.
 - [CLI Reference](cli.md): command groups and common usage.
 - [Configuration Reference](configuration.md): generated `.env` and runtime settings.
+- [Database and Migrations](database.md): `polepos db`, Alembic, and schema workflow.
 - [Spring and .NET Module Guide](spring-dotnet-module-structure.md): module
   structure explained for Spring Boot and ASP.NET Core teams.
 - [Architecture](architecture.md): generated project structure and design intent.

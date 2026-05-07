@@ -74,6 +74,8 @@ Database commands prefer `uv run alembic ...` when `uv` is available. Without
 `uv`, they fall back to the active virtualenv, the project `.venv`, or the
 first `python` on `PATH`.
 
+For the full database workflow, see [Database and Migrations](database.md).
+
 For generated `.env` values, see the
 [Configuration Reference](configuration.md).
 

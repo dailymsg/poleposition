@@ -88,14 +88,14 @@ def run(args: list[str]) -> None:
 
     if installer == "pip":
         print("  source .venv/bin/activate")
-        print(f"  {command_prefix}python -m alembic upgrade head")
+        print(f"  {command_prefix}polepos db upgrade")
         print(f"  {command_prefix}python -m {package_name}.run")
         return
 
     if not install:
         print("  uv sync")
 
-    print(f"  {command_prefix}uv run alembic upgrade head")
+    print(f"  {command_prefix}polepos db upgrade")
     print(f"  {command_prefix}uv run python -m {package_name}.run")
 
 

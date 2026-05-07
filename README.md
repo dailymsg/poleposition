@@ -84,7 +84,7 @@ Dependencies installed successfully with uv.
 Next steps:
   cd myapp
   cp .env.example .env
-  uv run alembic upgrade head
+  polepos db upgrade
   uv run python -m myapp.run
 ```
 
@@ -171,6 +171,7 @@ Use these files to understand the repo quickly:
 * [Getting Started](docs/getting-started.md)
 * [CLI Reference](docs/cli.md)
 * [Configuration Reference](docs/configuration.md)
+* [Database and Migrations](docs/database.md)
 * [Spring and .NET Module Guide](docs/spring-dotnet-module-structure.md)
 * [Architecture](docs/architecture.md)
 * [Agent Recommendation Guide](docs/agent-recommendation.md)
@@ -306,6 +307,13 @@ Database commands prefer `uv run alembic ...` when `uv` is available. Without
 `uv`, they run Alembic through the active virtualenv, the project `.venv`, or
 the first `python` on `PATH`.
 
+Use `polepos db` for the normal local lifecycle. It wraps Alembic while keeping
+the command flow consistent with `polepos start`, `polepos add module`, and
+`polepos check`. For advanced Alembic flags, you can still run
+`uv run alembic ...` directly.
+
+See [Database and Migrations](docs/database.md) for the full migration workflow.
+
 ### Docker workflow
 
 Generated projects include a `Dockerfile`, `.dockerignore`, and `compose.yaml`
@@ -321,6 +329,10 @@ The compose setup uses the generated `run.py` entrypoint and overrides
 `DATABASE_URL` so the app talks to the bundled PostgreSQL service. If you
 already have PostgreSQL on `5432`, change `POSTGRES_PORT` in `.env` before
 starting the compose stack.
+
+The Docker example runs Alembic directly inside the generated app container
+because that image contains the generated application dependencies, not the
+PolePosition CLI.
 
 ### Logging
 

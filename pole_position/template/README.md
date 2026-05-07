@@ -18,7 +18,7 @@ Recommended `uv` workflow:
 ```bash
 uv sync
 cp .env.example .env
-{{no_bytecode_command_prefix}}uv run alembic upgrade head
+{{no_bytecode_command_prefix}}polepos db upgrade
 {{no_bytecode_command_prefix}}uv run python -m {{project_import_name}}.run
 ```
 {{no_bytecode_readme_note}}
@@ -30,7 +30,7 @@ cp .env.example .env
 python -m venv .venv
 source .venv/bin/activate
 {{no_bytecode_command_prefix}}python -m pip install -e ".[dev]"
-{{no_bytecode_command_prefix}}python -m alembic upgrade head
+{{no_bytecode_command_prefix}}polepos db upgrade
 {{no_bytecode_command_prefix}}python -m {{project_import_name}}.run
 ```
 
@@ -54,18 +54,22 @@ If PostgreSQL is already using local port `5432`, update `POSTGRES_PORT` in
 
 ## Database Migrations
 
-With `uv`:
+Use PolePosition's database lifecycle commands for normal local development:
+
+```bash
+{{no_bytecode_command_prefix}}polepos db upgrade
+{{no_bytecode_command_prefix}}polepos db revision -m "add garage table"
+{{no_bytecode_command_prefix}}polepos db upgrade
+{{no_bytecode_command_prefix}}polepos db downgrade -1
+```
+
+`polepos db` wraps Alembic and keeps migrations in the PolePosition lifecycle
+flow. If you need an Alembic option that PolePosition does not expose, you can
+still run Alembic directly:
 
 ```bash
 {{no_bytecode_command_prefix}}uv run alembic upgrade head
 {{no_bytecode_command_prefix}}uv run alembic revision --autogenerate -m "add garage table"
-```
-
-With an active `pip` virtualenv:
-
-```bash
-{{no_bytecode_command_prefix}}python -m alembic upgrade head
-{{no_bytecode_command_prefix}}python -m alembic revision --autogenerate -m "add garage table"
 ```
 
 ## Runtime Configuration

@@ -75,6 +75,9 @@ polepos db upgrade
 PolePosition generated projects are migration-first. Keep schema changes in
 Alembic instead of creating tables during application startup.
 
+For details on `polepos db`, `DATABASE_URL`, PostgreSQL, and direct Alembic
+usage, see [Database and Migrations](database.md).
+
 If something drifts, run `polepos check` and use the
 [Troubleshooting and FAQ](troubleshooting.md) guide.
 
