@@ -39,17 +39,27 @@ pip install poleposition
 
 ---
 
-Start a new project lifecycle:
+## Quick Start
+
+Recommended `uv` workflow:
 
 ```bash
 polepos start myapp --install
+cd myapp
+cp .env.example .env
+polepos db upgrade
+
+uv run python -m myapp.run
 ```
 
-If you prefer not to generate Python bytecode while developing locally:
+Open your API documentation:
 
-```bash
-polepos start myapp --no-bytecode
+```text
+http://127.0.0.1:8000/docs
 ```
+
+For manual setup, Docker, and detailed command usage, see the sections below or
+the [Getting Started](docs/getting-started.md) guide.
 
 ---
 
@@ -160,7 +170,7 @@ Use these files to understand the repo quickly:
 * [Integration Guides](docs/integrations/index.md)
 * [Troubleshooting and FAQ](docs/troubleshooting.md)
 * [Release and Upgrade Notes](docs/release-upgrade-notes.md)
-* [Examples Index](examples/README.md)
+* [Examples](docs/examples/index.md)
 * [Changelog](CHANGELOG.md)
 * [Agent Guide](AGENTS.md)
 
@@ -170,86 +180,6 @@ Build the documentation site locally:
 python -m pip install -r requirements-docs.txt
 python -m mkdocs serve
 ```
-
-## Python Support
-
-The PolePosition CLI supports Python `>=3.10`.
-
-Generated FastAPI projects target Python `>=3.11`, as declared in the generated
-project `pyproject.toml`. This lets the CLI remain lightweight while generated
-applications use a modern FastAPI, Pydantic, SQLAlchemy, and Alembic baseline.
-
-The repository CI currently runs the CLI test suite on Python `3.10`, `3.11`,
-`3.12`, `3.13`, and `3.14`. Generated-project e2e coverage runs on Python
-`3.11`.
-
-## Test And CI Automation
-
-| Workflow | Trigger | What it runs |
-|---|---|---|
-| `CI` | push, pull request, manual dispatch | Repo test suite on Python `3.10`, `3.11`, `3.12`, `3.13`, and `3.14`; strict MkDocs build |
-| `E2E` | release tags, relevant pull requests, manual dispatch | Generated-project non-Docker e2e smoke tests on Python `3.11` |
-| `Deploy Docs` | pushes to `main`, manual dispatch | Strict MkDocs build and GitHub Pages deploy |
-
-The `CI` workflow runs `pytest` with `pytest-cov`, prints a terminal coverage
-report, and uploads `coverage.xml` as a per-Python-version workflow artifact.
-Coverage is currently informational; no minimum threshold is enforced yet.
-
-Docker e2e coverage exists as an opt-in local or release-readiness smoke path
-via the `docker_e2e` pytest marker. It is intentionally not run on every pull
-request because it requires Docker and a compose-capable environment.
-
----
-
-## Quick Start
-
-Recommended `uv` workflow:
-
-```bash
-polepos start myapp --install
-cd myapp
-cp .env.example .env
-uv run alembic upgrade head
-
-uv run python -m myapp.run
-```
-
-Equivalent `pip` workflow:
-
-```bash
-pip install poleposition
-polepos start myapp
-cd myapp
-cp .env.example .env
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-python -m alembic upgrade head
-
-python -m myapp.run
-```
-
-Or start the generated app with Docker and PostgreSQL:
-
-```bash
-docker compose up --build
-docker compose run --rm app uv run alembic upgrade head
-```
-
-Create and run migrations:
-
-```bash
-uv run alembic upgrade head
-uv run alembic revision --autogenerate -m "add garage table"
-```
-
-Open your API documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
----
 
 ## Usage
 
@@ -282,7 +212,7 @@ cd myapp
 
 cp .env.example .env
 uv sync
-uv run alembic upgrade head
+polepos db upgrade
 
 uv run python -m myapp.run
 ```
@@ -297,7 +227,7 @@ cp .env.example .env
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-python -m alembic upgrade head
+polepos db upgrade
 
 python -m myapp.run
 ```
@@ -495,7 +425,7 @@ PolePosition is a lifecycle CLI, so the commands are meant to be used over time,
 
 ### Examples
 
-Concrete scenarios live under [examples/README.md](examples/README.md):
+Concrete scenario guides live in [Examples](docs/examples/index.md):
 
 * auth foundation workflow
 * PostgreSQL-backed HTML swap workflow
@@ -688,6 +618,36 @@ POST /api/v1/users/
 ```
 
 From there, you refine the generated module for your actual domain instead of starting from an empty project structure.
+
+---
+
+## Python Support
+
+The PolePosition CLI supports Python `>=3.10`.
+
+Generated FastAPI projects target Python `>=3.11`, as declared in the generated
+project `pyproject.toml`. This lets the CLI remain lightweight while generated
+applications use a modern FastAPI, Pydantic, SQLAlchemy, and Alembic baseline.
+
+The repository CI currently runs the CLI test suite on Python `3.10`, `3.11`,
+`3.12`, `3.13`, and `3.14`. Generated-project e2e coverage runs on Python
+`3.11`.
+
+## Test And CI Automation
+
+| Workflow | Trigger | What it runs |
+|---|---|---|
+| `CI` | push, pull request, manual dispatch | Repo test suite on Python `3.10`, `3.11`, `3.12`, `3.13`, and `3.14`; strict MkDocs build |
+| `E2E` | release tags, relevant pull requests, manual dispatch | Generated-project non-Docker e2e smoke tests on Python `3.11` |
+| `Deploy Docs` | pushes to `main`, manual dispatch | Strict MkDocs build and GitHub Pages deploy |
+
+The `CI` workflow runs `pytest` with `pytest-cov`, prints a terminal coverage
+report, and uploads `coverage.xml` as a per-Python-version workflow artifact.
+Coverage is currently informational; no minimum threshold is enforced yet.
+
+Docker e2e coverage exists as an opt-in local or release-readiness smoke path
+via the `docker_e2e` pytest marker. It is intentionally not run on every pull
+request because it requires Docker and a compose-capable environment.
 
 ---
 
