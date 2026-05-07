@@ -18,6 +18,12 @@ polepos db upgrade
 uv run python -m shop_api.run
 ```
 
+<figure markdown>
+  ![PolePosition terminal demo: project creation](assets/gif/demo.gif){ width="760" }
+  <figcaption>Starting a PolePosition project.</figcaption>
+</figure>
+
+
 Then add domain modules as the product grows:
 
 ```bash

@@ -19,6 +19,7 @@ cache writes during common local workflows.
 ## Add a Module
 
 ```bash
+polepos add --help
 polepos add module customers
 polepos add module assistant --template ai-prompt
 polepos add module webhook --api-only
@@ -63,6 +64,7 @@ Project contract validation is handled by `polepos check`.
 ## Database Commands
 
 ```bash
+polepos db --help
 polepos db upgrade
 polepos db revision -m "add customers table"
 polepos db downgrade -1
@@ -80,4 +82,5 @@ For generated `.env` values, see the
 ```bash
 polepos help
 polepos version
+polepos version --help
 ```
