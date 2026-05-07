@@ -21,6 +21,15 @@ FastAPI speed, Spring/.NET-style project discipline, without turning FastAPI int
 
 PolePosition helps you keep [FastAPI](https://fastapi.tiangolo.com/)'s speed while avoiding the usual setup drag of enterprise backend work. It does more than render a project template: it gives teams commands for project creation, module growth, project checks, and migration workflows as the codebase evolves.
 
+<figure>
+  <img
+    src="assets/gif/demo.gif"
+    alt="PolePosition terminal demo: project creation"
+    width="760"
+  />
+  <figcaption>Starting a PolePosition project.</figcaption>
+</figure>
+
 ## Installation
 
 PolePosition recommends a `uv`-first workflow for installation, dependency
