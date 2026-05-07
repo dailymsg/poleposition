@@ -21,6 +21,24 @@ FastAPI speed, Spring/.NET-style project discipline, without turning FastAPI int
 
 PolePosition helps you keep [FastAPI](https://fastapi.tiangolo.com/)'s speed while avoiding the usual setup drag of enterprise backend work. It does more than render a project template: it gives teams commands for project creation, module growth, project checks, and migration workflows as the codebase evolves.
 
+## Installation
+
+PolePosition recommends a `uv`-first workflow for installation, dependency
+sync, migrations, and local development. It also works with `pip` and a normal
+Python virtual environment.
+
+```bash
+uv tool install poleposition
+```
+
+or
+
+```bash
+pip install poleposition
+```
+
+---
+
 Start a new project lifecycle:
 
 ```bash
@@ -152,26 +170,6 @@ Build the documentation site locally:
 python -m pip install -r requirements-docs.txt
 python -m mkdocs serve
 ```
-
----
-
-## Installation
-
-PolePosition recommends a `uv`-first workflow for installation, dependency
-sync, migrations, and local development. It also works with `pip` and a normal
-Python virtual environment.
-
-```bash
-uv tool install poleposition
-```
-
-or
-
-```bash
-pip install poleposition
-```
-
----
 
 ## Python Support
 
