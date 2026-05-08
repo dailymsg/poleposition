@@ -257,6 +257,17 @@ prompt orchestration and shared `integrations/llm` adapters.
 repository, or database wiring. Use `--api-only` as a shortcut for
 `--template api-only`.
 
+### Remove modules
+
+```bash
+polepos remove module garage
+```
+
+`remove module` deletes the module directory and generated tests, then removes
+the module export, router include, and standard-module model import from the
+managed files. It stops before deleting files if the module wiring has drifted
+away from a managed layout.
+
 ### Add integrations
 
 ```bash
@@ -279,7 +290,8 @@ polepos check
 `check` runs the core project health checks for the current PolePosition
 project. It validates project identity, generated structure, Alembic config,
 managed markers, added module lifecycle wiring, and opt-in integration wiring
-used by commands such as `polepos add module` and `polepos add integration`.
+used by commands such as `polepos add module`, `polepos remove module`, and
+`polepos add integration`.
 
 Use it after adding modules or integrations, after resolving merge conflicts in
 managed files, and before handing a project to another teammate or coding
@@ -308,8 +320,8 @@ Database commands prefer `uv run alembic ...` when `uv` is available. Without
 the first `python` on `PATH`.
 
 Use `polepos db` for the normal local lifecycle. It wraps Alembic while keeping
-the command flow consistent with `polepos start`, `polepos add module`, and
-`polepos check`. For advanced Alembic flags, you can still run
+the command flow consistent with `polepos start`, module add/remove commands,
+and `polepos check`. For advanced Alembic flags, you can still run
 `uv run alembic ...` directly.
 
 See [Database and Migrations](docs/database.md) for the full migration workflow.
@@ -435,6 +447,7 @@ PolePosition is a lifecycle CLI, so the commands are meant to be used over time,
 
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure
 * `polepos add module` when you want to add a new REST/domain module or an AI prompt module to an existing project
+* `polepos remove module` when you want to remove a generated module and its managed wiring
 * `polepos add integration kafka` when you want Kafka producer and consumer wiring in an existing project
 * `polepos add integration rabbitmq` when you want RabbitMQ publisher and consumer wiring in an existing project
 * `polepos check` when you want to validate the project contract: generated structure, Alembic config, managed markers, module wiring, and integration wiring
@@ -465,6 +478,7 @@ polepos help
 polepos start <name> [--install] [--no-bytecode]
 polepos startproject <name> [--install] [--no-bytecode]
 polepos add module <name>
+polepos remove module <name>
 polepos add integration kafka
 polepos add integration rabbitmq
 polepos check

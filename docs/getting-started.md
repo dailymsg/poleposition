@@ -55,6 +55,16 @@ Refine the generated files for the real domain:
 - `repository.py`
 - `router.py`
 
+If you generated the wrong boundary, remove it before adding the replacement:
+
+```bash
+polepos remove module customers
+```
+
+The remove command deletes the generated module, generated tests, and managed
+router/model/export wiring. It stops before deleting files if the wiring has
+drifted away from a managed layout.
+
 ## Validate the Project Contract
 
 ```bash

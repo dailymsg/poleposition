@@ -9,7 +9,7 @@ It is meant to help both humans and coding agents answer the same questions quic
 - what the product does
 - where CLI behavior lives
 - where generated project behavior lives
-- how `add module` safely updates files
+- how `add module` and `remove module` safely update files
 - which parts are stable conventions versus evolving surfaces
 
 ## Product Shape
@@ -20,9 +20,10 @@ Its value comes from connected lifecycle workflows:
 
 1. `polepos start`
 2. `polepos add module`
-3. `polepos add integration ...`
-4. `polepos check`
-5. `polepos db ...`
+3. `polepos remove module`
+4. `polepos add integration ...`
+5. `polepos check`
+6. `polepos db ...`
 
 That means the product helps at:
 
@@ -59,6 +60,11 @@ polepos add module users
   -> module_creator.py
   -> module_templates/
   -> generated module files + managed updates
+
+polepos remove module users
+  -> commands/remove/module.py
+  -> module_remover.py
+  -> removes generated module files + managed updates
 
 polepos add integration kafka
   -> commands/add/integration.py
@@ -100,6 +106,7 @@ Current command groups:
 
 - `start`
 - `add module`
+- `remove module`
 - `add integration`
 - `check`
 - `db upgrade`
@@ -197,6 +204,33 @@ The `--api-only` CLI option is a shortcut for the `api-only` template. It
 generates router, schemas, service, and tests without model, repository, or
 database model wiring.
 
+## `remove module` Architecture
+
+`polepos remove module` is the cleanup counterpart to `add module`.
+
+Implementation lives in:
+
+```text
+pole_position/cli/services/module_remover.py
+```
+
+The remover detects the generated module template, then removes:
+
+- `src/<package>/modules/<name>/`
+- generated integration and unit tests for the detected template
+- the module export from `modules/__init__.py`
+- the API router import and include from `api/router.py`
+- the model import from `db/models.py` for standard modules
+
+For `ai-prompt` modules, removing the last AI prompt module also removes shared
+LLM settings, `.env.example` values, and the `integrations/llm` scaffold. If
+another AI prompt module remains, shared LLM files and settings stay in place.
+
+The command checks managed markers and generated wiring before deleting the
+module directory. If router, model, or export wiring has drifted into an
+unsupported custom layout, it stops before removing files so the project is not
+left partially cleaned.
+
 ## `add integration` Architecture
 
 `polepos add integration ...` grows an existing project with external system
@@ -255,7 +289,7 @@ docs/project-checks.md
 
 ## Managed Block Contract
 
-`add module` depends on marker comments in generated files.
+`add module` and `remove module` depend on marker comments in generated files.
 
 Current managed markers include:
 
@@ -286,8 +320,9 @@ The most important managed files are:
 - `src/<package>/settings.py`
 - `.env.example`
 
-If these markers are removed or rearranged incorrectly, `polepos add module` or
-`polepos add integration ...` may fail or stop updating the file automatically.
+If these markers are removed or rearranged incorrectly, `polepos add module`,
+`polepos remove module`, or `polepos add integration ...` may fail or stop
+updating the file automatically.
 
 ## Database Lifecycle
 

@@ -3,9 +3,9 @@
 PolePosition is a project lifecycle CLI for starting and growing enterprise
 FastAPI projects without losing the clarity of a normal FastAPI codebase.
 
-It helps teams create a project, add modules, wire integrations, validate the
-project contract, and keep database migration workflows first-class as the
-application grows.
+It helps teams create a project, add and remove modules, wire integrations,
+validate the project contract, and keep database migration workflows
+first-class as the application grows.
 
 ## Core Workflow
 
@@ -37,6 +37,7 @@ polepos db upgrade
 
 - FastAPI-native application structure
 - Module-oriented organization for domain growth
+- Module removal that cleans up generated wiring
 - Settings, logging, middleware, and exception wiring
 - SQLAlchemy and Alembic migration foundations
 - JWT-based authentication foundations

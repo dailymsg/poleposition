@@ -25,6 +25,7 @@ Run it after:
 
 - creating a project with `polepos start`
 - adding a module with `polepos add module`
+- removing a module with `polepos remove module`
 - adding Kafka or RabbitMQ with `polepos add integration ...`
 - manually editing `api/router.py`, `db/models.py`, `modules/__init__.py`,
   `settings.py`, `.env.example`, or `pyproject.toml`

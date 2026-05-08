@@ -22,6 +22,7 @@ Today that flow is centered around:
 
 - `polepos start` for creating a project
 - `polepos add module` for growing the codebase
+- `polepos remove module` for removing generated module scaffolds
 - `polepos add integration ...` for opt-in external-system scaffolds
 - `polepos check` for validating the project lifecycle contract
 - `polepos db ...` for managing Alembic migration workflows
@@ -158,6 +159,7 @@ Current CLI command groups:
 
 - `polepos start`
 - `polepos add module`
+- `polepos remove module`
 - `polepos add integration kafka`
 - `polepos add integration rabbitmq`
 - `polepos check`
@@ -170,7 +172,7 @@ Current CLI command groups:
 Design expectations:
 
 - top-level commands should stay few and intentional
-- namespace commands like `add` and `db` should scale to more subcommands over time
+- namespace commands like `add`, `remove`, and `db` should scale to more subcommands over time
 - usage messages should be short, direct, and actionable
 - project detection should work from nested directories inside a PolePosition project
 
@@ -419,11 +421,12 @@ If you cannot run a heavier integration flow because a dependency is missing in 
 3. Update generated-project tests in `test_startproject.py`
 4. Update README and template README if needed
 
-### Change module generation
+### Change module generation or removal
 
 1. Update `pole_position/cli/services/module_creator.py`
-2. Verify router wiring, model wiring, and test generation
-3. Add or update tests under `test_add_module.py`
+2. Update `pole_position/cli/services/module_remover.py` when removal behavior changes
+3. Verify router wiring, model wiring, test generation, and cleanup symmetry
+4. Add or update tests under `test_add_module.py` and `test_remove_module.py`
 
 ### Change database command behavior
 
@@ -445,7 +448,6 @@ If you cannot run a heavier integration flow because a dependency is missing in 
 
 Do not assume these are implemented unless you add them:
 
-- `polepos remove module`
 - `polepos delete module`
 - full auth workflow
 - production presets

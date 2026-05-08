@@ -20,6 +20,7 @@ It keeps database work inside the same lifecycle vocabulary as:
 
 - `polepos start`
 - `polepos add module`
+- `polepos remove module`
 - `polepos check`
 
 The command group currently exposes:

@@ -9,6 +9,8 @@ summarizes user-facing behavior, release readiness work, and known beta scope.
 
 ### Added
 
+- Added `polepos remove module <name>` for removing generated modules and their
+  managed router, export, test, and model wiring.
 - Added documentation pages for troubleshooting, configuration, integration
   guides, and release or upgrade notes.
 - Added a database and migrations guide for the `polepos db` lifecycle.

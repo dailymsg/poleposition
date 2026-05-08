@@ -19,13 +19,14 @@ Instead, it clarifies whether a feature is:
 
 | Area | Status | Notes |
 |---|---|---|
-| Project lifecycle CLI shape | Stable foundation | Product is organized around `start`, `add module`, `add integration`, `check`, and `db` workflows rather than a one-time template. |
+| Project lifecycle CLI shape | Stable foundation | Product is organized around `start`, `add module`, `remove module`, `add integration`, `check`, and `db` workflows rather than a one-time template. |
 | `polepos start` | Stable foundation | Core product entrypoint; generated project shape is now a major part of the product contract. |
 | Template rendering | Stable foundation | Supporting mechanism for lifecycle workflows; placeholder replacement and template packaging are in good shape. |
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level boundaries for real provider integration. |
 | `polepos add module` with `api-only` | Growing | Useful lightweight module archetype for routes that do not need model, repository, or database wiring. |
+| `polepos remove module` | Growing | Removes generated module scaffolds and managed wiring; intentionally stops when cleanup would require interpreting custom layout drift. |
 | `polepos add integration kafka` | Growing | First messaging integration; producer, consumer factory, settings, env, and test double support are scaffolded. |
 | `polepos add integration rabbitmq` | Growing | Second messaging integration; publisher, queue factory, settings, env, and test double support are scaffolded. |
 | `polepos check` | Stable foundation | Runs core checks for project identity, generated structure, Alembic config, managed markers, added module lifecycle wiring, and opt-in integration wiring. |
@@ -52,6 +53,19 @@ This is one of the most important product surfaces.
 It uses PolePosition-managed markers as its insertion contract.
 That makes generated updates predictable while keeping surrounding project code
 editable.
+
+### `remove module`
+
+This is the cleanup counterpart to `add module`.
+
+It removes generated module directories, generated tests, module exports,
+router wiring, and standard-module model imports. For AI prompt modules, the
+last remaining AI prompt module removal also cleans up shared LLM scaffold
+settings and files.
+
+The command is conservative around custom layout drift: if it cannot recognize
+managed wiring well enough to remove it cleanly, it stops before deleting the
+module directory.
 
 ### Messaging integrations
 

@@ -209,6 +209,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
     assert "This file is for coding agents working in this PolePosition-generated" in agents_guide
     assert "`polepos add module <name>`" in agents_guide
+    assert "`polepos remove module <name>`" in agents_guide
     assert "`polepos check`" in agents_guide
     assert "{{project" not in agents_guide
     assert "CORS_ENABLED=true" in env_example

@@ -1,7 +1,7 @@
 # CLI Reference
 
 PolePosition keeps the top-level command surface intentionally small. Namespace
-commands grow under `add` and `db` as the lifecycle expands.
+commands grow under `add`, `remove`, and `db` as the lifecycle expands.
 
 ## Create a Project
 
@@ -34,6 +34,25 @@ skeleton and shared `integrations/llm` files when they are missing.
 
 The `api-only` template generates router, schemas, service, and tests without
 model, repository, or database wiring. `--api-only` is the shortcut form.
+
+## Remove a Module
+
+```bash
+polepos remove --help
+polepos remove module customers
+```
+
+`remove module` is the counterpart to `add module`. It removes the module
+directory, generated integration and unit tests, module exports, API router
+wiring, and standard-module model imports.
+
+For `ai-prompt` modules, removing the last AI prompt module also removes the
+shared LLM settings, `.env.example` values, and `integrations/llm` scaffold.
+If another AI prompt module remains, the shared LLM scaffold is kept.
+
+The command stops before deleting files when managed wiring has drifted into a
+layout it cannot clean safely. Fix the reported layout or remove the custom
+wiring manually, then retry.
 
 ## Add Integrations
 

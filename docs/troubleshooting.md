@@ -38,7 +38,8 @@ shape, including `api/router.py` and `modules/`.
 ## `polepos check` Reports a Missing Managed Marker
 
 Managed markers are insertion points for lifecycle commands such as
-`polepos add module` and `polepos add integration ...`.
+`polepos add module`, `polepos remove module`, and
+`polepos add integration ...`.
 
 Restore the marker listed in the check output, then rerun:
 
@@ -62,6 +63,21 @@ polepos check
 ```
 
 Fix the reported structure issue, then retry the module command.
+
+## `polepos remove module` Fails Before Deleting Files
+
+The command removes only wiring it can recognize as PolePosition-managed. If a
+router include, model import, or module export has been manually reformatted or
+rewritten, `remove module` stops before deleting the module directory.
+
+Run:
+
+```bash
+polepos check
+```
+
+Then either restore the generated managed wiring shape and retry, or remove the
+custom wiring manually before deleting the module.
 
 ## Database Migrations Cannot Connect
 
@@ -118,4 +134,3 @@ uv sync
 
 LLM scaffolds are provider-agnostic stubs and do not add a provider SDK by
 default.
-
