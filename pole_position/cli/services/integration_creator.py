@@ -9,7 +9,10 @@ from pole_position.cli.services.integration_specs import (
 )
 from pole_position.cli.services.module_templates.renderer import render_template
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
-from pole_position.cli.services.pyproject_editor import ensure_project_dependency
+from pole_position.cli.services.pyproject_editor import (
+    ensure_project_dependency,
+    ensure_project_dependency_text,
+)
 
 
 SETTINGS_INTEGRATION_MARKER = "    # polepos:integration-settings"
@@ -31,6 +34,7 @@ def add_integration(integration_name: str, cwd: Path | None = None) -> None:
         package_root=package_root,
         integration_root=integration_root,
         integration_name=contract.name,
+        dependency=contract.dependency,
     )
 
     if contract.name == "kafka":
@@ -60,13 +64,16 @@ def _validate_add_integration_preflight(
     package_root: Path,
     integration_root: Path,
     integration_name: str,
+    dependency: str | None,
 ) -> None:
     problems: list[str] = []
+    pyproject_path = project_root / "pyproject.toml"
 
     if integration_root.exists():
         problems.append(f"Integration already exists: {integration_name}")
 
-    _collect_required_file(problems, project_root / "pyproject.toml")
+    _collect_required_file(problems, pyproject_path)
+    _collect_patchable_project_dependency(problems, pyproject_path, dependency)
     _collect_missing_marker(
         problems,
         package_root / "settings.py",
@@ -89,6 +96,25 @@ def _validate_add_integration_preflight(
 def _collect_required_file(problems: list[str], path: Path) -> None:
     if not path.is_file():
         problems.append(f"Required managed file is missing: {path}")
+
+
+def _collect_patchable_project_dependency(
+    problems: list[str],
+    path: Path,
+    dependency: str | None,
+) -> None:
+    if dependency is None or not path.is_file():
+        return
+
+    content = path.read_text(encoding="utf-8")
+    try:
+        ensure_project_dependency_text(
+            content,
+            dependency,
+            path_label=str(path),
+        )
+    except RuntimeError as exc:
+        problems.append(str(exc))
 
 
 def _collect_missing_marker(problems: list[str], path: Path, marker: str) -> None:

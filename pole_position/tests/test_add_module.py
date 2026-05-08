@@ -25,6 +25,28 @@ def run_cli(cwd, *args):
     )
 
 
+def _remove_first_dependencies_array(content: str) -> str:
+    lines = content.splitlines()
+    updated: list[str] = []
+    removing = False
+    removed = False
+
+    for line in lines:
+        if not removed and line.startswith("dependencies = ["):
+            removing = True
+            continue
+
+        if removing:
+            if line == "]":
+                removing = False
+                removed = True
+            continue
+
+        updated.append(line)
+
+    return "\n".join(updated) + "\n"
+
+
 def test_add_command_shows_usage(tmp_path: Path):
     result = run_cli(tmp_path, "add")
 
@@ -147,6 +169,35 @@ def test_add_integration_preflight_fails_before_writing_when_marker_is_missing(
     assert '"aiokafka>=0.12.0",' not in (
         project_root / "pyproject.toml"
     ).read_text(encoding="utf-8")
+
+
+def test_add_integration_preflight_fails_before_writing_when_dependency_layout_is_unsupported(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    env_path = project_root / ".env.example"
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_path.write_text(
+        _remove_first_dependencies_array(
+            pyproject_path.read_text(encoding="utf-8"),
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "integration", "kafka")
+
+    assert result.returncode != 0
+    assert "Cannot add integration because the project layout is not ready" in result.stdout
+    assert "Unsupported dependency layout" in result.stdout
+    assert not (package_root / "integrations" / "kafka").exists()
+    assert "kafka_bootstrap_servers:" not in settings_path.read_text(encoding="utf-8")
+    assert "KAFKA_BOOTSTRAP_SERVERS=" not in env_path.read_text(encoding="utf-8")
+    assert '"aiokafka>=0.12.0",' not in pyproject_path.read_text(encoding="utf-8")
 
 
 def test_add_rabbitmq_integration_creates_files_and_updates_project(tmp_path: Path):

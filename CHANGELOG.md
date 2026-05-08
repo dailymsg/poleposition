@@ -22,6 +22,9 @@ summarizes user-facing behavior, release readiness work, and known beta scope.
 
 - Aligned project creation next steps and generated README migration workflow
   around `polepos db upgrade`.
+- Hardened `polepos add integration ...` preflight checks so unsupported
+  dependency layouts are reported before generated files or settings are
+  written.
 
 ### Beta Release Checklist
 

@@ -2,7 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from pole_position.cli.services.pyproject_editor import ensure_project_dependency
+from pole_position.cli.services.pyproject_editor import (
+    ensure_project_dependency,
+    ensure_project_dependency_text,
+)
 
 
 def test_ensure_project_dependency_handles_flexible_multiline_layout(
@@ -57,6 +60,27 @@ dependencies = ["sqlalchemy>=2.0.0", "fastapi>=0.115.0"]
         '    "sqlalchemy>=2.0.0",',
         "]",
     ]
+
+
+def test_ensure_project_dependency_text_can_preview_without_writing() -> None:
+    content = """[project]
+name = "shop-api"
+dependencies = ["fastapi>=0.115.0"]
+"""
+
+    updated = ensure_project_dependency_text(content, "aiokafka>=0.12.0")
+
+    assert updated != content
+    assert '"aiokafka>=0.12.0",' in updated
+    assert '"fastapi>=0.115.0",' in updated
+
+
+def test_ensure_project_dependency_noops_for_missing_dependency(tmp_path: Path) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+
+    ensure_project_dependency(pyproject_path, None)
+
+    assert not pyproject_path.exists()
 
 
 def test_ensure_project_dependency_does_not_duplicate_existing_dependency(

@@ -17,13 +17,32 @@ def ensure_project_dependency(path: Path, dependency: str | None) -> None:
         return
 
     content = path.read_text(encoding="utf-8")
+    updated = ensure_project_dependency_text(
+        content,
+        dependency,
+        path_label=str(path),
+    )
+
+    if updated != content:
+        path.write_text(updated, encoding="utf-8")
+
+
+def ensure_project_dependency_text(
+    content: str,
+    dependency: str | None,
+    *,
+    path_label: str = "pyproject.toml",
+) -> str:
+    if dependency is None:
+        return content
+
     lines = content.splitlines()
-    project_start, project_end = _find_project_section(lines, path)
+    project_start, project_end = _find_project_section(lines, path_label)
     array_start, array_end, array_indent, inline_values = _find_project_dependencies(
         lines,
         project_start,
         project_end,
-        path,
+        path_label,
     )
     existing_dependencies = _dependency_values(
         lines=lines,
@@ -33,7 +52,7 @@ def ensure_project_dependency(path: Path, dependency: str | None) -> None:
     )
 
     if dependency in existing_dependencies:
-        return
+        return content
 
     if inline_values is not None:
         _replace_inline_dependencies_array(
@@ -52,10 +71,10 @@ def ensure_project_dependency(path: Path, dependency: str | None) -> None:
             dependency=dependency,
         )
 
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return "\n".join(lines) + "\n"
 
 
-def _find_project_section(lines: list[str], path: Path) -> tuple[int, int]:
+def _find_project_section(lines: list[str], path_label: str) -> tuple[int, int]:
     for index, line in enumerate(lines):
         match = SECTION_HEADER_PATTERN.match(line)
         if match is None or match.group(1).strip() != "project":
@@ -67,14 +86,14 @@ def _find_project_section(lines: list[str], path: Path) -> tuple[int, int]:
 
         return index + 1, len(lines)
 
-    raise RuntimeError(f"Unsupported dependency layout: {path}")
+    raise RuntimeError(f"Unsupported dependency layout: {path_label}")
 
 
 def _find_project_dependencies(
     lines: list[str],
     project_start: int,
     project_end: int,
-    path: Path,
+    path_label: str,
 ) -> tuple[int, int, str, list[str] | None]:
     for index in range(project_start, project_end):
         match = DEPENDENCIES_ARRAY_PATTERN.match(lines[index])
@@ -89,11 +108,11 @@ def _find_project_dependencies(
             lines=lines,
             start_index=index,
             stop_index=project_end,
-            path=path,
+            path_label=path_label,
         )
         return index, end_index, match.group("indent"), None
 
-    raise RuntimeError(f"Unsupported dependency layout: {path}")
+    raise RuntimeError(f"Unsupported dependency layout: {path_label}")
 
 
 def _parse_inline_dependency_values(rest: str) -> list[str] | None:
@@ -254,10 +273,10 @@ def _find_array_end_index(
     lines: list[str],
     start_index: int,
     stop_index: int,
-    path: Path,
+    path_label: str,
 ) -> int:
     for index in range(start_index + 1, stop_index):
         if ARRAY_END_PATTERN.match(lines[index]):
             return index
 
-    raise RuntimeError(f"Unsupported dependency layout: {path}")
+    raise RuntimeError(f"Unsupported dependency layout: {path_label}")
