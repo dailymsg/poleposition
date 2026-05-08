@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import py_compile
 import subprocess
 import sys
 
@@ -23,6 +24,14 @@ def run_cli(cwd, *args):
         text=True,
         env=env,
     )
+
+
+def _assert_python_files_compile(project_root: Path) -> None:
+    python_files = sorted(project_root.rglob("*.py"))
+
+    assert python_files
+    for path in python_files:
+        py_compile.compile(str(path), doraise=True)
 
 
 def _remove_first_dependencies_array(content: str) -> str:
@@ -384,6 +393,36 @@ def test_add_module_creates_module_files_and_updates_router(tmp_path: Path):
     assert 'client.post("/api/v1/garage/"' in integration_test_content
     assert "from myapp.bootstrap.logging import get_logger" in service_content
     assert "logger = get_logger(__name__)" in service_content
+
+
+def test_added_module_templates_keep_project_python_files_compileable(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    standard_result = run_cli(project_root, "add", "module", "garage")
+    ai_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
+    api_only_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "webhooks",
+        "--api-only",
+    )
+
+    assert standard_result.returncode == 0
+    assert ai_result.returncode == 0
+    assert api_only_result.returncode == 0
+    _assert_python_files_compile(project_root)
 
 
 def test_add_module_keeps_router_imports_sorted(tmp_path: Path):

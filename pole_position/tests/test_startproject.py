@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import py_compile
 import subprocess
 import sys
 from unittest.mock import patch
@@ -31,6 +32,15 @@ def run_cli(cwd, *args):
         text=True,
         env=env,
     )
+
+
+def _assert_python_files_compile(project_root: Path) -> None:
+    python_files = sorted(project_root.rglob("*.py"))
+
+    assert python_files
+    for path in python_files:
+        py_compile.compile(str(path), doraise=True)
+
 
 def test_create_project(tmp_path: Path):
     project_name = "myapp"
@@ -146,6 +156,14 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
     ]
     for path in removed_sample_paths:
         assert not path.exists(), f"Sample path should not be generated: {path}"
+
+
+def test_generated_project_python_files_compile(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "myapp")
+
+    assert result.returncode == 0
+
+    _assert_python_files_compile(tmp_path / "myapp")
 
 
 def test_generated_project_does_not_copy_pycache(tmp_path: Path):
