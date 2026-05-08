@@ -185,6 +185,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
         package_root / "auth" / "dependencies.py"
     ).read_text(encoding="utf-8")
     auth_token = (package_root / "auth" / "token.py").read_text(encoding="utf-8")
+    db_models_path = package_root / "db" / "models.py"
+    db_models = db_models_path.read_text(encoding="utf-8")
 
     assert "DATABASE_URL=sqlite:///./poleposition.db" in env_example
     assert "This file is for coding agents working in this PolePosition-generated" in agents_guide
@@ -232,7 +234,9 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert '- "${POSTGRES_PORT:-5432}:5432"' in compose_file
     assert "# polepos:router-imports" in (package_root / "api" / "router.py").read_text(encoding="utf-8")
     assert "# polepos:router-includes" in (package_root / "api" / "router.py").read_text(encoding="utf-8")
-    assert "# polepos:model-imports" in (package_root / "db" / "models.py").read_text(encoding="utf-8")
+    assert "# polepos:model-imports" in db_models
+    assert "    pass" in db_models
+    compile(db_models, str(db_models_path), "exec")
     assert "# polepos:module-exports" in (package_root / "modules" / "__init__.py").read_text(encoding="utf-8")
     assert "# polepos:auth-settings" in settings_module
     assert "# polepos:integration-settings" in settings_module
