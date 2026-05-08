@@ -146,8 +146,6 @@ src/<package>/
     session.py
   modules/
     status/
-    profile/
-    races/
 ```
 
 The important folder is `modules/`. Each domain feature belongs there.

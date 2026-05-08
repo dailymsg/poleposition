@@ -401,8 +401,6 @@ The list-style fields accept JSON arrays in `.env`.
 Generated projects include a minimal JWT-based authentication foundation with:
 
 * a public `GET /api/v1/status` endpoint
-* a protected `GET /api/v1/profile/me` endpoint
-* a role-gated `GET /api/v1/profile/admin-preview` endpoint
 * `get_current_user` and `require_roles(...)` helpers
 
 Relevant auth settings:
@@ -502,9 +500,7 @@ myapp/
 │     ├─ db/
 │     ├─ domain/
 │     └─ modules/
-│        ├─ profile/
-│        ├─ status/
-│        └─ races/
+│        └─ status/
 └─ tests/
    ├─ integration/
    └─ unit/

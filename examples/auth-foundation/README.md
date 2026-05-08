@@ -1,6 +1,7 @@
 # Auth Foundation Scenario
 
-This guide shows how to use the authentication foundation that comes with a generated PolePosition project.
+This guide shows how to use the authentication foundation that comes with a
+generated PolePosition project.
 
 It focuses on the current scope of the template:
 
@@ -9,9 +10,8 @@ It focuses on the current scope of the template:
 - role-gated endpoints
 - JWT-based token verification
 
-It does not assume a full login system yet.
-This is intentional.
-The current goal is to give teams a clean and reusable endpoint protection pattern from day one.
+It does not assume a full login system yet. The goal is to give teams a clean
+and reusable endpoint protection pattern from day one.
 
 ## Scenario Goal
 
@@ -20,10 +20,12 @@ Assume the user is building an internal API for a business application.
 They want:
 
 - `/api/v1/status` to stay public
-- `/api/v1/profile/me` to require authentication
-- `/api/v1/profile/admin-preview` to require an `admin` role
+- `/api/v1/account/me` to require authentication
+- `/api/v1/account/admin-preview` to require an `admin` role
 
-That is exactly the kind of boundary PolePosition's auth foundation is meant to establish.
+PolePosition provides the auth primitives. The protected routes belong in a
+normal module, so this scenario creates an `account` API module and wires those
+dependencies explicitly.
 
 ## Step 1: Create the Project
 
@@ -37,21 +39,77 @@ uv sync
 polepos db upgrade
 ```
 
-Run the app:
-
-```bash
-uv run python -m secure_api.run
-```
-
-At this point the generated project already includes:
+At this point the generated project includes:
 
 - `src/secure_api/auth/`
 - JWT token helpers
 - auth dependencies
-- example protected profile routes
 - auth settings in `.env`
+- a public `GET /api/v1/status` endpoint
 
-## Step 2: Review the Auth Settings
+## Step 2: Add an API Module
+
+Create a lightweight module for account endpoints:
+
+```bash
+polepos add module account --api-only
+```
+
+PolePosition creates:
+
+```text
+src/secure_api/modules/account/
+  __init__.py
+  router.py
+  schemas.py
+  service.py
+tests/integration/test_account.py
+tests/unit/test_account_api_service.py
+```
+
+The generated module is just a starting point. Replace the example account
+routes with auth-focused endpoints.
+
+## Step 3: Rewrite `router.py`
+
+Replace:
+
+```text
+src/secure_api/modules/account/router.py
+```
+
+with:
+
+```python
+from fastapi import APIRouter, Depends
+
+from secure_api.api.deps import get_current_user, require_roles
+from secure_api.auth.schemas import AuthenticatedUser
+
+
+router = APIRouter()
+
+
+@router.get("/me")
+def read_account(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> dict[str, object]:
+    return current_user.model_dump()
+
+
+@router.get("/admin-preview")
+def read_admin_preview(
+    current_user: AuthenticatedUser = Depends(require_roles("admin")),
+) -> dict[str, object]:
+    return current_user.model_dump()
+```
+
+This demonstrates two route boundaries:
+
+- `get_current_user` requires a valid bearer token
+- `require_roles("admin")` requires a valid token with the `admin` role
+
+## Step 4: Review the Auth Settings
 
 The generated `.env` contains:
 
@@ -64,87 +122,23 @@ AUTH_ISSUER=secure-api
 
 For local development, the defaults are enough to see the flow.
 
-Before a real deployment, the team should change at least:
+Before a real deployment, change at least:
 
 - `AUTH_SECRET_KEY`
 - `AUTH_ISSUER`
 
-These settings are read from:
-
-```text
-src/secure_api/settings.py
-```
-
-## Step 3: Understand the Generated Auth Files
-
-PolePosition adds these files:
-
-```text
-src/secure_api/auth/
-  __init__.py
-  dependencies.py
-  schemas.py
-  service.py
-  token.py
-```
-
-What they do:
-
-`token.py`
-- creates and decodes JWT access tokens
-
-`schemas.py`
-- defines token payload and authenticated user shapes
-
-`service.py`
-- converts decoded token payload into an authenticated user object
-
-`dependencies.py`
-- exposes `get_current_user`
-- exposes `require_roles(...)`
-
-This separation is useful because it keeps authentication logic out of route files.
-
-## Step 4: Understand the Generated Example Endpoints
-
-The project includes these example routes:
-
-```text
-GET /api/v1/status
-GET /api/v1/profile/me
-GET /api/v1/profile/admin-preview
-```
-
-They demonstrate three distinct cases:
-
-`/status`
-- public
-
-`/profile/me`
-- requires a valid bearer token
-
-`/profile/admin-preview`
-- requires a valid bearer token
-- also requires the `admin` role
-
-This is the most important idea in the foundation:
-
-- authentication answers: who is calling?
-- authorization answers: can this user access this route?
-
-## Step 5: Generate a Token for Local Testing
-
-Because the current foundation does not ship with a login endpoint yet, the easiest way to test the flow is to mint a token from the generated helper.
-
-Inside the generated project, run:
+## Step 5: Run the App
 
 ```bash
-uv run python -c 'from secure_api.auth.token import create_access_token; print(create_access_token(subject="user-1", email="user@example.com", roles=["member"]))'
+uv run python -m secure_api.run
 ```
 
-This prints a JWT token.
+## Step 6: Generate Tokens for Local Testing
 
-Save it to a shell variable:
+Because the current foundation does not ship with a login endpoint yet, the
+easiest way to test the flow is to mint a token from the generated helper.
+
+Inside the generated project, run:
 
 ```bash
 TOKEN=$(uv run python -c 'from secure_api.auth.token import create_access_token; print(create_access_token(subject="user-1", email="user@example.com", roles=["member"]))')
@@ -156,9 +150,7 @@ For an admin token:
 ADMIN_TOKEN=$(uv run python -c 'from secure_api.auth.token import create_access_token; print(create_access_token(subject="admin-1", email="admin@example.com", roles=["admin","member"]))')
 ```
 
-This is enough to exercise the generated protection model.
-
-## Step 6: Test the Public Endpoint
+## Step 7: Test the Public Endpoint
 
 This route should always work without authentication:
 
@@ -171,83 +163,51 @@ Expected result:
 - status code `200`
 - JSON response with app status metadata
 
-This confirms public routes remain simple.
+## Step 8: Test the Protected Endpoint Without a Token
 
-## Step 7: Test the Protected Endpoint Without a Token
-
-Try the authenticated profile route without credentials:
+Try the authenticated account route without credentials:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/profile/me
+curl http://127.0.0.1:8000/api/v1/account/me
 ```
 
 Expected result:
 
 - status code `401`
-- response like:
+- response with an authentication error
 
-```json
-{
-  "detail": "Authentication credentials were not provided."
-}
-```
-
-This shows the endpoint boundary is protected.
-
-## Step 8: Test the Protected Endpoint With a Valid Token
+## Step 9: Test the Protected Endpoint With a Valid Token
 
 Now call the same route with the generated token:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/profile/me \
+curl http://127.0.0.1:8000/api/v1/account/me \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 Expected result:
 
 - status code `200`
-- JSON body like:
+- JSON body containing `subject`, `email`, and `roles`
 
-```json
-{
-  "subject": "user-1",
-  "email": "user@example.com",
-  "roles": ["member"]
-}
-```
+## Step 10: Test the Role-Gated Endpoint
 
-This confirms the generated `get_current_user` dependency works.
-
-## Step 9: Test the Role-Gated Endpoint With a Non-Admin Token
-
-Now call the admin-preview route with a normal member token:
+Call the admin-preview route with a normal member token:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/profile/admin-preview \
+curl http://127.0.0.1:8000/api/v1/account/admin-preview \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 Expected result:
 
 - status code `403`
-- response like:
-
-```json
-{
-  "detail": "You do not have permission to access this resource."
-}
-```
-
-This is the authorization example.
-
-The user is authenticated, but not allowed.
-
-## Step 10: Test the Role-Gated Endpoint With an Admin Token
+- response with an authorization error
 
 Now use the admin token:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/profile/admin-preview \
+curl http://127.0.0.1:8000/api/v1/account/admin-preview \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 
@@ -256,99 +216,17 @@ Expected result:
 - status code `200`
 - JSON body including `"admin"` inside `roles`
 
-This shows how `require_roles("admin")` is intended to be used.
-
-## Step 11: Use the Same Pattern in New Modules
-
-Once the user understands the built-in example, they can protect their own modules the same way.
-
-Example:
-
-```bash
-polepos add module reports
-```
-
-Inside:
-
-```text
-src/secure_api/modules/reports/router.py
-```
-
-they can protect a route like this:
-
-```python
-from fastapi import APIRouter, Depends
-
-from secure_api.api.deps import get_current_user, require_roles
-from secure_api.auth.schemas import AuthenticatedUser
-
-
-router = APIRouter()
-
-
-@router.get("/mine")
-def my_reports(
-    current_user: AuthenticatedUser = Depends(get_current_user),
-) -> dict[str, str]:
-    return {"owner": current_user.subject}
-
-
-@router.get("/admin")
-def admin_reports(
-    current_user: AuthenticatedUser = Depends(require_roles("admin")),
-) -> dict[str, str]:
-    return {"scope": "admin"}
-```
-
-This keeps authentication and authorization decisions explicit at the route boundary.
-
-## Step 12: Understand What This Foundation Does Not Do Yet
-
-This foundation intentionally does not include:
-
-- signup
-- login endpoint
-- password hashing
-- refresh tokens
-- database-backed user persistence
-- full RBAC system
-
-That is why this example uses `create_access_token(...)` directly for testing.
-
-The purpose of the current foundation is narrower:
-
-- define how protected endpoints work
-- define how a current user is resolved
-- define how role checks are expressed
-
-## Step 13: Why This Is Useful
-
-Without this foundation, every new project would need to answer the same questions again:
-
-- where does token parsing live?
-- how do we get the current user?
-- what makes a route protected?
-- how do we distinguish `401` and `403`?
-
-PolePosition now answers those questions with a default pattern.
-
-That gives the team:
-
-- a public route example
-- an authenticated route example
-- an authorization example
-- a consistent way to protect new endpoints
-
 ## Summary
 
 The full user flow looks like this:
 
 1. create a project
-2. run the app
-3. generate a local JWT with `create_access_token(...)`
-4. call `/status` without a token
-5. call `/profile/me` with and without a token
-6. call `/profile/admin-preview` with a member token and an admin token
-7. reuse the same auth dependencies in newly generated modules
+2. add an API-only module
+3. wire `get_current_user` and `require_roles(...)`
+4. generate local JWTs with `create_access_token(...)`
+5. call `/status` without a token
+6. call `/account/me` with and without a token
+7. call `/account/admin-preview` with a member token and an admin token
 
-This makes the generated auth layer practical immediately, even before a full login system exists.
+This makes the generated auth layer practical immediately, even before a full
+login system exists.

@@ -112,7 +112,6 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
         project_root / "migrations" / "env.py",
         project_root / "migrations" / "script.py.mako",
         project_root / "migrations" / "versions" / "__init__.py",
-        project_root / "migrations" / "versions" / "0001_create_races_table.py",
         package_root / "run.py",
         package_root / "settings.py",
         package_root / "auth" / "__init__.py",
@@ -128,22 +127,25 @@ def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
         package_root / "db" / "session.py",
         package_root / "db" / "base.py",
         package_root / "domain" / "exceptions.py",
-        package_root / "modules" / "profile" / "router.py",
-        package_root / "modules" / "profile" / "schemas.py",
         package_root / "modules" / "status" / "router.py",
         package_root / "modules" / "status" / "service.py",
-        package_root / "modules" / "races" / "model.py",
-        package_root / "modules" / "races" / "repository.py",
-        package_root / "modules" / "races" / "router.py",
         project_root / "tests" / "conftest.py",
-        project_root / "tests" / "integration" / "test_profile.py",
         project_root / "tests" / "integration" / "test_status.py",
-        project_root / "tests" / "integration" / "test_races.py",
-        project_root / "tests" / "unit" / "test_race_service.py",
     ]
 
     for path in expected_paths:
         assert path.exists(), f"Expected generated file is missing: {path}"
+
+    removed_sample_paths = [
+        project_root / "migrations" / "versions" / "0001_create_races_table.py",
+        package_root / "modules" / "profile",
+        package_root / "modules" / "races",
+        project_root / "tests" / "integration" / "test_profile.py",
+        project_root / "tests" / "integration" / "test_races.py",
+        project_root / "tests" / "unit" / "test_race_service.py",
+    ]
+    for path in removed_sample_paths:
+        assert not path.exists(), f"Sample path should not be generated: {path}"
 
 
 def test_generated_project_does_not_copy_pycache(tmp_path: Path):
@@ -178,9 +180,6 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     tests_conftest = (project_root / "tests" / "conftest.py").read_text(encoding="utf-8")
     status_service = (
         package_root / "modules" / "status" / "service.py"
-    ).read_text(encoding="utf-8")
-    profile_router = (
-        package_root / "modules" / "profile" / "router.py"
     ).read_text(encoding="utf-8")
     auth_dependencies = (
         package_root / "auth" / "dependencies.py"
@@ -296,9 +295,6 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "from demo_app.bootstrap.logging import get_logger" in status_service
     assert "logger = get_logger(__name__)" in status_service
     assert "from demo_app import __version__" in status_service
-    assert "from demo_app.api.deps import get_current_user, require_roles" in profile_router
-    assert '@router.get("/me", response_model=ProfileResponse)' in profile_router
-    assert '@router.get("/admin-preview", response_model=ProfileResponse)' in profile_router
     assert "bearer_scheme = HTTPBearer(auto_error=False)" in auth_dependencies
     assert "def get_current_user(" in auth_dependencies
     assert "def require_roles(*roles: str)" in auth_dependencies
@@ -317,9 +313,6 @@ def test_generated_project_includes_alembic_support(tmp_path: Path):
     project_root = tmp_path / "demo-app"
     pyproject = (project_root / "pyproject.toml").read_text(encoding="utf-8")
     migrations_env = (project_root / "migrations" / "env.py").read_text(encoding="utf-8")
-    initial_migration = (
-        project_root / "migrations" / "versions" / "0001_create_races_table.py"
-    ).read_text(encoding="utf-8")
     readme = (project_root / "README.md").read_text(encoding="utf-8")
 
     assert '"alembic>=' in pyproject
@@ -328,8 +321,6 @@ def test_generated_project_includes_alembic_support(tmp_path: Path):
     assert "from demo_app.settings import get_settings" in migrations_env
     assert "target_metadata = Base.metadata" in migrations_env
     assert "polepos db upgrade" in readme
-    assert 'op.create_table(' in initial_migration
-    assert '"races"' in initial_migration
     assert 'polepos db revision -m "add garage table"' in readme
     assert 'uv run alembic revision --autogenerate -m "add garage table"' in readme
     assert "{{project" not in migrations_env
@@ -342,18 +333,23 @@ def test_generated_project_includes_auth_foundation(tmp_path: Path):
 
     project_root = tmp_path / "demo-app"
     readme = (project_root / "README.md").read_text(encoding="utf-8")
-    profile_test = (
-        project_root / "tests" / "integration" / "test_profile.py"
-    ).read_text(encoding="utf-8")
     auth_schemas = (
         project_root / "src" / "demo_app" / "auth" / "schemas.py"
     ).read_text(encoding="utf-8")
+    auth_dependencies = (
+        project_root / "src" / "demo_app" / "auth" / "dependencies.py"
+    ).read_text(encoding="utf-8")
+    auth_token = (
+        project_root / "src" / "demo_app" / "auth" / "token.py"
+    ).read_text(encoding="utf-8")
 
-    assert "GET /api/v1/profile/me" in readme
-    assert "GET /api/v1/profile/admin-preview" in readme
-    assert "test_profile_requires_authentication" in profile_test
-    assert "test_admin_preview_requires_admin_role" in profile_test
+    assert "GET /api/v1/profile/me" not in readme
+    assert "GET /api/v1/profile/admin-preview" not in readme
     assert "class AuthenticatedUser(BaseModel):" in auth_schemas
+    assert "def get_current_user(" in auth_dependencies
+    assert "def require_roles(*roles: str)" in auth_dependencies
+    assert "def create_access_token(" in auth_token
+    assert "def decode_access_token(token: str" in auth_token
 
 
 def test_generated_project_includes_docker_workflow_docs(tmp_path: Path):

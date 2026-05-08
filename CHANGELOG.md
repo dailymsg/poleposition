@@ -20,6 +20,9 @@ summarizes user-facing behavior, release readiness work, and known beta scope.
 
 ### Changed
 
+- Removed the generated `profile` and `races` sample modules from the default
+  project template, while keeping the auth foundation, status module, and
+  Alembic migration infrastructure.
 - Aligned project creation next steps and generated README migration workflow
   around `polepos db upgrade`.
 - Hardened `polepos add integration ...` preflight checks so unsupported

@@ -6,11 +6,12 @@ generated PolePosition project.
 The generated project includes:
 
 - public `GET /api/v1/status`
-- protected `GET /api/v1/profile/me`
-- role-gated `GET /api/v1/profile/admin-preview`
 - JWT token helpers
 - `get_current_user`
 - `require_roles(...)`
+
+It does not generate a default protected profile route. Protected routes should
+belong to the real module that needs them.
 
 ## Create the Project
 
@@ -20,21 +21,48 @@ cd secure-api
 cp .env.example .env
 uv sync
 polepos db upgrade
+```
+
+## Add an API Module
+
+Use an API-only module for a small auth boundary example:
+
+```bash
+polepos add module account --api-only
+```
+
+Then update `src/secure_api/modules/account/router.py` to use the generated auth
+dependencies:
+
+```python
+from fastapi import APIRouter, Depends
+
+from secure_api.api.deps import get_current_user, require_roles
+from secure_api.auth.schemas import AuthenticatedUser
+
+
+router = APIRouter()
+
+
+@router.get("/me")
+def read_account(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> dict[str, object]:
+    return current_user.model_dump()
+
+
+@router.get("/admin-preview")
+def read_admin_preview(
+    current_user: AuthenticatedUser = Depends(require_roles("admin")),
+) -> dict[str, object]:
+    return current_user.model_dump()
+```
+
+Run the project:
+
+```bash
 uv run python -m secure_api.run
 ```
-
-## Review Auth Settings
-
-The generated `.env` contains local defaults:
-
-```env
-AUTH_SECRET_KEY=change-me-in-production
-AUTH_ALGORITHM=HS256
-AUTH_ACCESS_TOKEN_EXPIRE_MINUTES=60
-AUTH_ISSUER=secure-api
-```
-
-Before deployment, change at least `AUTH_SECRET_KEY` and `AUTH_ISSUER`.
 
 ## Generate a Local Token
 
@@ -62,14 +90,14 @@ curl http://127.0.0.1:8000/api/v1/status
 Protected endpoint:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/profile/me \
+curl http://127.0.0.1:8000/api/v1/account/me \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 Admin endpoint:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/profile/admin-preview \
+curl http://127.0.0.1:8000/api/v1/account/admin-preview \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 ```
 

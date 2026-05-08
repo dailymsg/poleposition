@@ -4,6 +4,7 @@ from pole_position.cli.services.project_checker import (
     ProjectCheckResult,
     _check_alembic_config,
     _check_generated_structure,
+    _check_lifecycle_wiring,
     _check_managed_markers,
     _check_project_identity,
 )
@@ -96,6 +97,26 @@ def test_managed_marker_check_passes_with_all_markers(tmp_path: Path) -> None:
     problems: list[str] = []
 
     _check_managed_markers(problems, package_root)
+
+    assert problems == []
+
+
+def test_lifecycle_check_ignores_legacy_starter_samples(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    package_root = project_root / "src" / "shop_api"
+    _write_text(package_root / "modules" / "profile" / "__init__.py", "")
+    _write_text(package_root / "modules" / "profile" / "router.py", "")
+    _write_text(package_root / "modules" / "profile" / "schemas.py", "")
+    _write_text(package_root / "modules" / "races" / "__init__.py", "")
+    _write_text(package_root / "modules" / "races" / "model.py", "")
+    _write_text(package_root / "modules" / "races" / "repository.py", "")
+    _write_text(package_root / "modules" / "races" / "router.py", "")
+    _write_text(package_root / "modules" / "races" / "schemas.py", "")
+    _write_text(package_root / "modules" / "races" / "service.py", "")
+    _write_text(project_root / "tests" / "unit" / "test_race_service.py", "")
+    problems: list[str] = []
+
+    _check_lifecycle_wiring(problems, project_root, package_root)
 
     assert problems == []
 

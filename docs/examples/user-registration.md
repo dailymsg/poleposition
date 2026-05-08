@@ -24,7 +24,7 @@ uv run python -m account_api.run
 ```
 
 The project starts with the generated FastAPI app, database foundation, Alembic
-migrations, auth foundation, and `races`, `status`, and `profile` modules.
+migrations, auth foundation, and `status` module.
 
 For this guide, keep the default SQLite database while developing locally. When
 you are ready to use PostgreSQL, update `DATABASE_URL` in `.env` and run the

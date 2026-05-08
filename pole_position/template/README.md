@@ -143,19 +143,13 @@ JSON logs include:
 
 ## Authentication
 
-Generated projects include a minimal JWT-based authentication foundation.
+Generated projects include a minimal JWT-based authentication foundation under
+`src/{{project_import_name}}/auth/`.
 
 Public endpoint:
 
 ```text
 GET /api/v1/status
-```
-
-Protected example endpoints:
-
-```text
-GET /api/v1/profile/me
-GET /api/v1/profile/admin-preview
 ```
 
 Relevant settings in `.env`:
@@ -181,19 +175,11 @@ src/{{project_import_name}}/
   api/
   db/
   modules/
-    profile/
     status/
-    races/
 ```
 
 ## Example Endpoints
 
 ```text
 GET    /api/v1/status
-GET    /api/v1/profile/me
-GET    /api/v1/profile/admin-preview
-GET    /api/v1/races/
-GET    /api/v1/races/{race_id}
-POST   /api/v1/races/
-PATCH  /api/v1/races/{race_id}/status
 ```

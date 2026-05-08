@@ -116,7 +116,7 @@ Important meanings:
 - `db/`: SQLAlchemy base, session, model import registry
 - `domain/`: shared domain exceptions and similar cross-module domain primitives
 - `integrations/`: opt-in external-system adapters such as LLM, Kafka, or RabbitMQ helpers
-- `modules/`: feature/domain modules such as `status`, `races`, `users`, `customers`
+- `modules/`: feature/domain modules such as `status`, `users`, `customers`
 
 Agents should prefer adding behavior inside modules instead of creating large global folders like `services/` or `repositories/` at the project root.
 

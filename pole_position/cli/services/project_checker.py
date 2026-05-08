@@ -39,10 +39,16 @@ MANAGED_MARKERS = {
 
 
 STARTER_MODULES = {
-    "profile",
-    "races",
     "status",
 }
+
+LEGACY_PROFILE_MODULE_FILES = {
+    "__init__.py",
+    "router.py",
+    "schemas.py",
+}
+
+LEGACY_RACES_UNIT_TEST = Path("tests/unit/test_race_service.py")
 
 PROJECT_IDENTITY_PATHS = [
     "pyproject.toml",
@@ -91,15 +97,6 @@ CORE_PACKAGE_PATHS = [
     "domain/__init__.py",
     "domain/exceptions.py",
     "modules/__init__.py",
-    "modules/profile/__init__.py",
-    "modules/profile/router.py",
-    "modules/profile/schemas.py",
-    "modules/races/__init__.py",
-    "modules/races/model.py",
-    "modules/races/repository.py",
-    "modules/races/router.py",
-    "modules/races/schemas.py",
-    "modules/races/service.py",
     "modules/status/__init__.py",
     "modules/status/router.py",
     "modules/status/schemas.py",
@@ -281,7 +278,9 @@ def _check_lifecycle_wiring(
         return
 
     for module_root in sorted(modules_root.iterdir()):
-        if not module_root.is_dir() or module_root.name in STARTER_MODULES:
+        if not module_root.is_dir():
+            continue
+        if _should_skip_lifecycle_module(project_root, module_root):
             continue
 
         _check_added_module_wiring(
@@ -290,6 +289,29 @@ def _check_lifecycle_wiring(
             package_root=package_root,
             module_root=module_root,
         )
+
+
+def _should_skip_lifecycle_module(project_root: Path, module_root: Path) -> bool:
+    if module_root.name in STARTER_MODULES:
+        return True
+
+    return _is_legacy_starter_module(project_root, module_root)
+
+
+def _is_legacy_starter_module(project_root: Path, module_root: Path) -> bool:
+    if module_root.name == "profile":
+        return (
+            all(
+                (module_root / file_name).exists()
+                for file_name in LEGACY_PROFILE_MODULE_FILES
+            )
+            and not (module_root / "service.py").exists()
+        )
+
+    if module_root.name == "races":
+        return (project_root / LEGACY_RACES_UNIT_TEST).exists()
+
+    return False
 
 
 def _check_added_module_wiring(
@@ -611,7 +633,9 @@ def _has_ai_prompt_module(project_root: Path, package_root: Path) -> bool:
         return False
 
     for module_root in modules_root.iterdir():
-        if not module_root.is_dir() or module_root.name in STARTER_MODULES:
+        if not module_root.is_dir():
+            continue
+        if _should_skip_lifecycle_module(project_root, module_root):
             continue
         if _detect_module_kind(project_root, module_root) == "ai-prompt":
             return True

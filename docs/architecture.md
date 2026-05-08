@@ -158,7 +158,7 @@ The responsibilities are:
 - `db/`: SQLAlchemy base, session, model import aggregation
 - `domain/`: domain exceptions and shared primitives
 - `integrations/`: external systems such as LLM adapters
-- `modules/`: feature modules such as `status`, `profile`, `races`
+- `modules/`: feature modules such as `status`, `users`, `customers`
 
 ## `add module` Architecture
 
@@ -323,11 +323,9 @@ The important separation is:
 - authentication: who is calling?
 - authorization: what can this user access?
 
-The generated example endpoints show this difference:
-
-- `GET /api/v1/status` is public
-- `GET /api/v1/profile/me` is authenticated
-- `GET /api/v1/profile/admin-preview` is role-gated
+The generated auth package provides token helpers, `get_current_user`, and
+`require_roles(...)` so newly added modules can define protected and role-gated
+routes explicitly.
 
 This is meant as a reusable route-boundary pattern, not a full identity system yet.
 

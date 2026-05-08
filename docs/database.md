@@ -68,8 +68,10 @@ uv sync
 polepos db upgrade
 ```
 
-The initial migration creates the starter `races` table. After the migration is
-applied, run the app:
+The initial migration command is still part of the startup flow even though the
+default project has no application tables yet. It verifies that Alembic can read
+your settings and that the migration environment is healthy. After it completes,
+run the app:
 
 ```bash
 uv run python -m shop_api.run

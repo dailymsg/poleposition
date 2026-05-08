@@ -1,10 +1,7 @@
-from datetime import datetime, timedelta, timezone
-
 import pytest
 from fastapi.testclient import TestClient
 
 from {{project_import_name}}.app import create_app
-from {{project_import_name}}.auth.token import create_access_token
 from {{project_import_name}}.db.base import Base
 from {{project_import_name}}.db.models import import_models
 from {{project_import_name}}.db.session import get_engine, get_session_factory
@@ -38,32 +35,3 @@ def client() -> TestClient:
     app = create_app()
     with TestClient(app) as test_client:
         yield test_client
-
-
-@pytest.fixture
-def race_payload() -> dict[str, str]:
-    scheduled_at = datetime.now(timezone.utc) + timedelta(days=14)
-    return {
-        "name": "Monaco Grand Prix",
-        "circuit": "Circuit de Monaco",
-        "country": "Monaco",
-        "scheduled_at": scheduled_at.isoformat(),
-    }
-
-
-@pytest.fixture
-def auth_token() -> str:
-    return create_access_token(
-        subject="driver-1",
-        email="driver@example.com",
-        roles=["member"],
-    )
-
-
-@pytest.fixture
-def admin_token() -> str:
-    return create_access_token(
-        subject="team-principal",
-        email="principal@example.com",
-        roles=["admin", "member"],
-    )
