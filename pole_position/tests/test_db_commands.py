@@ -60,6 +60,13 @@ def test_db_upgrade_defaults_to_head(tmp_path: Path):
     mock_run.assert_called_once_with("upgrade", ["head"])
 
 
+def test_db_upgrade_help_shows_usage_without_project(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "upgrade", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos db upgrade [target]" in result.stdout
+
+
 def test_db_revision_requires_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     from pole_position.cli.commands.db.revision import run
 
@@ -70,6 +77,13 @@ def test_db_revision_requires_message(tmp_path: Path, capsys: pytest.CaptureFixt
 
     captured = capsys.readouterr()
     assert 'Usage: polepos db revision -m "<message>"' in captured.out
+
+
+def test_db_revision_help_shows_usage_without_project(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "revision", "--help")
+
+    assert result.returncode == 0
+    assert 'Usage: polepos db revision -m "<message>"' in result.stdout
 
 
 def test_db_revision_invokes_autogenerate(tmp_path: Path):
@@ -96,6 +110,13 @@ def test_db_downgrade_requires_target(tmp_path: Path, capsys: pytest.CaptureFixt
 
     captured = capsys.readouterr()
     assert "Usage: polepos db downgrade <target>" in captured.out
+
+
+def test_db_downgrade_help_shows_usage_without_project(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "downgrade", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos db downgrade <target>" in result.stdout
 
 
 def test_db_upgrade_requires_poleposition_project(tmp_path: Path):

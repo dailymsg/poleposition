@@ -78,7 +78,7 @@ def remove_module(module_name: str, cwd: Path | None = None) -> RemovedModuleRes
         project_root=project_root,
         modules_root=modules_root,
         removed_module_name=module_name,
-    ):
+    ) and _is_generated_llm_scaffold_pristine(project_root, package_root, package_name):
         updated_files.extend(_remove_llm_settings(project_root, package_root))
         removed_paths.extend(_remove_llm_integration_files(package_root, package_name))
 
@@ -500,6 +500,49 @@ def _remove_llm_settings(project_root: Path, package_root: Path) -> list[Path]:
         updated_files.append(env_path)
 
     return updated_files
+
+
+def _is_generated_llm_scaffold_pristine(
+    project_root: Path,
+    package_root: Path,
+    package_name: str,
+) -> bool:
+    expected_files = llm_integration_files(package_name)
+    llm_root = package_root / "integrations" / "llm"
+    if not llm_root.is_dir():
+        return False
+
+    for relative_path, expected_content in expected_files.items():
+        path = package_root / relative_path
+        if not path.is_file():
+            return False
+        if path.read_text(encoding="utf-8") != expected_content:
+            return False
+
+    expected_llm_paths = {
+        package_root / relative_path
+        for relative_path in expected_files
+        if relative_path.startswith("integrations/llm/")
+    }
+    actual_llm_paths = {path for path in llm_root.rglob("*") if path.is_file()}
+    if actual_llm_paths != expected_llm_paths:
+        return False
+
+    settings_path = package_root / "settings.py"
+    env_path = project_root / ".env.example"
+    if not settings_path.is_file() or not env_path.is_file():
+        return False
+
+    settings_lines = settings_path.read_text(
+        encoding="utf-8",
+    ).splitlines()
+    env_lines = env_path.read_text(
+        encoding="utf-8",
+    ).splitlines()
+
+    return all(line in settings_lines for line in llm_settings_block()) and all(
+        line in env_lines for line in llm_env_block()
+    )
 
 
 def _remove_lines_by_prefix(path: Path, prefixes: list[str]) -> bool:

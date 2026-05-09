@@ -148,6 +148,61 @@ def test_remove_last_ai_prompt_module_cleans_llm_shared_scaffold(tmp_path: Path)
     assert check_result.returncode == 0
 
 
+def test_remove_last_ai_prompt_module_preserves_custom_llm_scaffold(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "assistant", "--template", "ai-prompt")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    custom_provider = package_root / "integrations" / "llm" / "custom_provider.py"
+    custom_provider.write_text("class CustomProvider:\n    pass\n", encoding="utf-8")
+
+    result = run_cli(project_root, "remove", "module", "assistant")
+
+    assert result.returncode == 0
+    assert not (package_root / "modules" / "assistant").exists()
+    assert custom_provider.exists()
+    assert "llm_provider" in (package_root / "settings.py").read_text(
+        encoding="utf-8"
+    )
+    assert "LLM_PROVIDER" in (project_root / ".env.example").read_text(
+        encoding="utf-8"
+    )
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
+def test_remove_ai_prompt_module_does_not_crash_when_llm_settings_are_missing(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "assistant", "--template", "ai-prompt")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    settings_path.write_text(
+        settings_path.read_text(encoding="utf-8").replace(
+            '    llm_provider: str = "openai"\n',
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "remove", "module", "assistant")
+
+    assert result.returncode == 0
+    assert not (package_root / "modules" / "assistant").exists()
+    assert (package_root / "integrations" / "llm").exists()
+
+
 def test_remove_ai_prompt_module_keeps_shared_llm_scaffold_when_another_ai_module_exists(
     tmp_path: Path,
 ):

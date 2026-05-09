@@ -6,6 +6,10 @@ USAGE = "Usage: polepos db downgrade <target>"
 
 
 def run(args: list[str]) -> None:
+    if args and args[0] in {"-h", "--help"}:
+        print(USAGE)
+        return
+
     if not args:
         print(USAGE)
         raise SystemExit(1)

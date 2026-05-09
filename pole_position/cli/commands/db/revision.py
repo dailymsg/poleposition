@@ -6,6 +6,10 @@ USAGE = 'Usage: polepos db revision -m "<message>"'
 
 
 def run(args: list[str]) -> None:
+    if args and args[0] in {"-h", "--help"}:
+        print(USAGE)
+        return
+
     if len(args) != 2 or args[0] not in {"-m", "--message"}:
         print(USAGE)
         raise SystemExit(1)
