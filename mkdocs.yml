@@ -32,6 +32,12 @@ theme:
 plugins:
   - search
 
+extra_css:
+  - assets/styles/font-size.css
+
+extra_javascript:
+  - assets/scripts/font-size.js
+
 markdown_extensions:
   - admonition
   - attr_list
