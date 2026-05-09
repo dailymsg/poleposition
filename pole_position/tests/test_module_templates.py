@@ -53,6 +53,8 @@ def test_standard_template_contract() -> None:
     assert template.ensure_llm_integrations is contract.ensure_llm_integrations
     assert template.ensure_llm_settings is contract.ensure_llm_settings
     assert "from shop_api.bootstrap.logging import get_logger" in template.files["service.py"]
+    assert 'extra={"item_name": payload.name}' in template.files["service.py"]
+    assert 'extra={"name": payload.name}' not in template.files["service.py"]
     assert 'client.post("/api/v1/customers/"' in template.integration_test_content
 
 
@@ -89,6 +91,8 @@ def test_api_only_template_contract() -> None:
     assert "model.py" not in template.files
     assert "repository.py" not in template.files
     assert "Depends(db_session)" not in template.files["router.py"]
+    assert 'extra={"payload_name": payload.name}' in template.files["service.py"]
+    assert 'extra={"name": payload.name}' not in template.files["service.py"]
     assert 'client.post("/api/v1/webhooks/"' in template.integration_test_content
 
 

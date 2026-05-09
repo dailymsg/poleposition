@@ -18,5 +18,5 @@ class {{class_name}}Service:
         return self.repository.list()
 
     def create_{{module_name}}(self, payload: {{class_name}}Create) -> {{class_name}}:
-        logger.info("Creating {{module_name}}", extra={"name": payload.name})
+        logger.info("Creating {{module_name}}", extra={"item_name": payload.name})
         return self.repository.create(name=payload.name)

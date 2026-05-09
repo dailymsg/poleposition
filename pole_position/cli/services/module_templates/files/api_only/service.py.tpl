@@ -17,7 +17,7 @@ class {{class_name}}Service:
         )
 
     def handle(self, payload: {{class_name}}Request) -> {{class_name}}Response:
-        logger.info("Handling {{module_name}} request", extra={"name": payload.name})
+        logger.info("Handling {{module_name}} request", extra={"payload_name": payload.name})
         return {{class_name}}Response(
             name=payload.name,
             message=f"{payload.name} was handled by {{module_name}}.",

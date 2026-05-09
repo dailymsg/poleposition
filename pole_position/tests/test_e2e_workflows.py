@@ -125,6 +125,10 @@ def test_e2e_start_project_and_run_generated_tests(tmp_path: Path) -> None:
     assert create_result.returncode == 0, create_result.stderr
 
     project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+
+    assert add_result.returncode == 0, add_result.stderr
+
     env_example = project_root / ".env.example"
     env_file = project_root / ".env"
     env_file.write_text(env_example.read_text(encoding="utf-8"), encoding="utf-8")
@@ -144,6 +148,13 @@ def test_e2e_start_project_and_run_generated_tests(tmp_path: Path) -> None:
         f"stderr:\n{pytest_result.stderr}"
     )
     assert "passed" in pytest_result.stdout
+
+    check_result = run_cli(project_root, "check")
+
+    assert check_result.returncode == 0, (
+        f"Generated project check failed after pytest\nstdout:\n{check_result.stdout}\n"
+        f"stderr:\n{check_result.stderr}"
+    )
 
 
 @pytest.mark.e2e

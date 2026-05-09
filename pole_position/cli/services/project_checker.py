@@ -42,6 +42,10 @@ STARTER_MODULES = {
     "status",
 }
 
+IGNORED_MODULE_DIRECTORIES = {
+    "__pycache__",
+}
+
 LEGACY_PROFILE_MODULE_FILES = {
     "__init__.py",
     "router.py",
@@ -292,6 +296,9 @@ def _check_lifecycle_wiring(
 
 
 def _should_skip_lifecycle_module(project_root: Path, module_root: Path) -> bool:
+    if module_root.name in IGNORED_MODULE_DIRECTORIES:
+        return True
+
     if module_root.name in STARTER_MODULES:
         return True
 

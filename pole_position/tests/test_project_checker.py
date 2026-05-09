@@ -121,6 +121,17 @@ def test_lifecycle_check_ignores_legacy_starter_samples(tmp_path: Path) -> None:
     assert problems == []
 
 
+def test_lifecycle_check_ignores_python_cache_directories(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    package_root = project_root / "src" / "shop_api"
+    (package_root / "modules" / "__pycache__").mkdir(parents=True)
+    problems: list[str] = []
+
+    _check_lifecycle_wiring(problems, project_root, package_root)
+
+    assert problems == []
+
+
 def _write_marker_files_without_all_markers(project_root: Path, package_root: Path) -> None:
     _write_text(
         package_root / "api" / "router.py",

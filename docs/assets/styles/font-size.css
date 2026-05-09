@@ -3,15 +3,15 @@ html[data-polepos-font-size="small"] {
 }
 
 html[data-polepos-font-size="default"] {
-  font-size: 110%;
+  font-size: 115%;
 }
 
 html[data-polepos-font-size="large"] {
-  font-size: 125.5%;
+  font-size: 129.5%;
 }
 
 html[data-polepos-font-size="extra-large"] {
-  font-size: 155.5%;
+  font-size: 159.5%;
 }
 
 .polepos-font-size {
