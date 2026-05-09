@@ -1,3 +1,4 @@
+import ast
 from dataclasses import dataclass
 from pathlib import Path
 import shutil
@@ -59,7 +60,7 @@ def remove_module(module_name: str, cwd: Path | None = None) -> RemovedModuleRes
         updated_files.append(modules_init_path)
 
     router_path = package_root / "api" / "router.py"
-    if _remove_lines(router_path, _router_lines(package_name, module_name)):
+    if _remove_router_wiring(router_path, package_name, module_name):
         updated_files.append(router_path)
 
     if template_contract.update_db_models:
@@ -146,24 +147,11 @@ def _validate_remove_module_preflight(
         reference_tokens=[f'"{module_name}"', f"'{module_name}'"],
         description="module export",
     )
-    router_import_line, router_include_line = _router_lines(package_name, module_name)
-    _collect_unsupported_reference(
+    _collect_unsupported_router_wiring(
         problems=problems,
         path=router_path,
-        exact_lines=[router_import_line],
-        reference_tokens=[f"{package_name}.modules.{module_name}.router"],
-        description="router import",
-    )
-    _collect_unsupported_reference(
-        problems=problems,
-        path=router_path,
-        exact_lines=[router_include_line],
-        reference_tokens=[
-            f"include_router({module_name}_router",
-            f'prefix="/{module_name}"',
-            f"prefix='/{module_name}'",
-        ],
-        description="router include",
+        package_name=package_name,
+        module_name=module_name,
     )
 
     if template_contract.update_db_models:
@@ -213,6 +201,58 @@ def _collect_unsupported_reference(
         problems.append(
             f"Module {description} for removal is not in a managed layout: {path}"
         )
+
+
+def _collect_unsupported_router_wiring(
+    *,
+    problems: list[str],
+    path: Path,
+    package_name: str,
+    module_name: str,
+) -> None:
+    content = _read_file_text(problems, path)
+    if content is None:
+        return
+
+    router_alias = f"{module_name}_router"
+    router_module = f"{package_name}.modules.{module_name}.router"
+    tree = _parse_python_source(problems, content, path)
+    if tree is None:
+        return
+
+    if _has_router_import_reference(tree, router_module) and _find_router_import_range(
+        tree,
+        router_module,
+        router_alias,
+    ) is None:
+        problems.append(
+            f"Module router import for removal is not in a managed layout: {path}"
+        )
+
+    if _has_router_include_reference(
+        tree,
+        router_alias,
+        module_name,
+    ) and _find_router_include_range(
+        tree,
+        router_alias,
+        module_name,
+    ) is None:
+        problems.append(
+            f"Module router include for removal is not in a managed layout: {path}"
+        )
+
+
+def _parse_python_source(
+    problems: list[str],
+    content: str,
+    path: Path,
+) -> ast.Module | None:
+    try:
+        return ast.parse(content, filename=str(path))
+    except SyntaxError as exc:
+        problems.append(f"Could not parse managed Python file for removal: {path}: {exc}")
+        return None
 
 
 def _read_file_text(problems: list[str], path: Path) -> str | None:
@@ -266,6 +306,137 @@ def _remove_lines(path: Path, lines_to_remove: list[str]) -> bool:
 
     path.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
     return True
+
+
+def _remove_router_wiring(path: Path, package_name: str, module_name: str) -> bool:
+    content = path.read_text(encoding="utf-8")
+    tree = ast.parse(content, filename=str(path))
+    router_alias = f"{module_name}_router"
+    router_module = f"{package_name}.modules.{module_name}.router"
+    ranges = [
+        _find_router_import_range(tree, router_module, router_alias),
+        _find_router_include_range(tree, router_alias, module_name),
+    ]
+    ranges_to_remove = [line_range for line_range in ranges if line_range is not None]
+
+    if not ranges_to_remove:
+        return False
+
+    lines = content.splitlines()
+    for start, end in sorted(ranges_to_remove, reverse=True):
+        del lines[start - 1 : end]
+
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True
+
+
+def _find_router_import_range(
+    tree: ast.Module,
+    router_module: str,
+    router_alias: str,
+) -> tuple[int, int] | None:
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module != router_module:
+            continue
+        if len(node.names) != 1:
+            return None
+        alias = node.names[0]
+        if alias.name == "router" and alias.asname == router_alias:
+            return _node_line_range(node)
+
+    return None
+
+
+def _has_router_import_reference(tree: ast.Module, router_module: str) -> bool:
+    return any(
+        isinstance(node, ast.ImportFrom) and node.module == router_module
+        for node in tree.body
+    )
+
+
+def _find_router_include_range(
+    tree: ast.Module,
+    router_alias: str,
+    module_name: str,
+) -> tuple[int, int] | None:
+    for node in tree.body:
+        if not isinstance(node, ast.Expr):
+            continue
+        if not isinstance(node.value, ast.Call):
+            continue
+        if not _is_api_router_include_call(node.value):
+            continue
+        if not node.value.args or not _is_name(node.value.args[0], router_alias):
+            continue
+        if _include_router_keywords_match(node.value, module_name):
+            return _node_line_range(node)
+
+    return None
+
+
+def _has_router_include_reference(
+    tree: ast.Module,
+    router_alias: str,
+    module_name: str,
+) -> bool:
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not _is_api_router_include_call(node):
+            continue
+        if node.args and _is_name(node.args[0], router_alias):
+            return True
+        if _literal_keyword_value(node, "prefix") == f"/{module_name}":
+            return True
+        if _literal_keyword_value(node, "tags") in ([module_name], (module_name,)):
+            return True
+
+    return False
+
+
+def _node_line_range(node: ast.AST) -> tuple[int, int] | None:
+    end_lineno = getattr(node, "end_lineno", None)
+    if getattr(node, "lineno", None) is None or end_lineno is None:
+        return None
+
+    return node.lineno, end_lineno
+
+
+def _is_api_router_include_call(node: ast.Call) -> bool:
+    return (
+        isinstance(node.func, ast.Attribute)
+        and node.func.attr == "include_router"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "api_router"
+    )
+
+
+def _is_name(node: ast.AST, expected_name: str) -> bool:
+    return isinstance(node, ast.Name) and node.id == expected_name
+
+
+def _include_router_keywords_match(node: ast.Call, module_name: str) -> bool:
+    prefix = _literal_keyword_value(node, "prefix")
+    tags = _literal_keyword_value(node, "tags")
+
+    return prefix == f"/{module_name}" and tags in ([module_name], (module_name,))
+
+
+def _literal_keyword_value(node: ast.Call, keyword_name: str) -> object:
+    for keyword in node.keywords:
+        if keyword.arg == keyword_name:
+            return _literal_value(keyword.value)
+
+    return None
+
+
+def _literal_value(node: ast.AST) -> object:
+    try:
+        return ast.literal_eval(node)
+    except (ValueError, TypeError):
+        return None
 
 
 def _remove_generated_tests(

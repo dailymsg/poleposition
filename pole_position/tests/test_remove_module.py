@@ -191,7 +191,7 @@ def test_remove_module_rejects_starter_module(tmp_path: Path):
     assert (project_root / "src" / "myapp" / "modules" / "status").exists()
 
 
-def test_remove_module_fails_before_deleting_when_router_layout_drifted(
+def test_remove_module_accepts_multiline_router_wiring(
     tmp_path: Path,
 ):
     create_result = run_cli(tmp_path, "start", "myapp")
@@ -217,8 +217,73 @@ def test_remove_module_fails_before_deleting_when_router_layout_drifted(
 
     result = run_cli(project_root, "remove", "module", "garage")
 
+    assert result.returncode == 0
+    assert not (package_root / "modules" / "garage").exists()
+    assert "garage_router" not in router_path.read_text(encoding="utf-8")
+
+
+def test_remove_module_fails_before_deleting_when_router_alias_drifted(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "api" / "router.py"
+    router_content = router_path.read_text(encoding="utf-8").replace(
+        "from myapp.modules.garage.router import router as garage_router",
+        "from myapp.modules.garage.router import router as custom_garage_router",
+    )
+    router_path.write_text(router_content, encoding="utf-8")
+
+    result = run_cli(project_root, "remove", "module", "garage")
+
     assert result.returncode != 0
     assert "project layout is not ready" in result.stdout
-    assert "router include" in result.stdout
+    assert "router import" in result.stdout
     assert (package_root / "modules" / "garage").exists()
     assert (project_root / "tests" / "integration" / "test_garage.py").exists()
+
+
+def test_remove_module_ignores_comments_when_router_import_is_already_missing(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "api" / "router.py"
+    router_content = router_path.read_text(encoding="utf-8").replace(
+        "from myapp.modules.garage.router import router as garage_router\n",
+        "# removed import: myapp.modules.garage.router\n",
+    )
+    router_path.write_text(router_content, encoding="utf-8")
+
+    result = run_cli(project_root, "remove", "module", "garage")
+
+    assert result.returncode == 0
+    assert not (package_root / "modules" / "garage").exists()
+    assert "garage_router" not in router_path.read_text(encoding="utf-8")
+
+
+def test_remove_module_works_from_nested_directory(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    nested_dir = project_root / "src" / "myapp" / "modules" / "garage"
+    result = run_cli(nested_dir, "remove", "module", "garage")
+
+    assert result.returncode == 0
+    assert not nested_dir.exists()
