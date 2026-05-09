@@ -144,6 +144,55 @@ If you add a SQLAlchemy model manually, update `import_models()` in
 `db/models.py`. Without that import, Alembic autogenerate may not see the new
 table.
 
+## Removing a Module With Database State
+
+`polepos remove module <name>` is a code cleanup command. It removes generated
+module files, generated tests, module exports, router wiring, and, for standard
+modules, the generated model import from `src/<package>/db/models.py`.
+
+It does not:
+
+- connect to the database
+- drop tables
+- delete rows
+- create an Alembic revision
+- edit historical migration files
+- apply or downgrade migrations
+
+For a database-backed standard module, the usual removal flow is:
+
+```bash
+polepos remove module customers
+polepos db revision -m "remove customers table"
+polepos db upgrade
+polepos check
+```
+
+The remove command changes the model discovery surface first. Because the
+module model import is removed from `db/models.py`, Alembic autogenerate can
+compare the current database against the updated `Base.metadata`. If the
+database contains a table that is no longer represented in metadata,
+autogenerate may propose `op.drop_table(...)`.
+
+Always review that generated revision before applying it. Dropping a table is a
+data-destructive schema change. In many real projects you may need a staged
+migration instead, such as removing foreign keys first, backfilling replacement
+tables, archiving data, or keeping the table while only removing the API module.
+
+If you want to remove the API code but keep the table and data, run
+`polepos remove module <name>` and do not create a table-drop migration. The
+database will keep its existing schema until a later Alembic migration changes
+it.
+
+`api-only` and `ai-prompt` modules do not have generated model imports, so
+removing them has no database metadata effect by default. If you manually added
+models, repositories, relationships, or custom imports for one of those modules,
+clean up that custom model wiring and write the migration yourself.
+
+`polepos check` can confirm that generated module wiring is clean after removal.
+It does not inspect live database tables and does not prove that a table was
+dropped or retained.
+
 ## `DATABASE_URL`
 
 Alembic reads the database URL from the generated settings layer. The default

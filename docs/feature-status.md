@@ -63,6 +63,10 @@ router wiring, and standard-module model imports. For AI prompt modules, the
 last remaining AI prompt module removal also cleans up shared LLM scaffold
 settings and files.
 
+It intentionally does not mutate database schema. Database-backed module
+removal should be followed by an explicit Alembic revision only when the team
+wants to drop or otherwise change the underlying table.
+
 The command is conservative around custom layout drift: if it cannot recognize
 managed wiring well enough to remove it cleanly, it stops before deleting the
 module directory.

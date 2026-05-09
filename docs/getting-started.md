@@ -65,6 +65,15 @@ The remove command deletes the generated module, generated tests, and managed
 router/model/export wiring. It stops before deleting files if the wiring has
 drifted away from a managed layout.
 
+Removal does not change the live database. If the removed standard module had a
+table and you want that table removed too, create and review a migration after
+the code cleanup:
+
+```bash
+polepos db revision -m "remove customers table"
+polepos db upgrade
+```
+
 ## Validate the Project Contract
 
 ```bash

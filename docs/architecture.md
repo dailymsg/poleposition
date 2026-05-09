@@ -222,6 +222,12 @@ The remover detects the generated module template, then removes:
 - the API router import and include from `api/router.py`
 - the model import from `db/models.py` for standard modules
 
+It is a project-file operation, not a database operation. It does not open a
+database connection, create a migration, drop tables, delete data, or rewrite
+historical Alembic revisions. For database-backed modules, removing the model
+import narrows Alembic metadata discovery; a later reviewed migration decides
+whether the physical table is dropped, retained, or replaced.
+
 For `ai-prompt` modules, removing the last AI prompt module also removes shared
 LLM settings, `.env.example` values, and the `integrations/llm` scaffold. If
 another AI prompt module remains, shared LLM files and settings stay in place.
@@ -348,6 +354,18 @@ polepos start
 -> polepos db revision -m "..."
 -> polepos db upgrade
 ```
+
+The remove lifecycle keeps the same separation:
+
+```text
+polepos remove module customers
+-> review whether database tables should remain
+-> polepos db revision -m "remove customers table"
+-> polepos db upgrade
+```
+
+If the team wants to remove only API code while retaining data, it should stop
+after the remove command and avoid generating a drop-table migration.
 
 ## Authentication Boundary
 

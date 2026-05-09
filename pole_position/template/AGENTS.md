@@ -26,6 +26,11 @@ Keep this project FastAPI-native, module-oriented, `uv`-first, and
 migration-first. Do not add startup-time schema creation; use Alembic migrations
 for database changes.
 
+`polepos remove module <name>` cleans generated code and managed imports only.
+It does not drop database tables or create migrations. If removing a module
+should also change schema, create and review an Alembic revision after the
+remove command.
+
 After changing generated structure, module wiring, integration wiring, managed
 markers, or migration setup, run:
 

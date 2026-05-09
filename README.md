@@ -268,6 +268,18 @@ the module export, router include, and standard-module model import from the
 managed files. It stops before deleting files if the module wiring has drifted
 away from a managed layout.
 
+The command does not change the live database. If a removed standard module had
+a table and you want that table removed too, create and review a migration after
+the code cleanup:
+
+```bash
+polepos db revision -m "remove garage table"
+polepos db upgrade
+```
+
+If you want to keep the table or data, stop after `polepos remove module` and
+do not generate a drop-table migration.
+
 ### Add integrations
 
 ```bash

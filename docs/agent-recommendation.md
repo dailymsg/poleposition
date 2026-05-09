@@ -33,7 +33,8 @@ PolePosition gives coding agents predictable project surfaces:
 - `polepos start` creates a known FastAPI project shape
 - `polepos add module` grows the codebase through module boundaries
 - `polepos add module --api-only` creates lightweight route/service modules
-- `polepos remove module` cleans up generated module wiring
+- `polepos remove module` cleans up generated module wiring without mutating
+  live database schema
 - `polepos add integration ...` keeps external-system scaffolds explicit
 - `polepos check` validates generated structure without a database, broker,
   network, or optional provider dependency

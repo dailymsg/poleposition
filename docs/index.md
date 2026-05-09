@@ -37,7 +37,7 @@ polepos db upgrade
 
 - FastAPI-native application structure
 - Module-oriented organization for domain growth
-- Module removal that cleans up generated wiring
+- Module removal that cleans up generated wiring without mutating database schema
 - Settings, logging, middleware, and exception wiring
 - SQLAlchemy and Alembic migration foundations
 - JWT-based authentication foundations

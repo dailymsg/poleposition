@@ -72,6 +72,31 @@ still run Alembic directly:
 {{no_bytecode_command_prefix}}uv run alembic revision --autogenerate -m "add garage table"
 ```
 
+## Module Lifecycle
+
+Use PolePosition commands for generated module lifecycle work:
+
+```bash
+{{no_bytecode_command_prefix}}polepos add module garage
+{{no_bytecode_command_prefix}}polepos remove module garage
+{{no_bytecode_command_prefix}}polepos check
+```
+
+`polepos remove module` removes generated code, generated tests, router wiring,
+module exports, and standard-module model imports. It does not connect to the
+database, drop tables, delete rows, create migrations, or edit migration
+history.
+
+If a removed standard module had a database table and that table should be
+removed too, create and review an Alembic revision after the code cleanup:
+
+```bash
+{{no_bytecode_command_prefix}}polepos db revision -m "remove garage table"
+{{no_bytecode_command_prefix}}polepos db upgrade
+```
+
+If the table or data should be retained, do not create a drop-table migration.
+
 ## Runtime Configuration
 
 The generated project uses `run.py` as the preferred entrypoint:

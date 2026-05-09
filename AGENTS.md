@@ -270,6 +270,8 @@ Current database philosophy:
 - schema changes should flow through Alembic
 - `db/models.py` is the model import aggregation point for metadata discovery
 - new generated modules with models should be wired into `db/models.py`
+- removing a module cleans generated model imports but does not drop live
+  database tables; table removal still needs a reviewed Alembic migration
 
 If you touch migration behavior:
 

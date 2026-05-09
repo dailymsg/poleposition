@@ -53,6 +53,12 @@ Issues:
 The command is intentionally diagnostic. It does not rewrite files, install
 dependencies, create migrations, or apply fixes.
 
+After `polepos remove module`, `check` can verify that generated router,
+export, model-import, and test wiring no longer references the removed module.
+It does not connect to the database and does not verify whether a removed
+module's table still exists. Schema cleanup remains an Alembic migration
+decision.
+
 ## What It Checks
 
 `polepos check` currently has three layers.

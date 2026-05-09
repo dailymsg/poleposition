@@ -46,6 +46,17 @@ polepos remove module customers
 directory, generated integration and unit tests, module exports, API router
 wiring, and standard-module model imports.
 
+The command is intentionally file-based. It does not connect to the database,
+create a migration, drop tables, or edit migration history. If the removed
+module had a SQLAlchemy model and you want to remove its table, create and
+review an Alembic revision after removal:
+
+```bash
+polepos remove module customers
+polepos db revision -m "remove customers table"
+polepos db upgrade
+```
+
 For `ai-prompt` modules, removing the last AI prompt module also removes the
 shared LLM settings, `.env.example` values, and `integrations/llm` scaffold.
 If another AI prompt module remains, the shared LLM scaffold is kept.

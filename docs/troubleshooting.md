@@ -79,6 +79,26 @@ polepos check
 Then either restore the generated managed wiring shape and retry, or remove the
 custom wiring manually before deleting the module.
 
+## A Removed Module's Table Still Exists
+
+`polepos remove module <name>` removes generated code and managed wiring. It
+does not connect to the database, drop tables, delete rows, or create an
+Alembic revision.
+
+For a standard module with a SQLAlchemy model, removal also deletes the
+generated import from `src/<package>/db/models.py`. That changes what Alembic
+sees in `Base.metadata`, but the database schema remains unchanged until you
+write and apply a migration:
+
+```bash
+polepos db revision -m "remove customers table"
+polepos db upgrade
+```
+
+Review the generated revision before applying it. If you want to keep the table
+for reporting, rollback safety, or data retention, do not apply a drop-table
+migration.
+
 ## Database Migrations Cannot Connect
 
 Check `DATABASE_URL` in `.env`, then run:

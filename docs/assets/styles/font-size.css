@@ -3,7 +3,7 @@ html[data-polepos-font-size="small"] {
 }
 
 html[data-polepos-font-size="default"] {
-  font-size: 100%;
+  font-size: 110%;
 }
 
 html[data-polepos-font-size="large"] {
@@ -11,7 +11,7 @@ html[data-polepos-font-size="large"] {
 }
 
 html[data-polepos-font-size="extra-large"] {
-  font-size: 145.5%;
+  font-size: 155.5%;
 }
 
 .polepos-font-size {
