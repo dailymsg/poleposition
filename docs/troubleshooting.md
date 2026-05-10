@@ -119,6 +119,9 @@ docker compose up --build
 docker compose run --rm app uv run alembic upgrade head
 ```
 
+That migration command runs inside the generated app container. Outside Docker,
+use `polepos db upgrade` from the project root.
+
 ## A New Model Is Not Included in Alembic Autogenerate
 
 Standard modules are wired into `src/<package>/db/models.py` automatically.

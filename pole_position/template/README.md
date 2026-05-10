@@ -49,6 +49,9 @@ Apply migrations from the app container:
 docker compose run --rm app uv run alembic upgrade head
 ```
 
+This Docker command runs Alembic directly inside the generated app container.
+For host-based development, keep using `polepos db upgrade`.
+
 If PostgreSQL is already using local port `5432`, update `POSTGRES_PORT` in
 `.env` before starting the compose stack.
 

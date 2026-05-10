@@ -396,6 +396,8 @@ def test_generated_project_includes_docker_workflow_docs(tmp_path: Path):
 
     assert "docker compose up --build" in readme
     assert "docker compose run --rm app uv run alembic upgrade head" in readme
+    assert "runs Alembic directly inside the generated app container" in readme
+    assert "For host-based development, keep using `polepos db upgrade`." in readme
 
 
 def test_generated_project_is_migration_first(tmp_path: Path):
@@ -501,7 +503,7 @@ def test_lockfile_version_matches_project_metadata() -> None:
     assert poleposition_package["version"] == pyproject["project"]["version"]
 
 
-def test_install_flag(tmp_path: Path):
+def test_install_flag(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     from pole_position.cli.commands.startproject import run
 
     with patch(
@@ -512,8 +514,13 @@ def test_install_flag(tmp_path: Path):
             mp.chdir(tmp_path)
             run(["myapp", "--install"])
 
+    captured = capsys.readouterr()
     mock_install.assert_called_once_with(project_path=Path("myapp"))
-   
+    assert "Dependencies installed successfully with uv." in captured.out
+    assert "polepos db upgrade" in captured.out
+    assert "uv run python -m myapp.run" in captured.out
+    assert "alembic upgrade head" not in captured.out
+
 
 def test_install_flag_prints_pip_next_steps_when_uv_is_unavailable(
     tmp_path: Path,

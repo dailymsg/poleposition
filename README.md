@@ -200,7 +200,8 @@ polepos start myapp --install
 ```
 
 `--install` runs `uv sync` when `uv` is available. If `uv` is not available, it
-creates `.venv` and installs the generated project with `pip`.
+creates `.venv` and installs the generated project with `pip`. It does not run
+migrations; after copying `.env.example` to `.env`, run `polepos db upgrade`.
 `--no-bytecode` configures generated migration and runtime commands to start
 with `PYTHONDONTWRITEBYTECODE=1`, preventing bytecode cache writes from
 interpreter startup during common local workflows.
@@ -596,6 +597,9 @@ Or use the generated Docker workflow:
 docker compose up --build
 docker compose run --rm app uv run alembic upgrade head
 ```
+
+That Docker command runs Alembic directly inside the generated app container.
+For the host workflow, use `polepos db upgrade` after configuring `.env`.
 
 Point the project to PostgreSQL in `.env`:
 

@@ -12,9 +12,10 @@ polepos start shop-api --no-bytecode
 polepos start --help
 ```
 
-`--install` syncs the generated project after creation. `--no-bytecode`
-configures generated runtime and migration commands to avoid Python bytecode
-cache writes during common local workflows.
+`--install` syncs generated project dependencies after creation. It does not
+run migrations; after copying `.env.example` to `.env`, run
+`polepos db upgrade`. `--no-bytecode` configures generated runtime and migration
+commands to avoid Python bytecode cache writes during common local workflows.
 
 ## Add a Module
 

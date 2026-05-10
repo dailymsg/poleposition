@@ -109,3 +109,6 @@ cp .env.example .env
 docker compose up --build
 docker compose run --rm app uv run alembic upgrade head
 ```
+
+The Docker migration command runs Alembic directly inside the generated app
+container. For the host workflow, keep using `polepos db upgrade`.

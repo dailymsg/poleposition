@@ -86,6 +86,9 @@ docker compose up --build
 docker compose run --rm app uv run alembic upgrade head
 ```
 
+That Docker command runs Alembic directly inside the generated app container.
+For host-based development, keep the normal `polepos db upgrade` workflow.
+
 Then run the generated app:
 
 ```bash

@@ -33,7 +33,7 @@ examples/html-swap/README.md
 
 Focus:
 
-- `polepos add module html`
+- `polepos add module html --api-only`
 - reshaping a generated module into a transformation-focused endpoint
 - PostgreSQL-backed swap history
 - `POST /api/v1/html/swap`
