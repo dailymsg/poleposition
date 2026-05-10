@@ -1,8 +1,24 @@
-import logging
+from contextvars import ContextVar, Token
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 from urllib.parse import urlparse
+
+
+_request_id_context = ContextVar("request_id", default="-")
+
+
+def bind_request_id(request_id: str) -> Token:
+    return _request_id_context.set(request_id)
+
+
+def reset_request_id(token: Token) -> None:
+    _request_id_context.reset(token)
+
+
+def get_request_id() -> str:
+    return _request_id_context.get()
 
 
 class DefaultFieldsFilter(logging.Filter):
@@ -17,7 +33,7 @@ class DefaultFieldsFilter(logging.Filter):
         if not hasattr(record, "environment"):
             record.environment = self.environment
         if not hasattr(record, "request_id"):
-            record.request_id = "-"
+            record.request_id = get_request_id()
         return True
 
 

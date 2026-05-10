@@ -308,10 +308,18 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert 'def empty_string_to_none(cls, value: object) -> object:' in settings_module
     assert "def parse_list_env(cls, value: object) -> object:" in settings_module
     assert "def get_logger(name: str) -> logging.Logger:" in logging_module
+    assert '_request_id_context = ContextVar("request_id", default="-")' in logging_module
+    assert "def bind_request_id(request_id: str) -> Token:" in logging_module
+    assert "def reset_request_id(token: Token) -> None:" in logging_module
+    assert "record.request_id = get_request_id()" in logging_module
     assert "class JsonFormatter(logging.Formatter):" in logging_module
     assert 'if log_format.lower() == "json":' in logging_module
     assert '"timestamp": datetime.fromtimestamp(' in logging_module
     assert '"request_id": getattr(record, "request_id", "-")' in logging_module
+    assert (
+        "from demo_app.bootstrap.logging import bind_request_id, reset_request_id"
+        in middleware_module
+    )
     assert "from fastapi.middleware.cors import CORSMiddleware" in middleware_module
     assert "allow_origins=settings.cors_allow_origins" in middleware_module
     assert "allow_origin_regex=settings.cors_allow_origin_regex" in middleware_module
@@ -320,6 +328,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "allow_headers=settings.cors_allow_headers" in middleware_module
     assert "expose_headers=settings.cors_expose_headers" in middleware_module
     assert "max_age=settings.cors_max_age" in middleware_module
+    assert "token = bind_request_id(request_id)" in middleware_module
+    assert "reset_request_id(token)" in middleware_module
     assert "from demo_app.bootstrap.logging import get_logger" in lifespan
     assert "logger = get_logger(__name__)" in lifespan
     assert "from demo_app.settings import get_settings" in app_module
@@ -337,6 +347,73 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "sys.dont_write_bytecode = True" not in tests_conftest
     assert "{{project" not in app_module
     assert "{{project" not in status_service
+
+
+def test_generated_logging_context_includes_request_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import importlib
+    import json
+    import logging
+
+    result = run_cli(tmp_path, "start", "request-id-app")
+
+    assert result.returncode == 0
+
+    project_root = tmp_path / "request-id-app"
+    package_name = "request_id_app"
+    request_id = "req-test-123"
+
+    monkeypatch.syspath_prepend(str(project_root / "src"))
+    monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.setenv("LOG_FORMAT", "json")
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'request-id.db'}")
+
+    root_logger = logging.getLogger()
+    previous_handlers = list(root_logger.handlers)
+    previous_level = root_logger.level
+
+    try:
+        logging_module = importlib.import_module(f"{package_name}.bootstrap.logging")
+        logging_module.setup_logging(
+            log_format="json",
+            app_name="request-id-app",
+            environment="test",
+        )
+
+        token = logging_module.bind_request_id(request_id)
+        try:
+            logging_module.get_logger("request-id-test").info("bound request")
+        finally:
+            logging_module.reset_request_id(token)
+
+        logging_module.get_logger("request-id-test").info("outside request")
+
+        output = capsys.readouterr().out
+        logs = [json.loads(line) for line in output.splitlines() if line.startswith("{")]
+
+        assert any(
+            log.get("message") == "bound request"
+            and log.get("request_id") == request_id
+            for log in logs
+        )
+        assert any(
+            log.get("message") == "outside request"
+            and log.get("request_id") == "-"
+            for log in logs
+        )
+    finally:
+        for module_name in list(sys.modules):
+            if (
+                module_name == package_name
+                or module_name.startswith(f"{package_name}.")
+            ):
+                sys.modules.pop(module_name, None)
+        root_logger.handlers.clear()
+        root_logger.handlers.extend(previous_handlers)
+        root_logger.setLevel(previous_level)
 
 
 def test_generated_project_includes_alembic_support(tmp_path: Path):
