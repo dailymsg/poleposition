@@ -209,6 +209,7 @@ Project names:
 
 * Must not be empty
 * Must not contain whitespace
+* Must not contain path separators like `/` or `\`
 * May use hyphens like `my-app`
 * Are normalized to a Python package name like `my_app`
 

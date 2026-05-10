@@ -27,6 +27,12 @@ def test_validate_project_name_rejects_empty_name() -> None:
         validate_project_name("")
 
 
+@pytest.mark.parametrize("name", ["foo/bar", "foo\\bar"])
+def test_validate_project_name_rejects_path_separators(name: str) -> None:
+    with pytest.raises(ValueError, match="path separators"):
+        validate_project_name(name)
+
+
 def test_validate_project_name_rejects_numeric_start() -> None:
     with pytest.raises(ValueError):
         validate_project_name("123app")

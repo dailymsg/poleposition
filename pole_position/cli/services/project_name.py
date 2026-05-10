@@ -2,6 +2,9 @@ import keyword
 import re
 
 
+PATH_SEPARATORS = {"/", "\\"}
+
+
 def normalize_package_name(project_name: str) -> str:
     normalized = project_name.strip().lower()
     normalized = normalized.replace("-", "_")
@@ -20,6 +23,9 @@ def validate_project_name(project_name: str) -> None:
 
     if any(char.isspace() for char in raw_name):
         raise ValueError("Project name cannot contain whitespace.")
+
+    if any(separator in raw_name for separator in PATH_SEPARATORS):
+        raise ValueError("Project name cannot contain path separators.")
 
     package_name = normalize_package_name(raw_name)
 
