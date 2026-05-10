@@ -20,6 +20,8 @@ from pole_position.cli.services.project_locator import find_project_root
 
 
 STARTER_MODULES = {"status"}
+PYTHON_CACHE_DIRECTORIES = {"__pycache__"}
+PYTHON_BYTECODE_SUFFIXES = {".pyc", ".pyo"}
 
 
 @dataclass(frozen=True)
@@ -181,6 +183,9 @@ def _detect_custom_changes(
                 continue
 
             relative_path = path.relative_to(module_root).as_posix()
+            if _is_ignored_generated_artifact(path.relative_to(module_root)):
+                continue
+
             expected_content = expected_module_files.get(relative_path)
             if expected_content is None:
                 changes.append(f"Unexpected module file: {path}")
@@ -202,6 +207,13 @@ def _detect_custom_changes(
             changes.append(f"Modified generated test file: {path}")
 
     return changes
+
+
+def _is_ignored_generated_artifact(relative_path: Path) -> bool:
+    return (
+        any(part in PYTHON_CACHE_DIRECTORIES for part in relative_path.parts)
+        or relative_path.suffix in PYTHON_BYTECODE_SUFFIXES
+    )
 
 
 def _custom_changes_message(module_name: str, custom_changes: list[str]) -> str:

@@ -155,6 +155,30 @@ def test_remove_module_force_removes_custom_module_files(tmp_path: Path):
     assert check_result.returncode == 0
 
 
+def test_remove_module_ignores_python_cache_artifacts(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    cache_root = package_root / "modules" / "garage" / "__pycache__"
+    cache_root.mkdir()
+    (cache_root / "router.cpython-311.pyc").write_bytes(b"cache")
+
+    result = run_cli(project_root, "remove", "module", "garage")
+
+    assert result.returncode == 0
+    assert "custom changes" not in result.stdout
+    assert not (package_root / "modules" / "garage").exists()
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
 def test_remove_api_only_module_does_not_require_model_wiring(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
