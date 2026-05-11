@@ -13,7 +13,7 @@
 [![uv first](https://img.shields.io/badge/workflow-uv--first-261230)](https://docs.astral.sh/uv/)
 [![Alembic migrations](https://img.shields.io/badge/database-Alembic%20migrations-orange)](https://alembic.sqlalchemy.org/)
 
-![PolePosition logo](https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/logo/poleposition-python-logo.jpg)
+![PolePosition logo](https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/logo/poleposition-logo.png)
 
 A project lifecycle CLI that puts teams in pole position when starting, growing, and maintaining enterprise FastAPI projects.
 
@@ -344,6 +344,12 @@ Use `polepos db` for the normal local lifecycle. It wraps Alembic while keeping
 the command flow consistent with `polepos start`, module add/remove commands,
 and `polepos check`. For advanced Alembic flags, you can still run
 `uv run alembic ...` directly.
+
+Alembic works through SQLAlchemy dialects. The practical migration-managed
+database targets are PostgreSQL, MySQL/MariaDB, SQLite, Microsoft SQL Server,
+and Oracle. Stores with external SQLAlchemy dialects, such as ClickHouse, should
+usually be treated as explicit integrations unless the project owns and reviews
+their custom DDL workflow.
 
 See [Database and Migrations](docs/database.md) for the full migration workflow.
 

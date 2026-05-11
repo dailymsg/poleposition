@@ -220,6 +220,41 @@ polepos db upgrade
 The migration command does not start a database for you. Make sure PostgreSQL is
 running before using a PostgreSQL `DATABASE_URL`.
 
+## Database Compatibility
+
+Alembic runs through SQLAlchemy. A database used as the primary
+migration-managed application database should have a SQLAlchemy dialect, a DBAPI
+driver, and DDL behavior that fits reviewed schema migrations.
+
+Good default choices for Alembic-managed application schema are:
+
+| Database | Typical SQLAlchemy URL family | Notes |
+| --- | --- | --- |
+| PostgreSQL | `postgresql+psycopg://...` | PolePosition's recommended production-ready path. |
+| MySQL | `mysql+...://...` | Requires the matching MySQL driver dependency. |
+| MariaDB | `mariadb+...://...` | Requires the matching MariaDB/MySQL driver dependency. |
+| SQLite | `sqlite:///...` | Useful for local development and lightweight projects; complex ALTER flows may need batch migrations. |
+| Microsoft SQL Server | `mssql+pyodbc://...` | Requires SQL Server driver setup and migration review. |
+| Oracle Database | `oracle+oracledb://...` | Requires Oracle driver setup and migration review. |
+
+PolePosition currently ships a SQLite default and PostgreSQL-ready Docker flow.
+If you switch to another Alembic-compatible database, update `DATABASE_URL`, add
+the needed driver dependency, and review generated migrations against that
+database's DDL behavior.
+
+If a project does not need database tables yet, use API-only modules and delay
+database setup. Generated app startup does not create tables or connect just to
+create schema. The project is still DB-ready, though; a truly database-free
+starter would need a separate template and `polepos check` rules.
+
+ClickHouse and similar analytical stores are different. SQLAlchemy has external
+dialects for some of them, but they do not necessarily behave like a normal
+transactional application database for Alembic autogenerate and reversible DDL.
+Treat ClickHouse as an explicit integration or analytical adapter unless the
+project has a reviewed custom migration workflow for it. If PolePosition adds
+first-class ClickHouse support later, it should be closer to an integration
+scaffold than the default `polepos db` lifecycle.
+
 ## Docker and PostgreSQL
 
 Generated projects include a Docker Compose setup with PostgreSQL:

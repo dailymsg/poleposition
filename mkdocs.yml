@@ -9,7 +9,8 @@ site_dir: site
 
 theme:
   name: material
-  favicon: assets/logo/poleposition-fav.png
+  logo: assets/logo/poleposition-logo.png
+  favicon: assets/logo/poleposition-favicon.png
   palette:
     - scheme: default
       primary: indigo
