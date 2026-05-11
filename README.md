@@ -206,6 +206,20 @@ migrations; after copying `.env.example` to `.env`, run `polepos db upgrade`.
 with `PYTHONDONTWRITEBYTECODE=1`, preventing bytecode cache writes from
 interpreter startup during common local workflows.
 
+Use `--db` to choose the generated database posture without an interactive
+prompt:
+
+```bash
+polepos start myapp --db sqlite
+polepos start myapp --db postgres
+polepos start myapp --db none
+```
+
+`sqlite` is the default and preserves the standard DB-ready starter. `postgres`
+uses a PostgreSQL `DATABASE_URL` and matching Docker database name. `none`
+omits SQLAlchemy, Alembic, `DATABASE_URL`, migrations, and generated `db/`
+wiring; use `--api-only` modules until you intentionally add persistence.
+
 Project names:
 
 * Must not be empty
@@ -502,8 +516,8 @@ polepos version
 
 ```bash
 polepos help
-polepos start <name> [--install] [--no-bytecode]
-polepos startproject <name> [--install] [--no-bytecode]
+polepos start <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
+polepos startproject <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos add module <name>
 polepos remove module <name> [--force] [--trace]
 polepos add integration kafka

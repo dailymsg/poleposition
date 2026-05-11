@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from pole_position.cli.services.database_options import get_database_option
+
 
 TEXT_FILE_EXTENSIONS = {
     ".py",
@@ -19,10 +21,12 @@ def build_context(
     project_name: str,
     package_name: str,
     *,
+    database: str = "sqlite",
     no_bytecode: bool = False,
 ) -> dict[str, str]:
     no_bytecode_command_prefix = ""
     no_bytecode_readme_note = ""
+    database_option = get_database_option(database, package_name=package_name)
 
     if no_bytecode:
         no_bytecode_command_prefix = "PYTHONDONTWRITEBYTECODE=1 "
@@ -32,11 +36,134 @@ def build_context(
             "bytecode cache writes from interpreter startup.\n"
         )
 
+    database_development_step = ""
+    database_migrations_section = ""
+    docker_database_section = ""
+    docker_intro = "Start the generated project with Docker and PostgreSQL:"
+    module_database_removal_note = ""
+    runtime_database_summary = ""
+    agents_db_commands = ""
+    agents_db_guidance = ""
+    agents_task_scope = "modules, integrations, or checks"
+    agents_check_scope = (
+        "generated structure, module wiring, integration wiring, or managed markers"
+    )
+    readme_lifecycle_scope = "modules, integrations, or checks"
+
+    if database_option.uses_database:
+        database_development_step = (
+            f"{no_bytecode_command_prefix}polepos db upgrade\n"
+        )
+        docker_database_section = (
+            "\nApply migrations from the app container:\n\n"
+            "```bash\n"
+            "docker compose run --rm app uv run alembic upgrade head\n"
+            "```\n\n"
+            "This Docker command runs Alembic directly inside the generated app container.\n"
+            "For host-based development, keep using `polepos db upgrade`.\n\n"
+            "If PostgreSQL is already using local port `5432`, update `POSTGRES_PORT` in\n"
+            "`.env` before starting the compose stack.\n"
+        )
+        database_migrations_section = (
+            "## Database Migrations\n\n"
+            "Use PolePosition's database lifecycle commands for normal local development:\n\n"
+            "```bash\n"
+            f"{no_bytecode_command_prefix}polepos db upgrade\n"
+            f'{no_bytecode_command_prefix}polepos db revision -m "add garage table"\n'
+            f"{no_bytecode_command_prefix}polepos db upgrade\n"
+            f"{no_bytecode_command_prefix}polepos db downgrade -1\n"
+            "```\n\n"
+            "`polepos db` wraps Alembic and keeps migrations in the PolePosition lifecycle\n"
+            "flow. If you need an Alembic option that PolePosition does not expose, you can\n"
+            "still run Alembic directly:\n\n"
+            "```bash\n"
+            f"{no_bytecode_command_prefix}uv run alembic upgrade head\n"
+            f'{no_bytecode_command_prefix}uv run alembic revision --autogenerate -m "add garage table"\n'
+            "```\n"
+        )
+        module_database_removal_note = (
+            "\n`polepos remove module` removes generated code, generated tests, router wiring,\n"
+            "module exports, and standard-module model imports. It does not connect to the\n"
+            "database, drop tables, delete rows, create migrations, or edit migration\n"
+            "history.\n\n"
+            "By default, `polepos remove module` stops before deleting a module directory\n"
+            "that appears to contain custom changes. Use `--trace` to preview the planned\n"
+            "removals and updates without changing files, and use `--force` only when you\n"
+            "intentionally want to remove a customized module directory.\n\n"
+            "If a removed standard module had a database table and that table should be\n"
+            "removed too, create and review an Alembic revision after the code cleanup:\n\n"
+            "```bash\n"
+            f'{no_bytecode_command_prefix}polepos db revision -m "remove garage table"\n'
+            f"{no_bytecode_command_prefix}polepos db upgrade\n"
+            "```\n\n"
+            "If the table or data should be retained, do not create a drop-table migration.\n"
+        )
+        runtime_database_summary = "database backend, "
+        agents_db_commands = (
+            "- `polepos db revision -m \"...\"`\n"
+            "- `polepos db upgrade`\n"
+            "- `polepos db downgrade <target>`"
+        )
+        agents_db_guidance = (
+            "\nKeep this project FastAPI-native, module-oriented, `uv`-first, and\n"
+            "migration-first. Do not add startup-time schema creation; use Alembic migrations\n"
+            "for database changes.\n\n"
+            "`polepos remove module <name>` cleans generated code and managed imports only.\n"
+            "It does not drop database tables or create migrations. If removing a module\n"
+            "should also change schema, create and review an Alembic revision after the\n"
+            "remove command.\n"
+        )
+        agents_task_scope = "modules, integrations, checks, or migrations"
+        agents_check_scope = (
+            "generated structure, module wiring, integration wiring, managed\n"
+            "markers, or migration setup"
+        )
+        readme_lifecycle_scope = "modules, integrations, checks, or migrations"
+    else:
+        docker_intro = "Start the generated project with Docker:"
+        docker_database_section = (
+            "\nThis project was generated with `--db none`, so the Docker workflow starts only\n"
+            "the FastAPI application container. Add an explicit database or integration when\n"
+            "the application needs persistence.\n"
+        )
+        database_migrations_section = (
+            "## Database\n\n"
+            "This project was generated with `--db none`. It does not include SQLAlchemy,\n"
+            "Alembic, `DATABASE_URL`, or generated `db/` wiring.\n\n"
+            "Use `polepos add module <name> --api-only` for route/service modules that do\n"
+            "not need persistence. Add an explicit database or integration later when the\n"
+            "application needs it.\n"
+        )
+        module_database_removal_note = (
+            "\n`polepos remove module` removes generated code, generated tests, router wiring,\n"
+            "and module exports. This project has no generated database model wiring.\n"
+        )
+        agents_db_guidance = (
+            "\nKeep this project FastAPI-native, module-oriented, and `uv`-first. This project\n"
+            "was generated with `--db none`, so it has no generated SQLAlchemy/Alembic\n"
+            "lifecycle. Prefer `polepos add module <name> --api-only` unless you first add a\n"
+            "database layer intentionally.\n"
+        )
+
     return {
         "{{project_name}}": project_name,
         "{{ package_name }}": package_name,
         "{{project_import_name}}": package_name,
         "{{ app_name }}": project_name,
+        "{{database_mode}}": database_option.name,
+        "{{database_url_default}}": database_option.default_url,
+        "{{postgres_db_name}}": database_option.postgres_db_name,
+        "{{database_development_step}}": database_development_step,
+        "{{docker_intro}}": docker_intro,
+        "{{docker_database_section}}": docker_database_section,
+        "{{database_migrations_section}}": database_migrations_section,
+        "{{module_database_removal_note}}": module_database_removal_note,
+        "{{runtime_database_summary}}": runtime_database_summary,
+        "{{agents_db_commands}}": agents_db_commands,
+        "{{agents_db_guidance}}": agents_db_guidance,
+        "{{agents_task_scope}}": agents_task_scope,
+        "{{agents_check_scope}}": agents_check_scope,
+        "{{readme_lifecycle_scope}}": readme_lifecycle_scope,
         "{{no_bytecode_command_prefix}}": no_bytecode_command_prefix,
         "{{no_bytecode_readme_note}}": no_bytecode_readme_note,
     }

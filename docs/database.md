@@ -237,15 +237,24 @@ Good default choices for Alembic-managed application schema are:
 | Microsoft SQL Server | `mssql+pyodbc://...` | Requires SQL Server driver setup and migration review. |
 | Oracle Database | `oracle+oracledb://...` | Requires Oracle driver setup and migration review. |
 
-PolePosition currently ships a SQLite default and PostgreSQL-ready Docker flow.
-If you switch to another Alembic-compatible database, update `DATABASE_URL`, add
-the needed driver dependency, and review generated migrations against that
+PolePosition's `polepos start --db ...` flag controls the generated database
+posture:
+
+```bash
+polepos start shop-api --db sqlite
+polepos start shop-api --db postgres
+polepos start shop-api --db none
+```
+
+`sqlite` is the default and preserves the standard DB-ready starter. `postgres`
+uses a PostgreSQL `DATABASE_URL` and matching Docker database name. If you switch
+to another Alembic-compatible database later, update `DATABASE_URL`, add the
+needed driver dependency, and review generated migrations against that
 database's DDL behavior.
 
-If a project does not need database tables yet, use API-only modules and delay
-database setup. Generated app startup does not create tables or connect just to
-create schema. The project is still DB-ready, though; a truly database-free
-starter would need a separate template and `polepos check` rules.
+If a project does not need database tables, use `--db none`. That starter omits
+SQLAlchemy, Alembic, `DATABASE_URL`, migrations, and generated `db/` wiring. Use
+API-only modules while the project has no persistence layer.
 
 ClickHouse and similar analytical stores are different. SQLAlchemy has external
 dialects for some of them, but they do not necessarily behave like a normal

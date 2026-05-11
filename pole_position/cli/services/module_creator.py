@@ -142,11 +142,18 @@ def _validate_add_module_preflight(
     )
 
     if template_spec.update_db_models:
-        _collect_missing_marker(
-            problems,
-            package_root / "db" / "models.py",
-            MODEL_IMPORTS_MARKER,
-        )
+        db_models_path = package_root / "db" / "models.py"
+        if not db_models_path.is_file() and not (package_root / "db").exists():
+            problems.append(
+                "Database-backed module templates require generated db/ wiring. "
+                "Use `polepos add module <name> --api-only` in a database-free project."
+            )
+        else:
+            _collect_missing_marker(
+                problems,
+                db_models_path,
+                MODEL_IMPORTS_MARKER,
+            )
 
     if template_spec.ensure_llm_settings:
         _collect_missing_marker_unless_content_exists(

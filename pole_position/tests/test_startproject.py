@@ -14,6 +14,10 @@ except ModuleNotFoundError:
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+START_USAGE = (
+    "Usage: polepos start <project_name> "
+    "[--install] [--no-bytecode] [--db sqlite|postgres|none]"
+)
 
 
 def run_cli(cwd, *args):
@@ -76,10 +80,7 @@ def test_start_help_shows_usage_without_creating_project(tmp_path: Path):
     result = run_cli(tmp_path, "start", "--help")
 
     assert result.returncode == 0
-    assert (
-        "Usage: polepos start <project_name> [--install] [--no-bytecode]"
-        in result.stdout
-    )
+    assert START_USAGE in result.stdout
     assert list(tmp_path.iterdir()) == []
 
 
@@ -88,10 +89,7 @@ def test_start_rejects_unknown_option(tmp_path: Path):
 
     assert result.returncode != 0
     assert "Unexpected option: --template" in result.stdout
-    assert (
-        "Usage: polepos start <project_name> [--install] [--no-bytecode]"
-        in result.stdout
-    )
+    assert START_USAGE in result.stdout
     assert list(tmp_path.iterdir()) == []
 
 
@@ -110,6 +108,88 @@ def test_package_name_normalization(tmp_path: Path):
     assert result.returncode == 0
     assert (tmp_path / "my-app").exists()
     assert (tmp_path / "my-app" / "src" / "my_app").exists()
+
+
+def test_start_rejects_unknown_database_option(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "myapp", "--db", "clickhouse")
+
+    assert result.returncode != 0
+    assert "Unsupported database option 'clickhouse'" in result.stdout
+    assert START_USAGE in result.stdout
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_start_rejects_missing_database_option_value(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "myapp", "--db")
+
+    assert result.returncode != 0
+    assert "Missing value for --db" in result.stdout
+    assert START_USAGE in result.stdout
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_start_with_postgres_database_option(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "pg-app", "--db=postgres")
+
+    assert result.returncode == 0
+    assert "Database: postgres" in result.stdout
+    assert "polepos db upgrade" in result.stdout
+
+    project_root = tmp_path / "pg-app"
+    package_root = project_root / "src" / "pg_app"
+    env_example = (project_root / ".env.example").read_text(encoding="utf-8")
+    settings = (package_root / "settings.py").read_text(encoding="utf-8")
+    compose_file = (project_root / "compose.yaml").read_text(encoding="utf-8")
+
+    expected_url = "postgresql+psycopg://postgres:postgres@localhost:5432/pg_app"
+    assert f"DATABASE_URL={expected_url}" in env_example
+    assert "POSTGRES_DB=pg_app" in env_example
+    assert f'default="{expected_url}"' in settings
+    assert "${POSTGRES_DB:-pg_app}" in compose_file
+    assert (project_root / "alembic.ini").exists()
+    assert (package_root / "db" / "models.py").exists()
+
+
+def test_start_with_no_database_option(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "api-app", "--db", "none")
+
+    assert result.returncode == 0
+    assert "Database: none" in result.stdout
+    assert "polepos db upgrade" not in result.stdout
+    assert "uv run python -m api_app.run" in result.stdout
+
+    project_root = tmp_path / "api-app"
+    package_root = project_root / "src" / "api_app"
+    env_example = (project_root / ".env.example").read_text(encoding="utf-8")
+    pyproject = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    readme = (project_root / "README.md").read_text(encoding="utf-8")
+    settings = (package_root / "settings.py").read_text(encoding="utf-8")
+    lifespan = (package_root / "bootstrap" / "lifespan.py").read_text(
+        encoding="utf-8"
+    )
+    tests_conftest = (project_root / "tests" / "conftest.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert not (project_root / "alembic.ini").exists()
+    assert not (project_root / "migrations").exists()
+    assert not (package_root / "db").exists()
+    assert "DATABASE_URL=" not in env_example
+    assert "POSTGRES_DB=" not in env_example
+    assert '"alembic>=' not in pyproject
+    assert '"sqlalchemy>=' not in pyproject
+    assert '"psycopg[binary]>=' not in pyproject
+    assert "database_url" not in settings
+    assert "import_models" not in lifespan
+    assert ".db." not in tests_conftest
+    assert "This project was generated with `--db none`" in readme
+    assert "polepos db upgrade" not in readme
+
+    _assert_python_files_compile(project_root)
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+    assert "PolePosition project check passed." in check_result.stdout
 
 
 def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):

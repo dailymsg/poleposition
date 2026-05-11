@@ -37,6 +37,10 @@ MANAGED_MARKERS = {
     ],
 }
 
+DATABASE_MANAGED_MARKERS = {
+    "db/models.py",
+}
+
 
 STARTER_MODULES = {
     "status",
@@ -64,7 +68,6 @@ PACKAGE_IDENTITY_PATHS = [
     "settings.py",
     "api",
     "bootstrap",
-    "db",
     "modules",
 ]
 
@@ -94,10 +97,6 @@ CORE_PACKAGE_PATHS = [
     "bootstrap/lifespan.py",
     "bootstrap/logging.py",
     "bootstrap/middleware.py",
-    "db/__init__.py",
-    "db/base.py",
-    "db/models.py",
-    "db/session.py",
     "domain/__init__.py",
     "domain/exceptions.py",
     "modules/__init__.py",
@@ -106,6 +105,13 @@ CORE_PACKAGE_PATHS = [
     "modules/status/schemas.py",
     "modules/status/services/__init__.py",
     "modules/status/services/status_service.py",
+]
+
+DATABASE_PACKAGE_PATHS = [
+    "db/__init__.py",
+    "db/base.py",
+    "db/models.py",
+    "db/session.py",
 ]
 
 ALEMBIC_PATHS = [
@@ -146,11 +152,18 @@ def _run_project_checks(
 ) -> ProjectCheckResult:
     project_root, package_root = _discover_core_project(cwd)
     problems: list[str] = []
+    uses_database = _project_uses_database(project_root, package_root)
 
     _check_project_identity(problems, project_root, package_root)
-    _check_generated_structure(problems, project_root, package_root)
-    _check_alembic_config(problems, project_root)
-    _check_managed_markers(problems, package_root)
+    _check_generated_structure(
+        problems,
+        project_root,
+        package_root,
+        uses_database=uses_database,
+    )
+    if uses_database:
+        _check_alembic_config(problems, project_root)
+    _check_managed_markers(problems, package_root, uses_database=uses_database)
     if include_lifecycle:
         _check_lifecycle_wiring(problems, project_root, package_root)
     if include_integrations:
@@ -210,6 +223,27 @@ def _has_core_project_signals(project_root: Path, package_root: Path) -> bool:
     return project_signal_count >= 1 and package_signal_count >= 2
 
 
+def _project_uses_database(project_root: Path, package_root: Path) -> bool:
+    if (project_root / "alembic.ini").exists():
+        return True
+    if (project_root / "migrations").exists():
+        return True
+    if (package_root / "db").exists():
+        return True
+
+    pyproject_path = project_root / "pyproject.toml"
+    if pyproject_path.is_file():
+        pyproject_content = pyproject_path.read_text(encoding="utf-8")
+        if '"alembic' in pyproject_content or '"sqlalchemy' in pyproject_content:
+            return True
+
+    env_path = project_root / ".env.example"
+    if env_path.is_file() and "DATABASE_URL=" in env_path.read_text(encoding="utf-8"):
+        return True
+
+    return False
+
+
 def _check_project_identity(
     problems: list[str],
     project_root: Path,
@@ -240,10 +274,16 @@ def _check_generated_structure(
     problems: list[str],
     project_root: Path,
     package_root: Path,
+    *,
+    uses_database: bool = True,
 ) -> None:
+    package_paths = list(CORE_PACKAGE_PATHS)
+    if uses_database:
+        package_paths.extend(DATABASE_PACKAGE_PATHS)
+
     required_paths = [
         *[project_root / relative_path for relative_path in CORE_PROJECT_PATHS],
-        *[package_root / relative_path for relative_path in CORE_PACKAGE_PATHS],
+        *[package_root / relative_path for relative_path in package_paths],
     ]
 
     for path in required_paths:
@@ -259,8 +299,15 @@ def _check_alembic_config(problems: list[str], project_root: Path) -> None:
             problems.append(f"Required Alembic path is missing: {path}")
 
 
-def _check_managed_markers(problems: list[str], package_root: Path) -> None:
+def _check_managed_markers(
+    problems: list[str],
+    package_root: Path,
+    *,
+    uses_database: bool = True,
+) -> None:
     for relative_path, markers in MANAGED_MARKERS.items():
+        if not uses_database and relative_path in DATABASE_MANAGED_MARKERS:
+            continue
         path = (package_root / relative_path).resolve()
 
         if not path.is_file():

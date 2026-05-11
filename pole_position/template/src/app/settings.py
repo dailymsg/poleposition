@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "text"
     api_v1_prefix: str = "/api/v1"
-    database_url: str = Field(default="sqlite:///./poleposition.db")
+    database_url: str = Field(
+        default="{{database_url_default}}",
+    )
     cors_enabled: bool = True
     cors_allow_origins: list[str] = [
         "http://localhost:3000",

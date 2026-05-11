@@ -69,7 +69,7 @@ Core check validates the generated project foundation:
 
 - project identity
 - generated project structure
-- Alembic migration files
+- Alembic migration files for database-backed projects
 - PolePosition-managed markers
 
 Project identity means the command can find one generated application package
@@ -77,15 +77,21 @@ under `src/` and can report missing core paths instead of simply saying the
 directory is unknown.
 
 Core generated paths include the package entrypoints, settings, bootstrap
-files, API files, database files, domain files, the `status` starter module,
-test conftest, README, `AGENTS.md`, and `.env.example`.
+files, API files, domain files, the `status` starter module, test conftest,
+README, `AGENTS.md`, and `.env.example`. Database-backed projects also include
+generated `db/` files.
 
-Alembic paths include:
+Alembic paths are checked only when the project has generated database wiring.
+They include:
 
 - `alembic.ini`
 - `migrations/env.py`
 - `migrations/script.py.mako`
 - `migrations/versions`
+
+Projects generated with `polepos start --db none` intentionally omit
+SQLAlchemy, Alembic, `DATABASE_URL`, and generated `db/` paths. `polepos check`
+accepts that shape and skips database-specific structure checks.
 
 Managed markers include:
 

@@ -28,6 +28,10 @@ polepos db upgrade
 uv run python -m shop_api.run
 ```
 
+`polepos start` defaults to `--db sqlite`. Use `--db postgres` when the generated
+project should start with PostgreSQL settings, or `--db none` for a database-free
+starter that omits SQLAlchemy and Alembic wiring.
+
 Open the generated FastAPI docs at:
 
 ```text

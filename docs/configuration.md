@@ -26,6 +26,11 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | `postgres` | Local Docker PostgreSQL password |
 | `POSTGRES_PORT` | `5432` | Host port for local Docker PostgreSQL |
 
+Projects generated with `polepos start --db none` omit `DATABASE_URL`,
+PostgreSQL settings, SQLAlchemy, and Alembic wiring. Projects generated with
+`--db postgres` start with a PostgreSQL `DATABASE_URL` instead of the SQLite
+default.
+
 Use Alembic for schema changes:
 
 ```bash

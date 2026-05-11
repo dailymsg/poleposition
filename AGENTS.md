@@ -158,6 +158,7 @@ The runner should read production-relevant `uvicorn` settings from `settings.py`
 Current CLI command groups:
 
 - `polepos start`
+- `polepos start --db sqlite|postgres|none`
 - `polepos add module`
 - `polepos remove module`
 - `polepos add integration kafka`

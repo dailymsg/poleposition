@@ -68,23 +68,21 @@ def render_startup_table(
     app_env: str,
     app_debug: bool,
     api_v1_prefix: str,
-    database_url: str,
     app_host: str,
     app_port: int,
     app_reload: bool,
     uvicorn_workers: int,
+    database_url: str | None = None,
 ) -> str:
     display_host = "127.0.0.1" if app_host == "0.0.0.0" else app_host
     docs_url = f"http://{display_host}:{app_port}/docs"
     openapi_url = f"http://{display_host}:{app_port}/openapi.json"
-    database_backend = urlparse(database_url).scheme or "unknown"
 
     rows = [
         ("Service", app_name),
         ("Environment", app_env),
         ("Debug", str(app_debug).lower()),
         ("API Prefix", api_v1_prefix),
-        ("Database", database_backend),
         ("Host", app_host),
         ("Port", str(app_port)),
         ("Reload", str(app_reload).lower()),
@@ -92,6 +90,8 @@ def render_startup_table(
         ("Docs", docs_url),
         ("OpenAPI", openapi_url),
     ]
+    if database_url:
+        rows.insert(4, ("Database", urlparse(database_url).scheme or "unknown"))
 
     key_width = max(len("Setting"), *(len(key) for key, _ in rows))
     value_width = max(len("Value"), *(len(value) for _, value in rows))

@@ -9,6 +9,8 @@ commands grow under `add`, `remove`, and `db` as the lifecycle expands.
 polepos start shop-api
 polepos start shop-api --install
 polepos start shop-api --no-bytecode
+polepos start shop-api --db postgres
+polepos start shop-api --db none
 polepos start --help
 ```
 
@@ -16,6 +18,11 @@ polepos start --help
 run migrations; after copying `.env.example` to `.env`, run
 `polepos db upgrade`. `--no-bytecode` configures generated runtime and migration
 commands to avoid Python bytecode cache writes during common local workflows.
+
+`--db` is non-interactive and accepts `sqlite`, `postgres`, or `none`. The
+default is `sqlite`. Use `postgres` when the generated project should start with
+a PostgreSQL `DATABASE_URL`; use `none` for a database-free FastAPI starter with
+no SQLAlchemy, Alembic, migrations, or generated `db/` wiring.
 
 ## Add a Module
 

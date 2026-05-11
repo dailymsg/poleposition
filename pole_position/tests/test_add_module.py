@@ -470,6 +470,22 @@ def test_add_module_requires_poleposition_project(tmp_path: Path):
     assert "does not look like a PolePosition project" in result.stdout
 
 
+def test_add_module_in_database_free_project_requires_api_only(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp", "--db", "none")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    standard_result = run_cli(project_root, "add", "module", "garage")
+    api_only_result = run_cli(project_root, "add", "module", "webhooks", "--api-only")
+
+    assert standard_result.returncode != 0
+    assert "Database-backed module templates require generated db/ wiring" in standard_result.stdout
+    assert "Use `polepos add module <name> --api-only`" in standard_result.stdout
+    assert api_only_result.returncode == 0
+    assert (project_root / "src" / "myapp" / "modules" / "webhooks" / "router.py").exists()
+    assert not (project_root / "src" / "myapp" / "db").exists()
+
+
 def test_add_module_works_from_nested_directory(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
