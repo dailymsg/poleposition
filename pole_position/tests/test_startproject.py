@@ -7,6 +7,10 @@ from unittest.mock import patch
 
 import pytest
 
+from pole_position.cli.services.project_creator import (
+    create_project as create_project_from_template,
+)
+
 try:
     import tomllib
 except ModuleNotFoundError:
@@ -163,7 +167,9 @@ def test_start_with_no_database_option(tmp_path: Path):
     env_example = (project_root / ".env.example").read_text(encoding="utf-8")
     pyproject = (project_root / "pyproject.toml").read_text(encoding="utf-8")
     readme = (project_root / "README.md").read_text(encoding="utf-8")
+    dockerfile = (project_root / "Dockerfile").read_text(encoding="utf-8")
     settings = (package_root / "settings.py").read_text(encoding="utf-8")
+    api_deps = (package_root / "api" / "deps.py").read_text(encoding="utf-8")
     lifespan = (package_root / "bootstrap" / "lifespan.py").read_text(
         encoding="utf-8"
     )
@@ -180,16 +186,50 @@ def test_start_with_no_database_option(tmp_path: Path):
     assert '"sqlalchemy>=' not in pyproject
     assert '"psycopg[binary]>=' not in pyproject
     assert "database_url" not in settings
+    assert "sqlalchemy" not in api_deps
+    assert ".db." not in api_deps
+    assert "db_session" not in api_deps
+    assert "get_current_user" in api_deps
+    assert "require_roles" in api_deps
     assert "import_models" not in lifespan
     assert ".db." not in tests_conftest
+    assert "alembic.ini" not in dockerfile
+    assert "COPY migrations" not in dockerfile
+    assert "COPY pyproject.toml README.md ./" in dockerfile
     assert "This project was generated with `--db none`" in readme
     assert "polepos db upgrade" not in readme
+    assert "alembic.ini" not in readme
+    assert "migrations/" not in readme
+    assert "\n  db/\n" not in readme
+    assert "src/api_app/" in readme
 
     _assert_python_files_compile(project_root)
 
     check_result = run_cli(project_root, "check")
     assert check_result.returncode == 0
     assert "PolePosition project check passed." in check_result.stdout
+
+
+def test_create_project_normalizes_database_option_for_database_free_scaffold(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "api-app"
+
+    create_project_from_template(
+        project_name="api-app",
+        package_name="api_app",
+        project_path=project_root,
+        database="NONE",
+    )
+
+    api_deps = (
+        project_root / "src" / "api_app" / "api" / "deps.py"
+    ).read_text(encoding="utf-8")
+
+    assert not (project_root / "alembic.ini").exists()
+    assert not (project_root / "migrations").exists()
+    assert "db_session" not in api_deps
+    assert "sqlalchemy" not in api_deps
 
 
 def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):
@@ -334,6 +374,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert 'build-backend = "hatchling.build"' in pyproject
     assert 'packages = ["src/demo_app"]' in pyproject
     assert 'CMD ["uv", "run", "python", "-m", "demo_app.run"]' in dockerfile
+    assert "COPY pyproject.toml README.md alembic.ini ./" in dockerfile
+    assert "COPY migrations ./migrations" in dockerfile
     assert "RUN uv sync --no-dev" in dockerfile
     assert ".venv" in dockerignore
     assert "poleposition.db" in dockerignore
@@ -514,6 +556,8 @@ def test_generated_project_includes_alembic_support(tmp_path: Path):
     assert "polepos db upgrade" in readme
     assert 'polepos db revision -m "add garage table"' in readme
     assert 'uv run alembic revision --autogenerate -m "add garage table"' in readme
+    assert "alembic.ini\nmigrations/\n  versions/\nsrc/demo_app/" in readme
+    assert "\n  db/\n" in readme
     assert "{{project" not in migrations_env
 
 

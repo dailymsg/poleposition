@@ -88,6 +88,51 @@ def test_check_passes_after_added_api_only_module(tmp_path: Path) -> None:
     assert "PolePosition project check passed." in result.stdout
 
 
+def test_check_reports_database_free_database_remnants(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp", "--db", "none")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    (package_root / "api" / "deps.py").write_text(
+        (
+            "from sqlalchemy.orm import Session\n"
+            "from myapp.db.session import get_db\n"
+            "def db_session():\n"
+            "    yield from get_db()\n"
+        ),
+        encoding="utf-8",
+    )
+    (project_root / "Dockerfile").write_text(
+        (
+            "COPY pyproject.toml README.md alembic.ini ./\n"
+            "COPY migrations ./migrations\n"
+        ),
+        encoding="utf-8",
+    )
+    (project_root / "README.md").write_text(
+        (
+            "## Project Layout\n\n"
+            "```text\n"
+            "alembic.ini\n"
+            "migrations/\n"
+            "src/myapp/\n"
+            "  db/\n"
+            "```\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "PolePosition project check failed." in result.stdout
+    assert "Database-free project contains database-specific content" in result.stdout
+    assert "api/deps.py" in result.stdout
+    assert "Dockerfile" in result.stdout
+    assert "README.md" in result.stdout
+
+
 def test_check_passes_after_added_messaging_integrations(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0

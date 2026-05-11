@@ -3,6 +3,7 @@ from pathlib import Path
 from pole_position.cli.services.project_checker import (
     ProjectCheckResult,
     _check_alembic_config,
+    _check_database_free_remnants,
     _check_generated_structure,
     _check_lifecycle_wiring,
     _check_managed_markers,
@@ -62,6 +63,37 @@ def test_alembic_config_check_reports_missing_paths(tmp_path: Path) -> None:
     assert any("alembic.ini" in problem for problem in problems)
     assert any("migrations/env.py" in problem for problem in problems)
     assert any("migrations/versions" in problem for problem in problems)
+
+
+def test_database_free_remnant_check_reports_database_content(tmp_path: Path) -> None:
+    project_root = tmp_path / "shop-api"
+    package_root = project_root / "src" / "shop_api"
+    _write_text(
+        project_root / "Dockerfile",
+        "COPY pyproject.toml README.md alembic.ini ./\nCOPY migrations ./migrations\n",
+    )
+    _write_text(
+        project_root / "README.md",
+        "## Project Layout\n\n```text\nalembic.ini\nmigrations/\nsrc/shop_api/\n  db/\n```\n",
+    )
+    _write_text(
+        package_root / "api" / "deps.py",
+        (
+            "from sqlalchemy.orm import Session\n"
+            "from shop_api.db.session import get_db\n"
+            "def db_session():\n"
+            "    yield from get_db()\n"
+        ),
+    )
+    problems: list[str] = []
+
+    _check_database_free_remnants(problems, project_root, package_root)
+
+    assert any("Dockerfile" in problem for problem in problems)
+    assert any("README.md" in problem for problem in problems)
+    assert any("api/deps.py" in problem for problem in problems)
+    assert any("sqlalchemy" in problem for problem in problems)
+    assert any("COPY migrations" in problem for problem in problems)
 
 
 def test_managed_marker_check_reports_missing_files(tmp_path: Path) -> None:

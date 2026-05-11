@@ -9,6 +9,8 @@ site_dir: site
 
 theme:
   name: material
+  # Paths are relative to docs_dir. Keep the site logo and favicon as separate
+  # assets so browser tabs use the compact favicon, not the header logo.
   logo: assets/logo/poleposition-logo.png
   favicon: assets/logo/poleposition-favicon.png
   palette:

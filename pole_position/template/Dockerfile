@@ -7,9 +7,8 @@ WORKDIR /app
 
 RUN python -m pip install --no-cache-dir uv
 
-COPY pyproject.toml README.md alembic.ini ./
-COPY migrations ./migrations
-COPY src ./src
+COPY pyproject.toml README.md{{docker_alembic_copy}} ./
+{{docker_migrations_copy}}COPY src ./src
 
 RUN uv sync --no-dev
 

@@ -114,6 +114,26 @@ DATABASE_PACKAGE_PATHS = [
     "db/session.py",
 ]
 
+DATABASE_FREE_FORBIDDEN_PROJECT_CONTENT = {
+    "Dockerfile": [
+        "alembic.ini",
+        "COPY migrations",
+    ],
+    "README.md": [
+        "\nalembic.ini\n",
+        "\nmigrations/\n",
+        "\n  db/\n",
+    ],
+}
+
+DATABASE_FREE_FORBIDDEN_PACKAGE_CONTENT = {
+    "api/deps.py": [
+        "sqlalchemy",
+        ".db.session",
+        "db_session",
+    ],
+}
+
 ALEMBIC_PATHS = [
     "alembic.ini",
     "migrations/env.py",
@@ -163,6 +183,8 @@ def _run_project_checks(
     )
     if uses_database:
         _check_alembic_config(problems, project_root)
+    else:
+        _check_database_free_remnants(problems, project_root, package_root)
     _check_managed_markers(problems, package_root, uses_database=uses_database)
     if include_lifecycle:
         _check_lifecycle_wiring(problems, project_root, package_root)
@@ -297,6 +319,46 @@ def _check_alembic_config(problems: list[str], project_root: Path) -> None:
     for path in required_paths:
         if not path.exists():
             problems.append(f"Required Alembic path is missing: {path}")
+
+
+def _check_database_free_remnants(
+    problems: list[str],
+    project_root: Path,
+    package_root: Path,
+) -> None:
+    for relative_path, snippets in DATABASE_FREE_FORBIDDEN_PROJECT_CONTENT.items():
+        _collect_forbidden_database_free_content(
+            problems,
+            project_root / relative_path,
+            snippets,
+        )
+
+    for relative_path, snippets in DATABASE_FREE_FORBIDDEN_PACKAGE_CONTENT.items():
+        _collect_forbidden_database_free_content(
+            problems,
+            package_root / relative_path,
+            snippets,
+        )
+
+
+def _collect_forbidden_database_free_content(
+    problems: list[str],
+    path: Path,
+    snippets: list[str],
+) -> None:
+    if not path.is_file():
+        return
+
+    content = path.read_text(encoding="utf-8")
+    for snippet in snippets:
+        if snippet not in content:
+            continue
+
+        display_snippet = snippet.strip() or snippet
+        problems.append(
+            "Database-free project contains database-specific content in "
+            f"{path}: {display_snippet}"
+        )
 
 
 def _check_managed_markers(

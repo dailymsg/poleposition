@@ -1,7 +1,10 @@
 import shutil
 from pathlib import Path
 
-from pole_position.cli.services.database_options import DEFAULT_DATABASE
+from pole_position.cli.services.database_options import (
+    DEFAULT_DATABASE,
+    get_database_option,
+)
 from pole_position.cli.services.template_renderer import (
     build_context,
     render_project_files,
@@ -21,6 +24,8 @@ def create_project(
     if not template_dir.exists():
         raise RuntimeError(f"Template directory not found: {template_dir}")
 
+    database_option = get_database_option(database, package_name=package_name)
+
     shutil.copytree(
         template_dir,
         project_path,
@@ -35,12 +40,12 @@ def create_project(
     context = build_context(
         project_name=project_name,
         package_name=package_name,
-        database=database,
+        database=database_option.name,
         no_bytecode=no_bytecode,
     )
     render_project_files(project_path=project_path, context=context)
 
-    if database == "none":
+    if not database_option.uses_database:
         _remove_database_scaffold(
             project_path=project_path,
             project_name=project_name,
@@ -80,6 +85,7 @@ def _remove_database_scaffold(
     _remove_pyproject_database_dependencies(project_path / "pyproject.toml")
     _remove_env_database_values(project_path / ".env.example")
     _write_database_free_compose(project_path / "compose.yaml")
+    _write_database_free_api_deps(package_root / "api" / "deps.py", package_name)
     _remove_settings_database_url(package_root / "settings.py")
     _remove_lifespan_model_imports(package_root / "bootstrap" / "lifespan.py")
     _remove_run_database_summary(package_root / "run.py")
@@ -132,6 +138,20 @@ def _write_database_free_compose(path: Path) -> None:
                 "",
             ]
         ),
+        encoding="utf-8",
+    )
+
+
+def _write_database_free_api_deps(path: Path, package_name: str) -> None:
+    path.write_text(
+        f"""from {package_name}.auth.dependencies import get_current_user, require_roles
+
+
+__all__ = [
+    "get_current_user",
+    "require_roles",
+]
+""",
         encoding="utf-8",
     )
 

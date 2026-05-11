@@ -149,17 +149,7 @@ simple role-gated routes.
 ## Project Layout
 
 ```text
-alembic.ini
-migrations/
-  versions/
-src/{{project_import_name}}/
-  run.py
-  auth/
-  bootstrap/
-  api/
-  db/
-  modules/
-    status/
+{{project_layout}}
 ```
 
 ## Example Endpoints

@@ -40,7 +40,22 @@ def build_context(
     database_migrations_section = ""
     docker_database_section = ""
     docker_intro = "Start the generated project with Docker and PostgreSQL:"
+    docker_alembic_copy = " alembic.ini"
+    docker_migrations_copy = "COPY migrations ./migrations\n"
     module_database_removal_note = ""
+    project_layout = (
+        "alembic.ini\n"
+        "migrations/\n"
+        "  versions/\n"
+        f"src/{package_name}/\n"
+        "  run.py\n"
+        "  auth/\n"
+        "  bootstrap/\n"
+        "  api/\n"
+        "  db/\n"
+        "  modules/\n"
+        "    status/"
+    )
     runtime_database_summary = ""
     agents_db_commands = ""
     agents_db_guidance = ""
@@ -121,6 +136,17 @@ def build_context(
         readme_lifecycle_scope = "modules, integrations, checks, or migrations"
     else:
         docker_intro = "Start the generated project with Docker:"
+        docker_alembic_copy = ""
+        docker_migrations_copy = ""
+        project_layout = (
+            f"src/{package_name}/\n"
+            "  run.py\n"
+            "  auth/\n"
+            "  bootstrap/\n"
+            "  api/\n"
+            "  modules/\n"
+            "    status/"
+        )
         docker_database_section = (
             "\nThis project was generated with `--db none`, so the Docker workflow starts only\n"
             "the FastAPI application container. Add an explicit database or integration when\n"
@@ -155,9 +181,12 @@ def build_context(
         "{{postgres_db_name}}": database_option.postgres_db_name,
         "{{database_development_step}}": database_development_step,
         "{{docker_intro}}": docker_intro,
+        "{{docker_alembic_copy}}": docker_alembic_copy,
+        "{{docker_migrations_copy}}": docker_migrations_copy,
         "{{docker_database_section}}": docker_database_section,
         "{{database_migrations_section}}": database_migrations_section,
         "{{module_database_removal_note}}": module_database_removal_note,
+        "{{project_layout}}": project_layout,
         "{{runtime_database_summary}}": runtime_database_summary,
         "{{agents_db_commands}}": agents_db_commands,
         "{{agents_db_guidance}}": agents_db_guidance,
