@@ -21,7 +21,7 @@ commands to avoid Python bytecode cache writes during common local workflows.
 
 `--db` is non-interactive and accepts `sqlite`, `postgres`, or `none`. The
 default is `sqlite`. Use `postgres` when the generated project should start with
-a PostgreSQL `DATABASE_URL`; use `none` for a database-free FastAPI starter with
+a PostgreSQL `DATABASE_URL`; use `none` for a database-free [FastAPI](https://fastapi.tiangolo.com/tutorial/first-steps/) starter with
 no SQLAlchemy, Alembic, migrations, or generated `db/` wiring.
 
 ## Add a Module

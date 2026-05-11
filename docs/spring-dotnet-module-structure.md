@@ -6,7 +6,7 @@ know PolePosition or FastAPI yet.
 The short version:
 
 PolePosition gives FastAPI projects a familiar enterprise shape without turning
-FastAPI into Spring Boot or ASP.NET Core. A module is a small feature boundary:
+FastAPI into [Spring Boot](https://spring.io/projects/spring-boot) or [ASP.NET Core](https://dotnet.microsoft.com/en-us/apps/aspnet). A module is a small feature boundary:
 routes, schemas, service logic, repository code, and optional database model
 live together.
 
@@ -19,7 +19,7 @@ If you come from ASP.NET Core, think of a PolePosition module as a feature
 folder with endpoints or a controller, request and response models, service
 logic, repository code, and an EF Core-style entity.
 
-PolePosition keeps the same idea but uses FastAPI and SQLAlchemy names.
+PolePosition keeps the same idea but uses FastAPI and [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) names.
 
 | Concept | Spring Boot | ASP.NET Core | PolePosition / FastAPI |
 |---|---|---|---|
