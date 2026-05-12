@@ -481,6 +481,55 @@ def test_add_module_keeps_router_imports_sorted(tmp_path: Path):
     assert import_lines == sorted(import_lines)
 
 
+def test_add_module_preserves_multiline_import_blocks(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "api" / "router.py"
+    models_path = package_root / "db" / "models.py"
+
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8").replace(
+            "from myapp.modules.status.router import router as status_router\n",
+            (
+                "from myapp.modules.status.router import router as status_router\n"
+                "from myapp.modules.status.schemas import (\n"
+                "    StatusResponse,\n"
+                ")\n"
+            ),
+        ),
+        encoding="utf-8",
+    )
+    models_path.write_text(
+        models_path.read_text(encoding="utf-8").replace(
+            "    # polepos:model-imports",
+            (
+                "    from myapp.modules.status.schemas import (\n"
+                "        StatusResponse,\n"
+                "    )\n"
+                "    # polepos:model-imports"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "module", "customers")
+
+    assert result.returncode == 0
+    _assert_python_files_compile(project_root)
+
+    router_content = router_path.read_text(encoding="utf-8")
+    models_content = models_path.read_text(encoding="utf-8")
+    assert "from myapp.modules.status.schemas import (" in router_content
+    assert "    StatusResponse," in router_content
+    assert "from myapp.modules.customers.router import router as customers_router" in router_content
+    assert "from myapp.modules.status.schemas import (" in models_content
+    assert "        StatusResponse," in models_content
+    assert "from myapp.modules.customers import model  # noqa: F401" in models_content
+
+
 def test_add_module_rejects_duplicate_module(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0

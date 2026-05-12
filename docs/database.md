@@ -96,6 +96,10 @@ src/shop_api/modules/customers/services/customers_service.py
 src/shop_api/modules/customers/router.py
 ```
 
+The generated router starts with collection routes such as `@router.get("/")`.
+Those paths are module-local and become `/api/v1/customers/` after the
+`customers` router is included with `prefix="/customers"`.
+
 After changing the model, create and apply a migration:
 
 ```bash

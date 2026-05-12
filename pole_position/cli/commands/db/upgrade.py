@@ -7,6 +7,10 @@ USAGE = "Usage: polepos db upgrade [target]"
 
 def run(args: list[str]) -> None:
     if args and args[0] in {"-h", "--help"}:
+        if len(args) > 1:
+            print(f"Unexpected argument: {args[1]}")
+            print(USAGE)
+            raise SystemExit(1)
         print(USAGE)
         return
 

@@ -33,6 +33,10 @@ polepos db revision -m "add customers table"
 polepos db upgrade
 ```
 
+Generated module routes are included under module-specific prefixes. For
+example, the `customers` module starter exposes collection handlers at
+`/api/v1/customers/`, even though the module-local router uses `/` internally.
+
 ## What PolePosition Gives You
 
 - FastAPI-native application structure

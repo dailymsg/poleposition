@@ -51,6 +51,22 @@ The command creates a module under `src/shop_api/modules/customers/`, adds
 starter tests, wires the router, and registers model imports for Alembic
 metadata discovery.
 
+Generated module endpoint paths are relative to the module router. The standard
+starter uses collection handlers such as `@router.get("/")` and
+`@router.post("/")`, while `api/router.py` includes that router with a
+module-specific prefix:
+
+```python
+api_router.include_router(customers_router, prefix="/customers", tags=["customers"])
+```
+
+With the default `API_V1_PREFIX`, those handlers are served as:
+
+```text
+GET  /api/v1/customers/
+POST /api/v1/customers/
+```
+
 Refine the generated files for the real domain:
 
 - `model.py`

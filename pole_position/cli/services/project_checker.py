@@ -253,11 +253,12 @@ def _project_uses_database(project_root: Path, package_root: Path) -> bool:
     if (package_root / "db").exists():
         return True
 
-    pyproject_path = project_root / "pyproject.toml"
-    if pyproject_path.is_file():
-        pyproject_content = pyproject_path.read_text(encoding="utf-8")
-        if '"alembic' in pyproject_content or '"sqlalchemy' in pyproject_content:
-            return True
+    settings_path = package_root / "settings.py"
+    if (
+        settings_path.is_file()
+        and "database_url:" in settings_path.read_text(encoding="utf-8")
+    ):
+        return True
 
     env_path = project_root / ".env.example"
     if env_path.is_file() and "DATABASE_URL=" in env_path.read_text(encoding="utf-8"):
@@ -620,9 +621,18 @@ def _check_module_model_wiring(
     module_name: str,
 ) -> None:
     models_path = package_root / "db" / "models.py"
-    lines = _read_file_lines(models_path)
-    if lines is None:
+    content = _read_file_text(models_path)
+    if content is None:
         return
+
+    if _has_reported_parse_error(problems, models_path):
+        return
+
+    tree = _parse_python_source(content, models_path, problems)
+    if tree is None:
+        return
+
+    lines = content.splitlines()
 
     package_name = package_root.name
     import_line = (
@@ -633,6 +643,11 @@ def _check_module_model_wiring(
             f"Lifecycle module '{module_name}' is missing model import in "
             f"{models_path}: {import_line}"
         )
+
+
+def _has_reported_parse_error(problems: list[str], path: Path) -> bool:
+    prefix = f"Could not parse Python file for lifecycle checks: {path}:"
+    return any(problem.startswith(prefix) for problem in problems)
 
 
 def _check_module_tests(

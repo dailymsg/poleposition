@@ -45,6 +45,18 @@ The `api-only` template generates router, schemas, a module-local `services/`
 package, and tests without model, repository, or database wiring. `--api-only`
 is the shortcut form.
 
+Module route decorators are relative to the module router. A generated
+`customers` module can safely define `@router.get("/")` because PolePosition
+registers it once in `src/<package>/api/router.py`:
+
+```python
+api_router.include_router(customers_router, prefix="/customers", tags=["customers"])
+```
+
+With the generated app-level API prefix, that route is served as
+`GET /api/v1/customers/`. Other modules can also define `/` handlers because
+each module gets its own router prefix.
+
 ## Remove a Module
 
 ```bash

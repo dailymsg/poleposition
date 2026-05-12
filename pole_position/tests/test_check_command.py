@@ -280,6 +280,31 @@ def test_check_reports_missing_added_module_model_wiring(tmp_path: Path) -> None
     assert "db/models.py" in result.stdout
 
 
+def test_check_reports_parse_error_in_db_models(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    models_path = project_root / "src" / "myapp" / "db" / "models.py"
+    models_path.write_text(
+        (
+            "def import_models() -> None:\n"
+            "    from myapp.modules.garage import model  # noqa: F401\n"
+            "        broken\n"
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Could not parse Python file for lifecycle checks" in result.stdout
+    assert "db/models.py" in result.stdout
+
+
 def test_check_reports_missing_added_module_test_wiring(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -479,3 +504,28 @@ def test_check_rejects_unexpected_arguments(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "Unexpected argument: --fix" in result.stdout
     assert "Usage: polepos check" in result.stdout
+
+
+def test_check_database_free_project_ignores_sqlalchemy_named_dependencies(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp", "--db", "none")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_path.write_text(
+        pyproject_path.read_text(encoding="utf-8").replace(
+            '    "pydantic>=2.0.0",\n',
+            (
+                '    "pydantic>=2.0.0",\n'
+                '    "sqlalchemy-utils>=0.41.0",\n'
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode == 0
+    assert "PolePosition project check passed." in result.stdout

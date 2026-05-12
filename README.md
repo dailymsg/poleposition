@@ -273,6 +273,19 @@ prompt orchestration and shared `integrations/llm` adapters.
 tests without model, repository, or database wiring. Use `--api-only` as a
 shortcut for `--template api-only`.
 
+Generated module routes are local to their module router. For example, the
+standard and API-only starters use `@router.get("/")` inside the module, then
+PolePosition registers that router in `src/<package>/api/router.py` with a
+module prefix:
+
+```python
+api_router.include_router(customers_router, prefix="/customers", tags=["customers"])
+```
+
+With the generated API prefix, that route becomes `GET /api/v1/customers/`.
+Another module can also define `@router.get("/")` because it is registered with
+its own prefix.
+
 ### Remove modules
 
 ```bash
@@ -691,6 +704,9 @@ At that point, you already have the generated router shape for:
 GET  /api/v1/users/
 POST /api/v1/users/
 ```
+
+Those paths come from the module-local `@router.get("/")` and `@router.post("/")`
+handlers being included once under the `/users` prefix in `api/router.py`.
 
 From there, you refine the generated module for your actual domain instead of starting from an empty project structure.
 

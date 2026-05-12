@@ -268,7 +268,11 @@ from <package>.modules.customers.router import router as customers_router
 api_router.include_router(customers_router, prefix="/customers", tags=["customers"])
 ```
 
-This registration happens once per module.
+This registration happens once per module. The module router owns paths relative
+to that prefix, so a generated `@router.get("/")` handler becomes
+`GET /api/v1/customers/` once the app-level API prefix is applied. A different
+module can also define `@router.get("/")` because it is included under a
+different module prefix.
 
 After that, if you add more endpoints inside:
 

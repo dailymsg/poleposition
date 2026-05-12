@@ -67,6 +67,14 @@ def test_db_upgrade_help_shows_usage_without_project(tmp_path: Path):
     assert "Usage: polepos db upgrade [target]" in result.stdout
 
 
+def test_db_upgrade_help_rejects_extra_argument(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "upgrade", "--help", "head")
+
+    assert result.returncode != 0
+    assert "Unexpected argument: head" in result.stdout
+    assert "Usage: polepos db upgrade [target]" in result.stdout
+
+
 def test_db_revision_requires_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     from pole_position.cli.commands.db.revision import run
 
@@ -103,6 +111,14 @@ def test_db_revision_help_shows_usage_without_project(tmp_path: Path):
     assert 'Usage: polepos db revision -m "<message>"' in result.stdout
 
 
+def test_db_revision_help_rejects_extra_argument(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "revision", "--help", "-m")
+
+    assert result.returncode != 0
+    assert "Unexpected argument: -m" in result.stdout
+    assert 'Usage: polepos db revision -m "<message>"' in result.stdout
+
+
 def test_db_revision_invokes_autogenerate(tmp_path: Path):
     from pole_position.cli.commands.db.revision import run
 
@@ -133,6 +149,14 @@ def test_db_downgrade_help_shows_usage_without_project(tmp_path: Path):
     result = run_cli(tmp_path, "db", "downgrade", "--help")
 
     assert result.returncode == 0
+    assert "Usage: polepos db downgrade <target>" in result.stdout
+
+
+def test_db_downgrade_help_rejects_extra_argument(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "downgrade", "--help", "-1")
+
+    assert result.returncode != 0
+    assert "Unexpected argument: -1" in result.stdout
     assert "Usage: polepos db downgrade <target>" in result.stdout
 
 

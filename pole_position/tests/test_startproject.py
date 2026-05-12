@@ -321,6 +321,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     app_module = (package_root / "app.py").read_text(encoding="utf-8")
     run_module = (package_root / "run.py").read_text(encoding="utf-8")
     settings_module = (package_root / "settings.py").read_text(encoding="utf-8")
+    readme = (project_root / "README.md").read_text(encoding="utf-8")
     pyproject = (project_root / "pyproject.toml").read_text(encoding="utf-8")
     dockerfile = (project_root / "Dockerfile").read_text(encoding="utf-8")
     dockerignore = (project_root / ".dockerignore").read_text(encoding="utf-8")
@@ -345,6 +346,10 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "`polepos remove module <name>`" in agents_guide
     assert "`polepos check`" in agents_guide
     assert "{{project" not in agents_guide
+    assert "src/demo_app/api/router.py" in readme
+    assert 'prefix="/garage"' in readme
+    assert "GET /api/v1/garage/" in readme
+    assert "{{project" not in readme
     assert "CORS_ENABLED=true" in env_example
     assert 'CORS_ALLOW_ORIGINS=["http://localhost:3000"' in env_example
     assert "# CORS_ALLOW_ORIGIN_REGEX=" in env_example

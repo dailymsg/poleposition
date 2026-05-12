@@ -54,6 +54,12 @@ Use PolePosition commands for generated module lifecycle work:
 {{no_bytecode_command_prefix}}polepos check
 ```
 
+Generated module routes are local to the module router. A generated `garage`
+module can define `@router.get("/")`, while
+`src/{{project_import_name}}/api/router.py` includes that router with
+`prefix="/garage"`. With the default API prefix, that route is served as
+`GET /api/v1/garage/`.
+
 {{module_database_removal_note}}
 
 ## Runtime Configuration

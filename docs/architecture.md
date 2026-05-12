@@ -200,6 +200,13 @@ This file:
 - optionally adds LLM integration files
 - optionally patches settings and `.env.example`
 
+Module routers use local paths. A generated standard module can define
+`@router.get("/")` and `@router.post("/")` inside
+`src/<package>/modules/<name>/router.py`; `module_creator.py` then registers the
+router once in `src/<package>/api/router.py` with `prefix="/<name>"`. The
+FastAPI app applies the app-level API prefix in `app.py`, so a `customers`
+module root route is served as `/api/v1/customers/`, not as a shared global `/`.
+
 The `--api-only` CLI option is a shortcut for the `api-only` template. It
 generates router, schemas, a module-local `services/` package, and tests
 without model, repository, or database model wiring.
