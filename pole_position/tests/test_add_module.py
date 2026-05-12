@@ -75,6 +75,37 @@ def test_add_help_shows_namespace_usage(tmp_path: Path):
     assert "module" in result.stdout
 
 
+def test_add_module_help_shows_usage_without_project(tmp_path: Path):
+    result = run_cli(tmp_path, "add", "module", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos add module <module_name>" in result.stdout
+    assert "Templates:" in result.stdout
+
+
+def test_add_module_rejects_template_flag_without_value(tmp_path: Path):
+    result = run_cli(tmp_path, "add", "module", "garage", "--template", "--api-only")
+
+    assert result.returncode != 0
+    assert "Missing value for --template." in result.stdout
+    assert "Unsupported module template '--api-only'" not in result.stdout
+
+
+def test_add_module_rejects_empty_template_value(tmp_path: Path):
+    result = run_cli(tmp_path, "add", "module", "garage", "--template=")
+
+    assert result.returncode != 0
+    assert "Missing value for --template." in result.stdout
+
+
+def test_add_integration_help_shows_usage_without_project(tmp_path: Path):
+    result = run_cli(tmp_path, "add", "integration", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos add integration <integration_name>" in result.stdout
+    assert "Integrations: kafka, rabbitmq" in result.stdout
+
+
 def test_add_kafka_integration_creates_files_and_updates_project(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0

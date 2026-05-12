@@ -25,6 +25,14 @@ def run_cli(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_check_help_shows_usage_without_project(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "check", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos check" in result.stdout
+    assert "Unexpected argument" not in result.stdout
+
+
 def test_check_passes_for_generated_project(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0

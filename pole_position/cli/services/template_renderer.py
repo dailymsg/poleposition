@@ -43,6 +43,7 @@ def build_context(
     docker_alembic_copy = " alembic.ini"
     docker_migrations_copy = "COPY migrations ./migrations\n"
     module_database_removal_note = ""
+    module_lifecycle_add_command = "polepos add module garage"
     project_layout = (
         "alembic.ini\n"
         "migrations/\n"
@@ -138,6 +139,7 @@ def build_context(
         docker_intro = "Start the generated project with Docker:"
         docker_alembic_copy = ""
         docker_migrations_copy = ""
+        module_lifecycle_add_command = "polepos add module garage --api-only"
         project_layout = (
             f"src/{package_name}/\n"
             "  run.py\n"
@@ -186,6 +188,7 @@ def build_context(
         "{{docker_database_section}}": docker_database_section,
         "{{database_migrations_section}}": database_migrations_section,
         "{{module_database_removal_note}}": module_database_removal_note,
+        "{{module_lifecycle_add_command}}": module_lifecycle_add_command,
         "{{project_layout}}": project_layout,
         "{{runtime_database_summary}}": runtime_database_summary,
         "{{agents_db_commands}}": agents_db_commands,

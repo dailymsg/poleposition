@@ -7,6 +7,7 @@ from pole_position.cli.services.project_name import normalize_package_name, vali
 
 
 USAGE = "Usage: polepos add integration <integration_name>"
+HELP_OPTIONS = {"-h", "--help"}
 
 
 def _print_usage() -> None:
@@ -20,8 +21,17 @@ def run(args: list[str]) -> None:
         _print_usage()
         raise SystemExit(1)
 
+    if len(args) == 1 and args[0] in HELP_OPTIONS:
+        _print_usage()
+        return
+
     if len(args) > 1:
         print(f"Unexpected argument: {args[1]}")
+        _print_usage()
+        raise SystemExit(1)
+
+    if args[0].startswith("--"):
+        print(f"Unexpected option: {args[0]}")
         _print_usage()
         raise SystemExit(1)
 

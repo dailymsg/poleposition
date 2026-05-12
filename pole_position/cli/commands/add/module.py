@@ -11,6 +11,7 @@ USAGE = (
     "Usage: polepos add module <module_name> "
     "[--template <template_name>] [--api-only]"
 )
+HELP_OPTIONS = {"-h", "--help"}
 
 
 def _print_usage() -> None:
@@ -26,6 +27,10 @@ def run(args: list[str]) -> None:
         _print_usage()
         raise SystemExit(1)
 
+    if len(args) == 1 and args[0] in HELP_OPTIONS:
+        _print_usage()
+        return
+
     raw_name: str | None = None
     template = "standard"
     template_was_set = False
@@ -36,7 +41,7 @@ def run(args: list[str]) -> None:
         argument = args[index]
 
         if argument == "--template":
-            if index + 1 >= len(args):
+            if index + 1 >= len(args) or args[index + 1].startswith("-"):
                 print("Missing value for --template.")
                 _print_usage()
                 raise SystemExit(1)
@@ -47,6 +52,10 @@ def run(args: list[str]) -> None:
 
         if argument.startswith("--template="):
             template = argument.split("=", 1)[1].strip()
+            if not template:
+                print("Missing value for --template.")
+                _print_usage()
+                raise SystemExit(1)
             template_was_set = True
             index += 1
             continue

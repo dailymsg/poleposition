@@ -79,6 +79,23 @@ def test_db_revision_requires_message(tmp_path: Path, capsys: pytest.CaptureFixt
     assert 'Usage: polepos db revision -m "<message>"' in captured.out
 
 
+def test_db_revision_rejects_message_flag_without_value(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+):
+    from pole_position.cli.commands.db.revision import run
+
+    with patch("pole_position.cli.commands.db.revision.run_alembic_command") as mock_run:
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(tmp_path)
+            with pytest.raises(SystemExit):
+                run(["--message", "--empty"])
+
+    captured = capsys.readouterr()
+    assert 'Usage: polepos db revision -m "<message>"' in captured.out
+    mock_run.assert_not_called()
+
+
 def test_db_revision_help_shows_usage_without_project(tmp_path: Path):
     result = run_cli(tmp_path, "db", "revision", "--help")
 

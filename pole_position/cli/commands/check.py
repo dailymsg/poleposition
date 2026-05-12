@@ -3,9 +3,14 @@ from pole_position.cli.services.project_checker import check_project
 
 
 USAGE = "Usage: polepos check"
+HELP_OPTIONS = {"-h", "--help"}
 
 
 def run(args: list[str]) -> None:
+    if len(args) == 1 and args[0] in HELP_OPTIONS:
+        print(USAGE)
+        return
+
     if args:
         print(f"Unexpected argument: {args[0]}")
         print(USAGE)

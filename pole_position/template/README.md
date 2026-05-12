@@ -48,7 +48,7 @@ docker compose up --build
 Use PolePosition commands for generated module lifecycle work:
 
 ```bash
-{{no_bytecode_command_prefix}}polepos add module garage
+{{no_bytecode_command_prefix}}{{module_lifecycle_add_command}}
 {{no_bytecode_command_prefix}}polepos remove module garage
 {{no_bytecode_command_prefix}}polepos remove module garage --trace
 {{no_bytecode_command_prefix}}polepos check

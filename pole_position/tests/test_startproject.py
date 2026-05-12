@@ -198,6 +198,8 @@ def test_start_with_no_database_option(tmp_path: Path):
     assert "COPY pyproject.toml README.md ./" in dockerfile
     assert "This project was generated with `--db none`" in readme
     assert "polepos db upgrade" not in readme
+    assert "polepos add module garage --api-only" in readme
+    assert "polepos add module garage\n" not in readme
     assert "alembic.ini" not in readme
     assert "migrations/" not in readme
     assert "\n  db/\n" not in readme
@@ -442,6 +444,19 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
         "from demo_app.bootstrap.logging import bind_request_id, reset_request_id"
         in middleware_module
     )
+    assert (
+        "from starlette.types import ASGIApp, Message, Receive, Scope, Send"
+        in middleware_module
+    )
+    assert "class RequestContextMiddleware:" in middleware_module
+    assert 'if message["type"] == "http.response.start":' in middleware_module
+    assert 'if key.lower() != b"x-request-id"' in middleware_module
+    assert (
+        'response_headers.append((b"x-request-id", request_id.encode("latin-1")))'
+        in middleware_module
+    )
+    assert "app.add_middleware(RequestContextMiddleware)" in middleware_module
+    assert '@app.middleware("http")' not in middleware_module
     assert "from fastapi.middleware.cors import CORSMiddleware" in middleware_module
     assert "allow_origins=settings.cors_allow_origins" in middleware_module
     assert "allow_origin_regex=settings.cors_allow_origin_regex" in middleware_module

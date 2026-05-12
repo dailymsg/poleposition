@@ -14,6 +14,10 @@ def run(args: list[str]) -> None:
         print(USAGE)
         raise SystemExit(1)
 
+    if args[1].startswith("-"):
+        print(USAGE)
+        raise SystemExit(1)
+
     message = args[1].strip()
     if not message:
         print(USAGE)

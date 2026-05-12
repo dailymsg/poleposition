@@ -81,6 +81,9 @@ def remove_module(
         )
         and _is_generated_llm_scaffold_pristine(project_root, package_root, package_name)
     )
+    include_migration_next_step = (
+        template_contract.update_db_models and (package_root / "db").exists()
+    )
 
     if custom_changes and not force and not trace:
         raise RuntimeError(_custom_changes_message(module_name, custom_changes))
@@ -115,7 +118,9 @@ def remove_module(
                     )
                 )
             ),
-            next_steps=_remove_next_steps(),
+            next_steps=_remove_next_steps(
+                include_migration_note=include_migration_next_step,
+            ),
             trace=True,
             force=force,
             custom_changes=tuple(custom_changes),
@@ -155,7 +160,9 @@ def remove_module(
         package_root=package_root,
         removed_paths=tuple(dict.fromkeys(removed_paths)),
         updated_files=tuple(dict.fromkeys(updated_files)),
-        next_steps=_remove_next_steps(),
+        next_steps=_remove_next_steps(
+            include_migration_note=include_migration_next_step,
+        ),
         force=force,
         custom_changes=tuple(custom_changes),
     )
@@ -362,11 +369,13 @@ def _would_remove_lines_by_prefix(path: Path, prefixes: list[str]) -> bool:
     )
 
 
-def _remove_next_steps() -> tuple[str, ...]:
-    return (
-        "Run `polepos check`",
-        "Create a migration if removing the module also removes database tables",
-    )
+def _remove_next_steps(*, include_migration_note: bool) -> tuple[str, ...]:
+    steps = ["Run `polepos check`"]
+    if include_migration_note:
+        steps.append(
+            "Create a migration if removing the module also removes database tables"
+        )
+    return tuple(steps)
 
 
 def _detect_module_contract(
@@ -801,6 +810,8 @@ def _is_generated_llm_scaffold_pristine(
         return False
 
     for relative_path, expected_content in expected_files.items():
+        if relative_path == "integrations/__init__.py":
+            continue
         path = package_root / relative_path
         if not path.is_file():
             return False

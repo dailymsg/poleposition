@@ -55,6 +55,9 @@ def test_remove_standard_module_cleans_generated_wiring(tmp_path: Path):
     assert result.returncode == 0
     assert "Removed module: garage" in result.stdout
     assert "Template: standard" in result.stdout
+    assert "Create a migration if removing the module also removes database tables" in (
+        result.stdout
+    )
 
     package_root = project_root / "src" / "myapp"
     assert not (package_root / "modules" / "garage").exists()
@@ -191,6 +194,7 @@ def test_remove_api_only_module_does_not_require_model_wiring(tmp_path: Path):
 
     assert result.returncode == 0
     assert "Template: api-only" in result.stdout
+    assert "Create a migration" not in result.stdout
 
     package_root = project_root / "src" / "myapp"
     assert not (package_root / "modules" / "webhooks").exists()
@@ -231,17 +235,63 @@ def test_remove_last_ai_prompt_module_cleans_llm_shared_scaffold(tmp_path: Path)
     assert create_result.returncode == 0
 
     project_root = tmp_path / "myapp"
-    add_result = run_cli(project_root, "add", "module", "assistant", "--template", "ai-prompt")
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
     assert add_result.returncode == 0
 
     result = run_cli(project_root, "remove", "module", "assistant")
 
     assert result.returncode == 0
     assert "Template: ai-prompt" in result.stdout
+    assert "Create a migration" not in result.stdout
 
     package_root = project_root / "src" / "myapp"
     assert not (package_root / "modules" / "assistant").exists()
     assert not (package_root / "integrations" / "llm").exists()
+    assert "llm_provider" not in (package_root / "settings.py").read_text(
+        encoding="utf-8"
+    )
+    assert "LLM_PROVIDER" not in (project_root / ".env.example").read_text(
+        encoding="utf-8"
+    )
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
+def test_remove_last_ai_prompt_module_cleans_llm_scaffold_with_other_integrations(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    kafka_result = run_cli(project_root, "add", "integration", "kafka")
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
+    assert kafka_result.returncode == 0
+    assert add_result.returncode == 0
+
+    result = run_cli(project_root, "remove", "module", "assistant")
+
+    assert result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    assert not (package_root / "modules" / "assistant").exists()
+    assert not (package_root / "integrations" / "llm").exists()
+    assert (package_root / "integrations" / "kafka").exists()
     assert "llm_provider" not in (package_root / "settings.py").read_text(
         encoding="utf-8"
     )
