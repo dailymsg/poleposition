@@ -677,6 +677,7 @@ def test_generated_gitignore_ignores_bytecode_artifacts(tmp_path: Path):
     assert "__pycache__/" in gitignore
     assert "*.pyc" in gitignore
     assert "*.egg-info/" in gitignore
+    assert ".env" in gitignore
 
 
 def test_generated_env_example_is_safe_to_copy(tmp_path: Path):
