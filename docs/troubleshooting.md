@@ -50,6 +50,36 @@ polepos check
 If your team intentionally owns that file manually, treat the failure as
 documented drift from the PolePosition lifecycle contract.
 
+## What User Changes Should I Avoid?
+
+You can edit normal FastAPI application code freely, especially code inside a
+generated module. Avoid changing the files and markers that PolePosition uses
+as lifecycle insertion points unless you intend to manage that surface manually.
+
+Do not remove or rename `# polepos:*` marker comments in:
+
+- `src/<package>/api/router.py`
+- `src/<package>/db/models.py`
+- `src/<package>/modules/__init__.py`
+- `src/<package>/settings.py`
+- `.env.example`
+
+Avoid manually rewriting generated router includes, model imports, module
+exports, integration settings, or integration env examples into a different
+shape. If you need custom behavior, add code around the managed block instead
+of replacing the managed block itself.
+
+Also avoid deleting generated module directories by hand. Prefer:
+
+```bash
+polepos remove module <name>
+polepos check
+```
+
+If the directory was already deleted manually, rerun
+`polepos remove module <name>` so PolePosition can clean remaining generated
+wiring and tests.
+
 ## `polepos add module` Fails Before Writing Files
 
 The command validates the project layout before it writes generated files. This

@@ -59,6 +59,50 @@ It does not connect to the database and does not verify whether a removed
 module's table still exists. Schema cleanup remains an Alembic migration
 decision.
 
+## Safe Customization Boundaries
+
+PolePosition projects are normal FastAPI projects, so users can and should edit
+their application code. The important boundary is the lifecycle contract used by
+`polepos add module`, `polepos remove module`, `polepos add integration ...`,
+`polepos db ...`, and `polepos check`.
+
+Safe customization examples:
+
+- edit generated module `model.py`, `schemas.py`, `repository.py`,
+  `services/<module>_service.py`, and `router.py` for the real domain
+- add new route handlers inside an existing module router
+- add custom helper modules under `src/<package>/`
+- add reviewed Alembic revisions under `migrations/versions/`
+- change runtime values in `.env`
+- add application tests under `tests/`
+
+Avoid these changes unless the team intentionally opts out of PolePosition
+lifecycle management for that file:
+
+- removing or renaming `# polepos:*` managed marker comments
+- manually rewriting managed imports, router includes, model imports, or module
+  exports into a shape the CLI cannot recognize
+- deleting a generated module directory or generated tests by hand and leaving
+  router, model, export, or test references behind
+- moving or renaming generated core files such as `api/router.py`,
+  `db/models.py`, `settings.py`, `.env.example`, or Alembic files
+- adding a SQLAlchemy model without importing it through `db/models.py`
+- creating tables during FastAPI startup instead of using Alembic migrations
+- partially adding integration settings or `.env.example` values by hand while
+  relying on `polepos add integration ...` or `polepos check` to manage the same
+  integration later
+- editing `.env.example` as a secret store; put local secrets in `.env`
+
+If a module was already deleted manually, run
+`polepos remove module <name>` before making more structural edits. The command
+can clean generated wiring and tests that still reference the missing module.
+
+After any structural customization, run:
+
+```bash
+polepos check
+```
+
 ## What It Checks
 
 `polepos check` currently has three layers.

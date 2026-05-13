@@ -359,6 +359,28 @@ The checks are organized into three layers:
 See [Project Checks](docs/project-checks.md) for detailed user guidance and the
 agent-facing check contract.
 
+### Safe customization boundaries
+
+Generated projects are normal FastAPI projects. Edit module internals for the
+real domain: models, schemas, repositories, services, routers, migrations, and
+tests.
+
+Avoid changing the lifecycle contract unless the team intentionally owns that
+surface manually:
+
+* Do not remove or rename `# polepos:*` managed markers.
+* Do not rewrite managed router includes, model imports, module exports,
+  integration settings, or `.env.example` values into a shape the CLI cannot
+  recognize.
+* Do not delete generated module directories by hand. Use
+  `polepos remove module <name>` so generated wiring and tests are cleaned too.
+* Do not move generated core files such as `api/router.py`, `db/models.py`,
+  `settings.py`, `.env.example`, or Alembic files.
+* Do not create database tables during app startup; keep schema changes in
+  Alembic migrations.
+
+After structural edits or merge-conflict resolution, run `polepos check`.
+
 ### Database commands
 
 ```bash

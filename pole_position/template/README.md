@@ -62,6 +62,32 @@ module can define `@router.get("/")`, while
 
 {{module_database_removal_note}}
 
+## Safe Customization
+
+This is a normal FastAPI project, so edit module internals for your domain:
+models, schemas, repositories, services, routers, and tests.
+
+Avoid changing the PolePosition lifecycle contract unless you intend to manage
+that surface manually:
+
+* Do not remove or rename `# polepos:*` marker comments.
+* Do not rewrite managed router includes, model imports, or module exports into
+  a shape the CLI cannot recognize.
+* Do not delete generated module directories by hand; use
+  `polepos remove module <name>`.
+* Do not move generated core files such as `api/router.py`, `settings.py`,
+  `.env.example`, and database files such as `db/models.py` or Alembic files
+  when present.
+* If you add or use a database, do not create tables during app startup; use
+  migrations.
+* Keep local secrets in `.env`, not `.env.example`.
+
+After structural changes, run:
+
+```bash
+{{no_bytecode_command_prefix}}polepos check
+```
+
 ## Runtime Configuration
 
 The generated project uses `run.py` as the preferred entrypoint:
