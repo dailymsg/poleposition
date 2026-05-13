@@ -51,6 +51,7 @@ Use PolePosition commands for generated module lifecycle work:
 {{no_bytecode_command_prefix}}{{module_lifecycle_add_command}}
 {{no_bytecode_command_prefix}}polepos remove module garage
 {{no_bytecode_command_prefix}}polepos remove module garage --trace
+{{no_bytecode_command_prefix}}polepos remove module garage --wiring-only
 {{no_bytecode_command_prefix}}polepos check
 ```
 
@@ -61,6 +62,10 @@ module can define `@router.get("/")`, while
 `GET /api/v1/garage/`.
 
 {{module_database_removal_note}}
+
+Use `polepos remove module <name> --wiring-only` when you want to keep a
+customized module directory but remove generated exports, router wiring,
+standard-module model imports when present, and generated tests.
 
 ## Safe Customization
 

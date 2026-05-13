@@ -157,6 +157,18 @@ It stops before deleting a module directory that appears to contain custom
 changes unless `--force` is used. Use `--trace` to preview the planned removals
 and updates without changing files.
 
+If you want to keep a customized module directory but detach its generated
+PolePosition wiring, use:
+
+```bash
+polepos remove module customers --wiring-only
+```
+
+This removes module exports, router wiring, standard-module model imports, and
+generated tests. It does not delete the module directory or drop database
+tables. Move, delete, or rewire the preserved module directory before expecting
+`polepos check` to pass.
+
 It does not:
 
 - connect to the database

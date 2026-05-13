@@ -1,4 +1,5 @@
 import ast
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -141,6 +142,14 @@ ALEMBIC_PATHS = [
     "migrations/versions",
 ]
 
+
+@dataclass(frozen=True)
+class ProjectCheckIssue:
+    code: str
+    message: str
+    remediation: str
+
+
 @dataclass(frozen=True)
 class ProjectCheckResult:
     project_root: Path
@@ -154,6 +163,211 @@ class ProjectCheckResult:
     @property
     def passed(self) -> bool:
         return not self.problems
+
+    @property
+    def issues(self) -> tuple[ProjectCheckIssue, ...]:
+        return tuple(describe_project_check_issue(problem) for problem in self.problems)
+
+
+def describe_project_check_issue(problem: str) -> ProjectCheckIssue:
+    return ProjectCheckIssue(
+        code=_project_check_issue_code(problem),
+        message=problem,
+        remediation=_project_check_remediation(problem),
+    )
+
+
+def _project_check_issue_code(problem: str) -> str:
+    if problem.startswith("Project identity file is missing"):
+        return "PPCHK001"
+    if problem.startswith("Project src directory is missing"):
+        return "PPCHK002"
+    if problem.startswith("Application package is not under project src directory"):
+        return "PPCHK003"
+    if problem.startswith("Application package name is not a valid Python identifier"):
+        return "PPCHK004"
+    if problem.startswith("Required generated path is missing"):
+        return "PPCHK010"
+    if problem.startswith("Required Alembic path is missing"):
+        return "PPCHK011"
+    if problem.startswith("Database-free project contains database-specific content"):
+        return "PPCHK012"
+    if problem.startswith("Managed file is missing"):
+        return "PPCHK020"
+    if problem.startswith("Managed marker"):
+        return "PPCHK021"
+    if problem.startswith(
+        "Lifecycle module directory is not a valid Python identifier"
+    ):
+        return "PPCHK030"
+    if " is missing generated path:" in problem:
+        return "PPCHK031"
+    if " is missing module export " in problem:
+        return "PPCHK032"
+    if " is missing router import " in problem:
+        return "PPCHK033"
+    if " is missing API router include " in problem:
+        return "PPCHK034"
+    if " is missing model import " in problem:
+        return "PPCHK035"
+    if " is missing integration test:" in problem:
+        return "PPCHK036"
+    if " is missing unit test:" in problem:
+        return "PPCHK037"
+    if problem.startswith("Could not parse Python file for lifecycle checks"):
+        return "PPCHK038"
+    if problem.startswith("Integration ") and " is missing generated file:" in problem:
+        return "PPCHK040"
+    if problem.startswith("Integration ") and " is missing dependency " in problem:
+        return "PPCHK041"
+    if problem.startswith("Integration ") and " is missing setting " in problem:
+        return "PPCHK042"
+    if problem.startswith("Integration ") and " is missing env value " in problem:
+        return "PPCHK043"
+    return "PPCHK000"
+
+
+def _project_check_remediation(problem: str) -> str:
+    module_name = _extract_lifecycle_module_name(problem)
+    integration_name = _extract_integration_name(problem)
+
+    if problem.startswith("Project identity file is missing"):
+        return (
+            "Restore pyproject.toml or run the command from the generated "
+            "project root."
+        )
+    if problem.startswith("Project src directory is missing"):
+        return (
+            "Restore the generated src/ directory or run the command from the "
+            "project root."
+        )
+    if problem.startswith("Application package is not under project src directory"):
+        return (
+            "Move the application package back under src/ or document the project "
+            "as manually managed."
+        )
+    if problem.startswith("Application package name is not a valid Python identifier"):
+        return "Rename the package directory to a valid Python identifier."
+    if problem.startswith("Required generated path is missing"):
+        return (
+            "Restore the generated path, or intentionally opt out and document "
+            "the drift."
+        )
+    if problem.startswith("Required Alembic path is missing"):
+        return (
+            "Restore Alembic files or regenerate the migration setup before using "
+            "polepos db commands."
+        )
+    if problem.startswith("Database-free project contains database-specific content"):
+        return (
+            "Remove database-specific remnants or add a database layer "
+            "intentionally."
+        )
+    if problem.startswith("Managed file is missing"):
+        return (
+            "Restore the managed file before running PolePosition lifecycle "
+            "commands."
+        )
+    if problem.startswith("Managed marker"):
+        return "Restore the listed # polepos marker or manage that file manually."
+    if problem.startswith(
+        "Lifecycle module directory is not a valid Python identifier"
+    ):
+        return "Rename the module directory to a valid Python identifier."
+    if " is missing generated path:" in problem:
+        return _module_fix(
+            module_name,
+            "Restore the missing generated module file, or detach/remove the module.",
+        )
+    if " is missing module export " in problem:
+        return _module_fix(
+            module_name,
+            "Restore the module export, or clean the detached module with "
+            "wiring-only removal.",
+        )
+    if " is missing router import " in problem:
+        return _module_fix(
+            module_name,
+            "Restore the router import, or clean the detached module with "
+            "wiring-only removal.",
+        )
+    if " is missing API router include " in problem:
+        return _module_fix(
+            module_name,
+            "Restore the router include, or clean the detached module with "
+            "wiring-only removal.",
+        )
+    if " is missing model import " in problem:
+        return _module_fix(
+            module_name,
+            "Restore the db/models.py import so Alembic can see the model.",
+        )
+    if " is missing integration test:" in problem:
+        return _module_fix(
+            module_name,
+            "Restore the generated integration test or clean detached test remnants.",
+        )
+    if " is missing unit test:" in problem:
+        return _module_fix(
+            module_name,
+            "Restore the generated unit test or clean detached test remnants.",
+        )
+    if problem.startswith("Could not parse Python file for lifecycle checks"):
+        return "Fix the Python syntax error before rerunning polepos check."
+    if problem.startswith("Integration ") and " is missing generated file:" in problem:
+        return _integration_fix(
+            integration_name,
+            "Restore the generated integration file or remove the integration "
+            "completely.",
+        )
+    if problem.startswith("Integration ") and " is missing dependency " in problem:
+        return _integration_fix(
+            integration_name,
+            "Restore the dependency in pyproject.toml or remove the integration "
+            "scaffold.",
+        )
+    if problem.startswith("Integration ") and " is missing setting " in problem:
+        return _integration_fix(
+            integration_name,
+            "Restore the generated settings.py value or remove the integration "
+            "scaffold.",
+        )
+    if problem.startswith("Integration ") and " is missing env value " in problem:
+        return _integration_fix(
+            integration_name,
+            "Restore the .env.example value or remove the integration scaffold.",
+        )
+
+    return "Review the reported drift and restore the PolePosition-managed contract."
+
+
+def _extract_lifecycle_module_name(problem: str) -> str | None:
+    match = re.search(r"Lifecycle module '([^']+)'", problem)
+    return match.group(1) if match else None
+
+
+def _extract_integration_name(problem: str) -> str | None:
+    match = re.search(r"Integration '([^']+)'", problem)
+    return match.group(1) if match else None
+
+
+def _module_fix(module_name: str | None, message: str) -> str:
+    if module_name is None:
+        return message
+    return (
+        f"{message} If '{module_name}' was intentionally detached, run "
+        f"`polepos remove module {module_name} --wiring-only`; if it was already "
+        "detached, move, delete, or rewire the module directory."
+    )
+
+
+def _integration_fix(integration_name: str | None, message: str) -> str:
+    if integration_name is None:
+        return message
+    return (
+        f"{message} Re-run `polepos add integration {integration_name}` only "
+        "after cleanup."
+    )
 
 
 def check_project(cwd: Path | None = None) -> ProjectCheckResult:

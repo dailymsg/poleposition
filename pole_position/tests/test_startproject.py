@@ -346,6 +346,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "This file is for coding agents working in this PolePosition-generated" in agents_guide
     assert "`polepos add module <name>`" in agents_guide
     assert "`polepos remove module <name>`" in agents_guide
+    assert "`polepos remove module <name> --wiring-only`" in agents_guide
     assert "`polepos check`" in agents_guide
     assert "{{project" not in agents_guide
     assert "src/demo_app/api/router.py" in readme
@@ -353,6 +354,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "GET /api/v1/garage/" in readme
     assert "If the module directory was already deleted manually" in readme
     assert "router, model, and export wiring" in readme
+    assert "polepos remove module <name> --wiring-only" in readme
     assert "{{project" not in readme
     assert "CORS_ENABLED=true" in env_example
     assert 'CORS_ALLOW_ORIGINS=["http://localhost:3000"' in env_example

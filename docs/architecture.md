@@ -246,6 +246,12 @@ the project is not left partially cleaned. If module files or generated tests
 appear to contain custom changes, it also stops unless `--force` is used.
 `--trace` reports the planned removals and updates without mutating files.
 
+`--wiring-only` is the escape hatch for customized module directories. It
+removes PolePosition-managed exports, router wiring, standard-module model
+imports, and generated tests, but preserves the module directory and shared
+integration scaffolds. This lets users detach generated wiring without deleting
+custom code.
+
 ## `add integration` Architecture
 
 `polepos add integration ...` grows an existing project with external system

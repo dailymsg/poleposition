@@ -35,6 +35,7 @@ class RemovedModuleResult:
     next_steps: tuple[str, ...]
     trace: bool = False
     force: bool = False
+    wiring_only: bool = False
     custom_changes: tuple[str, ...] = ()
     blocked_by_custom_changes: bool = False
 
@@ -49,6 +50,7 @@ def remove_module(
     *,
     force: bool = False,
     trace: bool = False,
+    wiring_only: bool = False,
 ) -> RemovedModuleResult:
     project_root = find_project_root(cwd)
     package_root = find_package_root(cwd)
@@ -65,15 +67,25 @@ def remove_module(
         template_contract=template_contract,
     )
 
-    custom_changes = _detect_custom_changes(
-        project_root=project_root,
-        package_root=package_root,
-        module_root=module_root,
-        module_name=module_name,
-        template_contract=template_contract,
+    custom_changes = (
+        _detect_custom_test_changes(
+            project_root=project_root,
+            package_root=package_root,
+            module_name=module_name,
+            template_contract=template_contract,
+        )
+        if wiring_only
+        else _detect_custom_changes(
+            project_root=project_root,
+            package_root=package_root,
+            module_root=module_root,
+            module_name=module_name,
+            template_contract=template_contract,
+        )
     )
     remove_llm_shared = (
-        template_contract.ensure_llm_settings
+        not wiring_only
+        and template_contract.ensure_llm_settings
         and not _has_remaining_ai_prompt_module(
             project_root=project_root,
             modules_root=modules_root,
@@ -86,7 +98,13 @@ def remove_module(
     )
 
     if custom_changes and not force and not trace:
-        raise RuntimeError(_custom_changes_message(module_name, custom_changes))
+        raise RuntimeError(
+            _custom_changes_message(
+                module_name,
+                custom_changes,
+                wiring_only=wiring_only,
+            )
+        )
 
     if trace:
         return RemovedModuleResult(
@@ -103,6 +121,7 @@ def remove_module(
                         module_name=module_name,
                         template_contract=template_contract,
                         remove_llm_shared=remove_llm_shared,
+                        include_module_directory=not wiring_only,
                     )
                 )
             ),
@@ -120,9 +139,12 @@ def remove_module(
             ),
             next_steps=_remove_next_steps(
                 include_migration_note=include_migration_next_step,
+                wiring_only=wiring_only,
+                module_directory_preserved=wiring_only and module_root.exists(),
             ),
             trace=True,
             force=force,
+            wiring_only=wiring_only,
             custom_changes=tuple(custom_changes),
             blocked_by_custom_changes=bool(custom_changes and not force),
         )
@@ -143,9 +165,11 @@ def remove_module(
         if _remove_line(models_path, _model_import_line(package_name, module_name)):
             updated_files.append(models_path)
 
-    removed_paths.extend(_remove_generated_tests(project_root, module_name, template_contract))
+    removed_paths.extend(
+        _remove_generated_tests(project_root, module_name, template_contract)
+    )
 
-    if module_root.exists():
+    if module_root.exists() and not wiring_only:
         shutil.rmtree(module_root)
         removed_paths.append(module_root)
 
@@ -162,8 +186,11 @@ def remove_module(
         updated_files=tuple(dict.fromkeys(updated_files)),
         next_steps=_remove_next_steps(
             include_migration_note=include_migration_next_step,
+            wiring_only=wiring_only,
+            module_directory_preserved=wiring_only and module_root.exists(),
         ),
         force=force,
+        wiring_only=wiring_only,
         custom_changes=tuple(custom_changes),
     )
 
@@ -216,6 +243,35 @@ def _detect_custom_changes(
     return changes
 
 
+def _detect_custom_test_changes(
+    *,
+    project_root: Path,
+    package_root: Path,
+    module_name: str,
+    template_contract: ModuleTemplateContract,
+) -> list[str]:
+    template = build_module_template(
+        template=template_contract.name,
+        package_name=package_root.name,
+        module_name=module_name,
+    )
+    changes: list[str] = []
+    integration_test_path = (
+        project_root / "tests" / "integration" / template.integration_test_name
+    )
+    unit_test_path = project_root / "tests" / "unit" / template.unit_test_name
+    expected_tests = {
+        integration_test_path: template.integration_test_content,
+        unit_test_path: template.unit_test_content,
+    }
+
+    for path, expected_content in expected_tests.items():
+        if path.is_file() and path.read_text(encoding="utf-8") != expected_content:
+            changes.append(f"Modified generated test file: {path}")
+
+    return changes
+
+
 def _is_ignored_generated_artifact(relative_path: Path) -> bool:
     return (
         any(part in PYTHON_CACHE_DIRECTORIES for part in relative_path.parts)
@@ -223,8 +279,22 @@ def _is_ignored_generated_artifact(relative_path: Path) -> bool:
     )
 
 
-def _custom_changes_message(module_name: str, custom_changes: list[str]) -> str:
+def _custom_changes_message(
+    module_name: str,
+    custom_changes: list[str],
+    *,
+    wiring_only: bool = False,
+) -> str:
     formatted_changes = "\n".join(f"- {change}" for change in custom_changes)
+    if wiring_only:
+        return (
+            "Cannot clean module wiring because generated tests appear to contain "
+            "custom changes:\n"
+            f"{formatted_changes}\n"
+            f"Use `polepos remove module {module_name} --wiring-only --force` "
+            "to remove those tests anyway."
+        )
+
     return (
         "Cannot remove module because it appears to contain custom changes:\n"
         f"{formatted_changes}\n"
@@ -240,6 +310,7 @@ def _planned_removed_paths(
     module_name: str,
     template_contract: ModuleTemplateContract,
     remove_llm_shared: bool,
+    include_module_directory: bool = True,
 ) -> list[Path]:
     removed_paths = [
         path
@@ -247,7 +318,7 @@ def _planned_removed_paths(
         if path.exists()
     ]
 
-    if module_root.exists():
+    if module_root.exists() and include_module_directory:
         removed_paths.append(module_root)
 
     if remove_llm_shared:
@@ -369,8 +440,19 @@ def _would_remove_lines_by_prefix(path: Path, prefixes: list[str]) -> bool:
     )
 
 
-def _remove_next_steps(*, include_migration_note: bool) -> tuple[str, ...]:
-    steps = ["Run `polepos check`"]
+def _remove_next_steps(
+    *,
+    include_migration_note: bool,
+    wiring_only: bool = False,
+    module_directory_preserved: bool = False,
+) -> tuple[str, ...]:
+    steps: list[str] = []
+    if wiring_only and module_directory_preserved:
+        steps.append(
+            "Move, delete, or rewire the preserved module directory before "
+            "expecting `polepos check` to pass"
+        )
+    steps.append("Run `polepos check`")
     if include_migration_note:
         steps.append(
             "Create a migration if removing the module also removes database tables"

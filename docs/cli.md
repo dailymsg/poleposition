@@ -64,6 +64,7 @@ polepos remove --help
 polepos remove module customers
 polepos remove module customers --trace
 polepos remove module customers --force
+polepos remove module customers --wiring-only
 ```
 
 `remove module` is the counterpart to `add module`. It removes the module
@@ -78,6 +79,15 @@ module files or generated tests appear to contain custom changes. Use `--trace`
 to preview the planned removals and updates without changing files. Use
 `--force` only when you intentionally want to remove a customized module
 directory.
+
+Use `--wiring-only` when a module directory contains custom code you want to
+keep, but the PolePosition-managed references should be removed. This mode
+cleans module exports, API router wiring, standard-module model imports, and
+generated tests. It does not delete the module directory or shared integration
+scaffold.
+
+After `--wiring-only`, either move/delete the preserved module directory or
+restore explicit wiring before expecting `polepos check` to pass.
 
 The command is intentionally file-based. It does not connect to the database,
 create a migration, drop tables, or edit migration history. If the removed
@@ -120,6 +130,9 @@ polepos check
 `check` validates generated structure, managed markers, Alembic configuration,
 added module wiring, generated tests, and supported integration scaffolds. It
 works from nested directories inside a PolePosition project.
+
+When it fails, each issue includes a `PPCHK` code and a `Fix:` hint so humans,
+coding agents, and CI logs can point to the same remediation.
 
 PolePosition does not currently provide a separate `polepos validate` command.
 Project contract validation is handled by `polepos check`.

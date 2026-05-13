@@ -41,6 +41,7 @@ def test_remove_module_shows_usage_without_name(tmp_path: Path):
     assert "Usage: polepos remove module <module_name>" in result.stdout
     assert "--force" in result.stdout
     assert "--trace" in result.stdout
+    assert "--wiring-only" in result.stdout
 
 
 def test_remove_standard_module_cleans_generated_wiring(tmp_path: Path):
@@ -201,6 +202,81 @@ def test_remove_module_rejects_custom_module_files_without_force(tmp_path: Path)
     assert custom_file.exists()
     assert (project_root / "tests" / "integration" / "test_garage.py").exists()
     assert "garage_router" in (
+        package_root / "api" / "router.py"
+    ).read_text(encoding="utf-8")
+
+
+def test_remove_module_wiring_only_preserves_custom_module_files(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    custom_file = package_root / "modules" / "garage" / "custom_logic.py"
+    custom_file.write_text("CUSTOM_VALUE = 1\n", encoding="utf-8")
+
+    result = run_cli(project_root, "remove", "module", "garage", "--wiring-only")
+
+    assert result.returncode == 0
+    assert "Cleaned module wiring: garage" in result.stdout
+    assert "Move, delete, or rewire the preserved module directory" in result.stdout
+    assert (package_root / "modules" / "garage").exists()
+    assert custom_file.exists()
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+    assert not (project_root / "tests" / "unit" / "test_garage_service.py").exists()
+
+    assert "garage_router" not in (
+        package_root / "api" / "router.py"
+    ).read_text(encoding="utf-8")
+    assert "modules.garage" not in (
+        package_root / "db" / "models.py"
+    ).read_text(encoding="utf-8")
+    assert '"garage"' not in (
+        package_root / "modules" / "__init__.py"
+    ).read_text(encoding="utf-8")
+
+
+def test_remove_module_wiring_only_rejects_custom_tests_without_force(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    unit_test = project_root / "tests" / "unit" / "test_garage_service.py"
+    unit_test.write_text("def test_customized():\n    assert True\n", encoding="utf-8")
+
+    result = run_cli(project_root, "remove", "module", "garage", "--wiring-only")
+
+    assert result.returncode != 0
+    assert "Cannot clean module wiring" in result.stdout
+    assert "Modified generated test file" in result.stdout
+    assert "--wiring-only --force" in result.stdout
+    assert unit_test.exists()
+    assert "garage_router" in (
+        package_root / "api" / "router.py"
+    ).read_text(encoding="utf-8")
+
+    force_result = run_cli(
+        project_root,
+        "remove",
+        "module",
+        "garage",
+        "--wiring-only",
+        "--force",
+    )
+
+    assert force_result.returncode == 0
+    assert not unit_test.exists()
+    assert (package_root / "modules" / "garage").exists()
+    assert "garage_router" not in (
         package_root / "api" / "router.py"
     ).read_text(encoding="utf-8")
 

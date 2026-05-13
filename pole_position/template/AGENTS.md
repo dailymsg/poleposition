@@ -12,6 +12,7 @@ Prefer these lifecycle commands when they fit the request:
 - `polepos add module <name> --api-only`
 - `polepos add module <name> --template ai-prompt`
 - `polepos remove module <name>`
+- `polepos remove module <name> --wiring-only`
 - `polepos add integration kafka`
 - `polepos add integration rabbitmq`
 - `polepos check`

@@ -47,7 +47,8 @@ PolePosition project check failed.
 Project root: /path/to/myapp
 Package: myapp
 Issues:
-  - Lifecycle module 'garage' is missing API router include in ...
+  - [PPCHK034] Lifecycle module 'garage' is missing API router include in ...
+    Fix: Restore the router include, or clean the detached module with ...
 ```
 
 The command is intentionally diagnostic. It does not rewrite files, install
@@ -254,13 +255,30 @@ adapters are provider-agnostic stubs.
 
 ## How To Read Issues
 
-Issue text names the layer by implication:
+Each issue includes a stable code, the problem text, and a short remediation
+hint:
+
+```text
+- [PPCHK021] Managed marker '# polepos:router-imports' is missing in ...
+  Fix: Restore the listed # polepos marker or manage that file manually.
+```
+
+Issue text still names the layer by implication:
 
 - `Required generated path is missing`: core generated structure drift
 - `Required Alembic path is missing`: migration setup drift
 - `Managed marker ... is missing`: a managed insertion point was removed
 - `Lifecycle module ...`: added module wiring drift
 - `Integration ...`: opt-in integration wiring drift
+
+Issue codes are intended to stay stable enough for humans, coding agents, CI
+logs, and future machine-readable output. The current code families are:
+
+- `PPCHK00x`: project identity
+- `PPCHK01x`: generated structure, Alembic, and database-mode drift
+- `PPCHK02x`: managed file and marker drift
+- `PPCHK03x`: module lifecycle drift
+- `PPCHK04x`: integration drift
 
 Fix the project by restoring the expected file, marker, import, dependency,
 setting, or env value. If a team intentionally opts out of PolePosition-managed

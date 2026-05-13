@@ -106,6 +106,9 @@ def build_context(
             "that appears to contain custom changes. Use `--trace` to preview the planned\n"
             "removals and updates without changing files, and use `--force` only when you\n"
             "intentionally want to remove a customized module directory.\n\n"
+            "Use `polepos remove module <name> --wiring-only` to clean generated tests and\n"
+            "managed router, model, and export wiring while preserving customized module\n"
+            "files.\n\n"
             "If the module directory was already deleted manually, rerun\n"
             "`polepos remove module <name>` to clean remaining generated tests and managed\n"
             "router, model, and export wiring.\n\n"
@@ -168,6 +171,8 @@ def build_context(
         module_database_removal_note = (
             "\n`polepos remove module` removes generated code, generated tests, router wiring,\n"
             "and module exports. This project has no generated database model wiring.\n\n"
+            "Use `polepos remove module <name> --wiring-only` to clean generated tests and\n"
+            "managed router/export wiring while preserving customized module files.\n\n"
             "If the module directory was already deleted manually, rerun\n"
             "`polepos remove module <name>` to clean remaining generated tests and managed\n"
             "router/export wiring.\n"

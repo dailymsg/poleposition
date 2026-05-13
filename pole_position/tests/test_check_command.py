@@ -181,8 +181,36 @@ def test_check_reports_missing_managed_marker(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "PolePosition project check failed." in result.stdout
+    assert "[PPCHK021]" in result.stdout
     assert "Managed marker '# polepos:router-imports' is missing" in result.stdout
+    assert "Fix: Restore the listed # polepos marker" in result.stdout
     assert "api/router.py" in result.stdout
+
+
+def test_check_reports_issue_codes_and_remediation_for_lifecycle_drift(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_content = router_path.read_text(encoding="utf-8").replace(
+        'api_router.include_router(garage_router, prefix="/garage", tags=["garage"])',
+        "# garage router is wired manually",
+    )
+    router_path.write_text(router_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK034]" in result.stdout
+    assert "Lifecycle module 'garage' is missing API router include" in result.stdout
+    assert "Fix: Restore the router include" in result.stdout
+    assert "polepos remove module garage --wiring-only" in result.stdout
 
 
 def test_check_reports_missing_core_path_after_loose_project_detection(tmp_path: Path) -> None:

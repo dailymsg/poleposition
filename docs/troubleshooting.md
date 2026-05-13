@@ -105,6 +105,17 @@ custom changes. Run `polepos remove module <name> --trace` to see what would be
 removed or updated without changing files. Use `--force` only when deleting the
 customized module directory is intentional.
 
+If you only want to clean generated wiring while preserving customized module
+files, run:
+
+```bash
+polepos remove module <name> --wiring-only
+```
+
+This removes managed exports, router wiring, standard-module model imports, and
+generated tests. It keeps the module directory. Move, delete, or rewire that
+directory before expecting `polepos check` to pass.
+
 Run:
 
 ```bash

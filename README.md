@@ -292,6 +292,7 @@ its own prefix.
 polepos remove module garage
 polepos remove module garage --trace
 polepos remove module garage --force
+polepos remove module garage --wiring-only
 ```
 
 `remove module` deletes the module directory and generated tests, then removes
@@ -307,6 +308,13 @@ router, model, and export wiring.
 Use `--trace` to preview the files that would be removed or updated without
 changing the project. Use `--force` only when you intentionally want to remove a
 customized module directory.
+
+Use `--wiring-only` when you want to keep a customized module directory but
+remove PolePosition-managed references to it. This mode cleans module exports,
+router wiring, standard-module model imports, and generated tests. It does not
+delete the module directory or shared integration scaffold. If the preserved
+directory should no longer be part of the PolePosition lifecycle, move, delete,
+or rewire it before expecting `polepos check` to pass.
 
 The command does not change the live database. If a removed standard module had
 a table and you want that table removed too, create and review a migration after
@@ -349,6 +357,9 @@ Use it after adding modules or integrations, after resolving merge conflicts in
 managed files, and before handing a project to another teammate or coding
 agent. The command is read-only: it reports drift but does not rewrite files,
 install dependencies, run migrations, or contact external services.
+
+Failed checks include stable `PPCHK` issue codes and `Fix:` hints so humans,
+coding agents, and CI logs can refer to the same remediation.
 
 The checks are organized into three layers:
 
@@ -558,7 +569,7 @@ polepos help
 polepos start <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos startproject <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos add module <name>
-polepos remove module <name> [--force] [--trace]
+polepos remove module <name> [--force] [--trace] [--wiring-only]
 polepos add integration kafka
 polepos add integration rabbitmq
 polepos check

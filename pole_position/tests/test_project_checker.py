@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pole_position.cli.services.project_checker import (
     ProjectCheckResult,
+    describe_project_check_issue,
     _check_alembic_config,
     _check_database_free_remnants,
     _check_generated_structure,
@@ -26,6 +27,18 @@ def test_project_check_result_properties(tmp_path: Path) -> None:
     assert result.package_name == "shop_api"
     assert result.passed is True
     assert failed_result.passed is False
+    assert failed_result.issues[0].code == "PPCHK000"
+    assert failed_result.issues[0].message == "broken"
+
+
+def test_project_check_issue_describes_managed_marker_remediation() -> None:
+    issue = describe_project_check_issue(
+        "Managed marker '# polepos:router-imports' is missing in api/router.py"
+    )
+
+    assert issue.code == "PPCHK021"
+    assert issue.message.startswith("Managed marker")
+    assert "Restore the listed # polepos marker" in issue.remediation
 
 
 def test_project_identity_check_reports_missing_identity_file(tmp_path: Path) -> None:

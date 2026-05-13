@@ -27,8 +27,9 @@ def run(args: list[str]) -> None:
         print(f"Project root: {result.project_root}")
         print(f"Package: {result.package_name}")
         print("Issues:")
-        for problem in result.problems:
-            print(f"  - {problem}")
+        for issue in result.issues:
+            print(f"  - [{issue.code}] {issue.message}")
+            print(f"    Fix: {issue.remediation}")
         raise SystemExit(1)
 
     print("PolePosition project check passed.")

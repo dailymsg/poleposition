@@ -7,7 +7,10 @@ from pole_position.cli.services.project_name import normalize_package_name
 from pole_position.cli.services.project_name import validate_project_name
 
 
-USAGE = "Usage: polepos remove module <module_name> [--force] [--trace]"
+USAGE = (
+    "Usage: polepos remove module <module_name> "
+    "[--force] [--trace] [--wiring-only]"
+)
 
 
 def _print_usage() -> None:
@@ -15,6 +18,10 @@ def _print_usage() -> None:
     print("Options:")
     print("  --force    Remove module files even when custom changes are detected.")
     print("  --trace    Show planned removals and updates without changing files.")
+    print("  --wiring-only")
+    print(
+        "             Remove managed wiring and generated tests, but keep module files."
+    )
 
 
 def run(args: list[str]) -> None:
@@ -25,6 +32,7 @@ def run(args: list[str]) -> None:
     raw_name: str | None = None
     force = False
     trace = False
+    wiring_only = False
 
     for argument in args:
         if argument in {"-h", "--help"}:
@@ -37,6 +45,10 @@ def run(args: list[str]) -> None:
 
         if argument == "--trace":
             trace = True
+            continue
+
+        if argument == "--wiring-only":
+            wiring_only = True
             continue
 
         if argument.startswith("--"):
@@ -59,7 +71,12 @@ def run(args: list[str]) -> None:
     try:
         validate_project_name(raw_name)
         module_name = normalize_package_name(raw_name)
-        result = remove_module(module_name, force=force, trace=trace)
+        result = remove_module(
+            module_name,
+            force=force,
+            trace=trace,
+            wiring_only=wiring_only,
+        )
     except RuntimeError as exc:
         print(str(exc))
         raise SystemExit(1)
@@ -76,7 +93,10 @@ def _print_success(result: RemovedModuleResult) -> None:
         _print_trace(result)
         return
 
-    print(f"Removed module: {result.module_name}")
+    if result.wiring_only:
+        print(f"Cleaned module wiring: {result.module_name}")
+    else:
+        print(f"Removed module: {result.module_name}")
     print(f"Template: {result.template}")
 
     if result.removed_paths:
@@ -99,7 +119,10 @@ def _relative_path(result: RemovedModuleResult, path: Path) -> str:
 
 
 def _print_trace(result: RemovedModuleResult) -> None:
-    print(f"Removal trace: {result.module_name}")
+    if result.wiring_only:
+        print(f"Wiring-only removal trace: {result.module_name}")
+    else:
+        print(f"Removal trace: {result.module_name}")
     print(f"Template: {result.template}")
 
     if result.blocked_by_custom_changes:
