@@ -300,6 +300,10 @@ managed files. It stops before deleting files if the module wiring has drifted
 away from a managed layout, or if the module directory or generated tests appear
 to contain custom changes.
 
+If the module directory was already deleted manually, rerun
+`polepos remove module <name>` to clean remaining generated tests and managed
+router, model, and export wiring.
+
 Use `--trace` to preview the files that would be removed or updated without
 changing the project. Use `--force` only when you intentionally want to remove a
 customized module directory.

@@ -410,7 +410,15 @@ def _validate_remove_module_preflight(
     if module_name in STARTER_MODULES:
         problems.append(f"Starter module cannot be removed: {module_name}")
 
-    if not module_root.is_dir():
+    module_exists = module_root.is_dir()
+    has_remnants = _has_removable_module_remnants(
+        project_root=project_root,
+        package_root=package_root,
+        module_name=module_name,
+        template_contract=template_contract,
+    )
+
+    if not module_exists and not has_remnants:
         problems.append(f"Module does not exist: {module_name}")
 
     modules_init_path = package_root / "modules" / "__init__.py"
@@ -436,7 +444,7 @@ def _validate_remove_module_preflight(
         module_name=module_name,
     )
 
-    if template_contract.update_db_models:
+    if template_contract.update_db_models and (module_exists or models_path.is_file()):
         _collect_missing_marker(problems, models_path, MODEL_IMPORTS_MARKER)
         _collect_unsupported_reference(
             problems=problems,
@@ -452,6 +460,52 @@ def _validate_remove_module_preflight(
             "Cannot remove module because the project layout is not ready:\n"
             f"{formatted_problems}"
         )
+
+
+def _has_removable_module_remnants(
+    *,
+    project_root: Path,
+    package_root: Path,
+    module_name: str,
+    template_contract: ModuleTemplateContract,
+) -> bool:
+    package_name = package_root.name
+    modules_init_path = package_root / "modules" / "__init__.py"
+    router_path = package_root / "api" / "router.py"
+    models_path = package_root / "db" / "models.py"
+
+    if _line_exists(modules_init_path, _module_export_line(module_name)):
+        return True
+
+    if _has_router_remnant(router_path, package_name, module_name):
+        return True
+
+    if any(
+        path.exists()
+        for path in _generated_test_paths(project_root, module_name, template_contract)
+    ):
+        return True
+
+    return (
+        template_contract.update_db_models
+        and _line_exists(models_path, _model_import_line(package_name, module_name))
+    )
+
+
+def _has_router_remnant(path: Path, package_name: str, module_name: str) -> bool:
+    if not path.is_file():
+        return False
+
+    content = path.read_text(encoding="utf-8")
+    router_alias = f"{module_name}_router"
+    router_module = f"{package_name}.modules.{module_name}.router"
+
+    return (
+        router_module in content
+        or router_alias in content
+        or f'prefix="/{module_name}"' in content
+        or f"prefix='/{module_name}'" in content
+    )
 
 
 def _collect_missing_marker(problems: list[str], path: Path, marker: str) -> None:

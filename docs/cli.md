@@ -70,6 +70,9 @@ polepos remove module customers --force
 directory, generated integration and unit tests, module exports, API router
 wiring, and standard-module model imports.
 
+If the module directory was already deleted manually, the command still cleans
+remaining generated tests and managed router, model, and export wiring.
+
 By default, the command stops before deleting the module directory when the
 module files or generated tests appear to contain custom changes. Use `--trace`
 to preview the planned removals and updates without changing files. Use

@@ -85,6 +85,10 @@ The remove command deletes the generated module, generated tests, and managed
 router/model/export wiring. It stops before deleting files if the wiring has
 drifted away from a managed layout.
 
+If the module directory was already deleted manually, rerun
+`polepos remove module customers` to clean the remaining generated tests and
+managed router, model, and export wiring.
+
 Removal does not change the live database. If the removed standard module had a
 table and you want that table removed too, create and review a migration after
 the code cleanup:

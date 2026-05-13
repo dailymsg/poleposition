@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import shutil
 import subprocess
 import sys
 
@@ -74,6 +75,78 @@ def test_remove_standard_module_cleans_generated_wiring(tmp_path: Path):
     assert "modules.garage" not in router_content
     assert "modules.garage" not in db_models_content
     assert '"garage"' not in modules_init_content
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
+def test_remove_standard_module_cleans_remnants_when_module_directory_is_missing(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    shutil.rmtree(package_root / "modules" / "garage")
+
+    result = run_cli(project_root, "remove", "module", "garage")
+
+    assert result.returncode == 0
+    assert "Module does not exist" not in result.stdout
+    assert "Removed module: garage" in result.stdout
+    assert "tests/integration/test_garage.py" in result.stdout
+    assert "tests/unit/test_garage_service.py" in result.stdout
+
+    router_content = (package_root / "api" / "router.py").read_text(encoding="utf-8")
+    db_models_content = (package_root / "db" / "models.py").read_text(encoding="utf-8")
+    modules_init_content = (package_root / "modules" / "__init__.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "garage_router" not in router_content
+    assert "modules.garage" not in router_content
+    assert "modules.garage" not in db_models_content
+    assert '"garage"' not in modules_init_content
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+    assert not (project_root / "tests" / "unit" / "test_garage_service.py").exists()
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
+def test_remove_api_only_module_cleans_remnants_when_module_directory_is_missing(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp", "--db", "none")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "webhooks", "--api-only")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    shutil.rmtree(package_root / "modules" / "webhooks")
+
+    result = run_cli(project_root, "remove", "module", "webhooks")
+
+    assert result.returncode == 0
+    assert "Module does not exist" not in result.stdout
+    assert "Template: api-only" in result.stdout
+    assert "Create a migration" not in result.stdout
+    assert "webhooks_router" not in (
+        package_root / "api" / "router.py"
+    ).read_text(encoding="utf-8")
+    assert '"webhooks"' not in (
+        package_root / "modules" / "__init__.py"
+    ).read_text(encoding="utf-8")
+    assert not (project_root / "tests" / "integration" / "test_webhooks.py").exists()
+    assert not (
+        project_root / "tests" / "unit" / "test_webhooks_api_service.py"
+    ).exists()
 
     check_result = run_cli(project_root, "check")
     assert check_result.returncode == 0
@@ -257,6 +330,50 @@ def test_remove_last_ai_prompt_module_cleans_llm_shared_scaffold(tmp_path: Path)
     assert "llm_provider" not in (package_root / "settings.py").read_text(
         encoding="utf-8"
     )
+    assert "LLM_PROVIDER" not in (project_root / ".env.example").read_text(
+        encoding="utf-8"
+    )
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
+def test_remove_ai_prompt_module_cleans_remnants_when_module_directory_is_missing(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    shutil.rmtree(package_root / "modules" / "assistant")
+
+    result = run_cli(project_root, "remove", "module", "assistant")
+
+    assert result.returncode == 0
+    assert "Module does not exist" not in result.stdout
+    assert "Template: ai-prompt" in result.stdout
+    assert "assistant_router" not in (
+        package_root / "api" / "router.py"
+    ).read_text(encoding="utf-8")
+    assert '"assistant"' not in (
+        package_root / "modules" / "__init__.py"
+    ).read_text(encoding="utf-8")
+    assert not (package_root / "integrations" / "llm").exists()
+    assert not (project_root / "tests" / "integration" / "test_assistant.py").exists()
+    assert not (
+        project_root / "tests" / "unit" / "test_assistant_orchestrator.py"
+    ).exists()
     assert "LLM_PROVIDER" not in (project_root / ".env.example").read_text(
         encoding="utf-8"
     )

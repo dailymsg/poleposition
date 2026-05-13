@@ -106,6 +106,9 @@ def build_context(
             "that appears to contain custom changes. Use `--trace` to preview the planned\n"
             "removals and updates without changing files, and use `--force` only when you\n"
             "intentionally want to remove a customized module directory.\n\n"
+            "If the module directory was already deleted manually, rerun\n"
+            "`polepos remove module <name>` to clean remaining generated tests and managed\n"
+            "router, model, and export wiring.\n\n"
             "If a removed standard module had a database table and that table should be\n"
             "removed too, create and review an Alembic revision after the code cleanup:\n\n"
             "```bash\n"
@@ -164,7 +167,10 @@ def build_context(
         )
         module_database_removal_note = (
             "\n`polepos remove module` removes generated code, generated tests, router wiring,\n"
-            "and module exports. This project has no generated database model wiring.\n"
+            "and module exports. This project has no generated database model wiring.\n\n"
+            "If the module directory was already deleted manually, rerun\n"
+            "`polepos remove module <name>` to clean remaining generated tests and managed\n"
+            "router/export wiring.\n"
         )
         agents_db_guidance = (
             "\nKeep this project FastAPI-native, module-oriented, and `uv`-first. This project\n"

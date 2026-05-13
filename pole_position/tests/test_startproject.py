@@ -200,6 +200,8 @@ def test_start_with_no_database_option(tmp_path: Path):
     assert "polepos db upgrade" not in readme
     assert "polepos add module garage --api-only" in readme
     assert "polepos add module garage\n" not in readme
+    assert "If the module directory was already deleted manually" in readme
+    assert "router/export wiring" in readme
     assert "alembic.ini" not in readme
     assert "migrations/" not in readme
     assert "\n  db/\n" not in readme
@@ -349,6 +351,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "src/demo_app/api/router.py" in readme
     assert 'prefix="/garage"' in readme
     assert "GET /api/v1/garage/" in readme
+    assert "If the module directory was already deleted manually" in readme
+    assert "router, model, and export wiring" in readme
     assert "{{project" not in readme
     assert "CORS_ENABLED=true" in env_example
     assert 'CORS_ALLOW_ORIGINS=["http://localhost:3000"' in env_example
