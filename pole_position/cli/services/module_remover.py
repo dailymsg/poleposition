@@ -9,6 +9,7 @@ from pole_position.cli.services.module_creator import ROUTER_IMPORTS_MARKER
 from pole_position.cli.services.module_creator import ROUTER_INCLUDES_MARKER
 from pole_position.cli.services.module_templates import DEFAULT_MODULE_TEMPLATE
 from pole_position.cli.services.module_templates import ModuleTemplateContract
+from pole_position.cli.services.module_templates import SUPPORTED_MODULE_TEMPLATES
 from pole_position.cli.services.module_templates import build_module_template
 from pole_position.cli.services.module_templates import get_module_template_contract
 from pole_position.cli.services.module_templates import llm_env_block
@@ -474,7 +475,11 @@ def _detect_module_contract(
     manifest = read_project_manifest(project_root)
     if manifest.exists:
         template = manifest.module_templates.get(module_name)
-        if template and template != "starter":
+        if (
+            template
+            and template != "starter"
+            and template in SUPPORTED_MODULE_TEMPLATES
+        ):
             return get_module_template_contract(template)
 
     for contract in module_template_detection_contracts():

@@ -635,6 +635,54 @@ def test_check_manifest_custom_db_allows_user_managed_database_content(
     assert "PolePosition project check passed." in result.stdout
 
 
+def test_check_reports_invalid_manifest_module_template_without_traceback(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8").replace(
+            'status = "starter"',
+            'status = "starter"\ngarage = "bogus"',
+        ),
+        encoding="utf-8",
+    )
+    (package_root / "modules" / "garage").mkdir()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK014]" in result.stdout
+    assert "Project manifest has unsupported module template" in result.stdout
+    assert "garage = bogus" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_check_normalizes_manifest_database_mode_case(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8").replace(
+            'db = "sqlite"',
+            'db = "SQLite"',
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode == 0
+    assert "PolePosition project check passed." in result.stdout
+
+
 def test_check_manifest_ignores_manual_kafka_dependency_without_integration(
     tmp_path: Path,
 ) -> None:

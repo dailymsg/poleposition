@@ -10,6 +10,7 @@ from pole_position.cli.services.integration_specs import (
 from pole_position.cli.services.module_templates import (
     DEFAULT_MODULE_TEMPLATE,
     ModuleTemplateContract,
+    SUPPORTED_MODULE_TEMPLATES,
     get_module_template_contract,
     module_template_detection_contracts,
 )
@@ -198,6 +199,8 @@ def _project_check_issue_code(problem: str) -> str:
         return "PPCHK012"
     if problem.startswith("Project manifest has unsupported database mode"):
         return "PPCHK013"
+    if problem.startswith("Project manifest has unsupported module template"):
+        return "PPCHK014"
     if problem.startswith("Managed file is missing"):
         return "PPCHK020"
     if problem.startswith("Managed marker"):
@@ -277,6 +280,9 @@ def _project_check_remediation(problem: str) -> str:
         )
     if problem.startswith("Project manifest has unsupported database mode"):
         return "Use db = \"sqlite\", \"postgres\", \"none\", or \"custom\"."
+    if problem.startswith("Project manifest has unsupported module template"):
+        supported = ", ".join((*SUPPORTED_MODULE_TEMPLATES, "starter"))
+        return f"Use one of these module template values: {supported}."
     if problem.startswith("Managed file is missing"):
         return (
             "Restore the managed file before running PolePosition lifecycle "
@@ -579,15 +585,28 @@ def _check_project_manifest(
             f"{manifest_path}: {manifest.package_name} != {package_root.name}"
         )
 
-    if manifest.database and manifest.database not in {
+    supported_database_modes = {
         "sqlite",
         "postgres",
         "none",
         "custom",
-    }:
+    }
+    if (
+        manifest.database
+        and manifest.database.strip().lower() not in supported_database_modes
+    ):
         problems.append(
             "Project manifest has unsupported database mode in "
             f"{manifest_path}: {manifest.database}"
+        )
+
+    supported_module_templates = {*SUPPORTED_MODULE_TEMPLATES, "starter"}
+    for module_name, template in manifest.module_templates.items():
+        if template in supported_module_templates:
+            continue
+        problems.append(
+            "Project manifest has unsupported module template in "
+            f"{manifest_path}: {module_name} = {template}"
         )
 
 
@@ -836,7 +855,11 @@ def _detect_module_kind(
     manifest = manifest or read_project_manifest(project_root)
     if manifest.exists:
         module_kind = manifest.module_templates.get(module_name)
-        if module_kind and module_kind != "starter":
+        if (
+            module_kind
+            and module_kind != "starter"
+            and module_kind in SUPPORTED_MODULE_TEMPLATES
+        ):
             return module_kind
 
     for contract in module_template_detection_contracts():
