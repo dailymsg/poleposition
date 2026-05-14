@@ -1,4 +1,5 @@
 from pathlib import Path
+import ast
 import os
 import py_compile
 import subprocess
@@ -48,6 +49,27 @@ def _assert_python_files_compile(project_root: Path) -> None:
     assert python_files
     for path in python_files:
         py_compile.compile(str(path), doraise=True)
+
+
+def _assigns_name(node: ast.Assign, name: str) -> bool:
+    return any(
+        isinstance(target, ast.Name) and target.id == name
+        for target in node.targets
+    )
+
+
+def _assigns_call(node: ast.Assign, target_name: str, call_name: str) -> bool:
+    return _assigns_name(node, target_name) and _call_name(node.value) == call_name
+
+
+def _call_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Call):
+        return _call_name(node.func)
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
 
 
 def test_create_project(tmp_path: Path):
@@ -324,6 +346,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     env_example = (project_root / ".env.example").read_text(encoding="utf-8")
     agents_guide = (project_root / "AGENTS.md").read_text(encoding="utf-8")
     app_module = (package_root / "app.py").read_text(encoding="utf-8")
+    main_module = (package_root / "main.py").read_text(encoding="utf-8")
     run_module = (package_root / "run.py").read_text(encoding="utf-8")
     settings_module = (package_root / "settings.py").read_text(encoding="utf-8")
     readme = (project_root / "README.md").read_text(encoding="utf-8")
@@ -419,6 +442,9 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "from demo_app.api.router import api_router" in app_module
     assert 'uvicorn.run(' in run_module
     assert '"demo_app.main:app"' in run_module
+    assert "from demo_app.app import create_app" in main_module
+    assert "app = create_app()" in main_module
+    assert "app = create_app()" not in app_module
     assert "from demo_app.bootstrap.logging import print_startup_table" in run_module
     assert "print_startup_table(" in run_module
     assert 'docs_url = f"http://{display_host}:{app_port}/docs"' in logging_module
@@ -502,6 +528,51 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "sys.dont_write_bytecode = True" not in tests_conftest
     assert "{{project" not in app_module
     assert "{{project" not in status_service
+
+
+def test_generated_app_factory_initializes_settings_inside_create_app(
+    tmp_path: Path,
+) -> None:
+    result = run_cli(tmp_path, "start", "runtime-app")
+
+    assert result.returncode == 0
+
+    project_root = tmp_path / "runtime-app"
+    package_root = project_root / "src" / "runtime_app"
+    app_source = (package_root / "app.py").read_text(encoding="utf-8")
+    app_tree = ast.parse(app_source)
+    create_app = next(
+        node
+        for node in app_tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "create_app"
+    )
+
+    module_assignments = [
+        node
+        for node in app_tree.body
+        if isinstance(node, ast.Assign)
+    ]
+    create_app_assignments = [
+        node
+        for node in create_app.body
+        if isinstance(node, ast.Assign)
+    ]
+
+    assert not any(_assigns_name(node, "settings") for node in module_assignments)
+    assert not any(
+        _assigns_call(node, "app", "create_app")
+        for node in module_assignments
+    )
+    assert any(
+        _assigns_call(node, "settings", "get_settings")
+        for node in create_app_assignments
+    )
+    assert any(
+        isinstance(node, ast.Expr)
+        and isinstance(node.value, ast.Call)
+        and _call_name(node.value) == "setup_logging"
+        for node in create_app.body
+    )
 
 
 def test_generated_logging_context_includes_request_id(

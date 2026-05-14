@@ -4,10 +4,8 @@ from {{project_import_name}}.bootstrap.logging import print_startup_table
 from {{project_import_name}}.settings import get_settings
 
 
-settings = get_settings()
-
-
 def main() -> None:
+    settings = get_settings()
     print_startup_table(
         app_name=settings.app_name,
         app_env=settings.app_env,
