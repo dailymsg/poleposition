@@ -104,6 +104,47 @@ dependencies = [
     assert pyproject_path.read_text(encoding="utf-8") == original_content
 
 
+def test_ensure_project_dependency_does_not_duplicate_upgraded_dependency(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        """[project]
+name = "shop-api"
+dependencies = [
+    "Aiokafka>=0.13.0",
+    "fastapi>=0.115.0",
+]
+""",
+        encoding="utf-8",
+    )
+    original_content = pyproject_path.read_text(encoding="utf-8")
+
+    ensure_project_dependency(pyproject_path, "aiokafka>=0.12.0")
+
+    assert pyproject_path.read_text(encoding="utf-8") == original_content
+
+
+def test_ensure_project_dependency_replaces_lower_version_dependency(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        """[project]
+name = "shop-api"
+dependencies = ["fastapi>=0.115.0", "Aiokafka>=0.11.0"]
+""",
+        encoding="utf-8",
+    )
+
+    ensure_project_dependency(pyproject_path, "aiokafka>=0.12.0")
+
+    content = pyproject_path.read_text(encoding="utf-8")
+    assert '"aiokafka>=0.12.0",' in content
+    assert "Aiokafka>=0.11.0" not in content
+    assert content.count("aiokafka") == 1
+
+
 def test_ensure_project_dependency_requires_project_dependencies(
     tmp_path: Path,
 ) -> None:

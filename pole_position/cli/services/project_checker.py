@@ -94,6 +94,7 @@ CORE_PROJECT_PATHS = [
     "AGENTS.md",
     "README.md",
     "tests/conftest.py",
+    "tests/integration/test_status.py",
 ]
 
 CORE_PACKAGE_PATHS = [
@@ -810,6 +811,8 @@ def _has_status_router_include(tree: ast.Module) -> bool:
             continue
         if not node.args or not _is_name(node.args[0], "status_router"):
             continue
+        if any(keyword.arg == "prefix" for keyword in node.keywords):
+            continue
         if _literal_keyword_value(node, "tags") in (["status"], ("status",)):
             return True
 
@@ -1411,9 +1414,19 @@ def _should_check_integration(
         integrations = manifest.enabled_integrations
         if integrations.get(contract.name):
             return True
-        if contract.name == "llm":
-            return _has_ai_prompt_module(project_root, package_root)
-        return False
+        if contract.name == "llm" and _has_ai_prompt_module(
+            project_root,
+            package_root,
+        ):
+            return True
+        return _has_integration_signal(
+            contract=contract,
+            project_root=project_root,
+            package_root=package_root,
+            settings_content=settings_content,
+            env_content=env_content,
+            pyproject_content=pyproject_content,
+        )
 
     return _has_integration_signal(
         contract=contract,

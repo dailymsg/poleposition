@@ -47,6 +47,20 @@ def test_check_passes_for_generated_project(tmp_path: Path) -> None:
     assert "Package: myapp" in result.stdout
 
 
+def test_check_reports_missing_status_integration_test(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    (project_root / "tests" / "integration" / "test_status.py").unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Required generated path is missing" in result.stdout
+    assert "tests/integration/test_status.py" in result.stdout
+
+
 def test_check_works_from_nested_directory(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -489,6 +503,27 @@ def test_check_reports_missing_kafka_dependency(tmp_path: Path) -> None:
     assert "aiokafka>=0.12.0" in result.stdout
 
 
+def test_check_reports_kafka_directory_signal_without_manifest_entry(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    kafka_root = project_root / "src" / "myapp" / "integrations" / "kafka"
+    kafka_root.mkdir(parents=True)
+    (kafka_root / "__init__.py").write_text("", encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'kafka' is missing generated file" in result.stdout
+    assert "producer.py" in result.stdout
+    assert "Integration 'kafka' is missing dependency" in result.stdout
+    assert "Integration 'kafka' is missing setting" in result.stdout
+    assert "Integration 'kafka' is missing env value" in result.stdout
+
+
 def test_check_accepts_upgraded_kafka_dependency(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -735,6 +770,31 @@ def test_check_reports_invalid_manifest_module_template_without_traceback(
     assert "Traceback" not in result.stderr
 
 
+def test_check_reports_status_router_include_with_added_prefix(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8").replace(
+            'api_router.include_router(status_router, tags=["status"])',
+            (
+                'api_router.include_router('
+                'status_router, prefix="/status", tags=["status"])'
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Starter module 'status' is missing API router include" in result.stdout
+
+
 def test_check_normalizes_manifest_database_mode_case(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -755,7 +815,7 @@ def test_check_normalizes_manifest_database_mode_case(tmp_path: Path) -> None:
     assert "PolePosition project check passed." in result.stdout
 
 
-def test_check_manifest_ignores_manual_kafka_dependency_without_integration(
+def test_check_manifest_reports_manual_kafka_dependency_without_integration(
     tmp_path: Path,
 ) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
@@ -773,5 +833,7 @@ def test_check_manifest_ignores_manual_kafka_dependency_without_integration(
 
     result = run_cli(project_root, "check")
 
-    assert result.returncode == 0
-    assert "PolePosition project check passed." in result.stdout
+    assert result.returncode != 0
+    assert "Integration 'kafka' is missing generated file" in result.stdout
+    assert "Integration 'kafka' is missing setting" in result.stdout
+    assert "Integration 'kafka' is missing env value" in result.stdout

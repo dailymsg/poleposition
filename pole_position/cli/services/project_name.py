@@ -3,6 +3,9 @@ import re
 
 
 PATH_SEPARATORS = {"/", "\\"}
+PROJECT_METADATA_NAME_PATTERN = re.compile(
+    r"^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$"
+)
 
 
 def normalize_package_name(project_name: str) -> str:
@@ -26,6 +29,12 @@ def validate_project_name(project_name: str) -> None:
 
     if any(separator in raw_name for separator in PATH_SEPARATORS):
         raise ValueError("Project name cannot contain path separators.")
+
+    if not PROJECT_METADATA_NAME_PATTERN.fullmatch(raw_name):
+        raise ValueError(
+            "Project name may only contain letters, digits, '.', '_', and '-' "
+            "and must start and end with a letter or digit."
+        )
 
     package_name = normalize_package_name(raw_name)
 

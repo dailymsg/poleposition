@@ -125,8 +125,8 @@ directory is unknown.
 
 Core generated paths include the package entrypoints, settings, bootstrap
 files, API files, domain files, the `status` starter module, test conftest,
-README, `AGENTS.md`, and `.env.example`. Database-backed projects also include
-generated `db/` files.
+the generated `status` integration test, README, `AGENTS.md`, and
+`.env.example`. Database-backed projects also include generated `db/` files.
 
 Alembic paths are checked only when the project has generated database wiring.
 They include:
@@ -185,9 +185,9 @@ modules as starter modules when their original generated signals are present,
 so upgraded CLI versions can still validate older generated projects.
 
 Lifecycle check also validates that the starter `status` module remains wired
-into `api/router.py`, and reports orphan generated references when a module
-directory was deleted manually but managed router/model/export/test references
-remain.
+into `api/router.py` without an added router prefix, and reports orphan
+generated references when a module directory was deleted manually but managed
+router/model/export/test references remain.
 
 For a standard module, `check` expects:
 
@@ -227,7 +227,9 @@ For an `api-only` module, `check` expects:
 ### 3. Integration Check
 
 Integration check validates opt-in external-system scaffolds when the project
-contains signals that those integrations are present.
+contains signals that those integrations are present. In projects with
+`.poleposition.toml`, explicit manifest entries and file, dependency, setting,
+or env signals are both treated as integration signals.
 
 Kafka is checked when `integrations/kafka`, Kafka settings, Kafka env values,
 or the Kafka dependency are present. `check` expects:

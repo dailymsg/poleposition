@@ -1,15 +1,26 @@
 import re
 from pathlib import Path
 
+try:
+    from packaging.version import InvalidVersion, Version
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    InvalidVersion = ValueError  # type: ignore[assignment]
+    Version = None  # type: ignore[assignment]
+
 
 SECTION_HEADER_PATTERN = re.compile(r"^\s*\[([^\]]+)\]\s*(?:#.*)?$")
 DEPENDENCIES_ARRAY_PATTERN = re.compile(
     r"^(?P<indent>\s*)dependencies\s*=\s*\[(?P<rest>.*)$"
 )
 DEPENDENCY_ENTRY_PATTERN = re.compile(
-    r"^(?P<indent>\s*)(?P<quote>[\"'])(?P<value>.+?)(?P=quote)\s*,?\s*(?:#.*)?$"
+    r"^(?P<indent>\s*)(?P<quote>[\"'])(?P<value>.+?)(?P=quote)"
+    r"(?P<trailing>\s*,?\s*(?:#.*)?)$"
 )
 ARRAY_END_PATTERN = re.compile(r"^\s*\]\s*(?:#.*)?$")
+DEPENDENCY_NAME_PATTERN = re.compile(r"^\s*(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)")
+DEPENDENCY_SPECIFIER_PATTERN = re.compile(
+    r"(?P<operator>~=|===|==|!=|<=|>=|<|>)\s*(?P<version>[^,;\s]+)"
+)
 
 
 def ensure_project_dependency(path: Path, dependency: str | None) -> None:
@@ -51,7 +62,7 @@ def ensure_project_dependency_text(
         inline_values=inline_values,
     )
 
-    if dependency in existing_dependencies:
+    if _dependency_contract_satisfied(existing_dependencies, dependency):
         return content
 
     if inline_values is not None:
@@ -60,16 +71,23 @@ def ensure_project_dependency_text(
             start_index=array_start,
             end_index=array_end,
             array_indent=array_indent,
-            dependencies=[*inline_values, dependency],
+            dependencies=_replace_or_append_dependency(inline_values, dependency),
         )
     else:
-        _insert_dependency_line(
+        replaced_dependency = _replace_dependency_line(
             lines=lines,
             start_index=array_start,
             end_index=array_end,
-            array_indent=array_indent,
             dependency=dependency,
         )
+        if not replaced_dependency:
+            _insert_dependency_line(
+                lines=lines,
+                start_index=array_start,
+                end_index=array_end,
+                array_indent=array_indent,
+                dependency=dependency,
+            )
 
     return "\n".join(lines) + "\n"
 
@@ -204,6 +222,43 @@ def _dependency_value_from_line(line: str) -> str | None:
     return match.group("value")
 
 
+def _replace_or_append_dependency(
+    existing_dependencies: list[str],
+    dependency: str,
+) -> list[str]:
+    dependencies = list(existing_dependencies)
+    for index, existing_dependency in enumerate(dependencies):
+        if _dependency_names_match(existing_dependency, dependency):
+            dependencies[index] = dependency
+            return dependencies
+
+    return [*dependencies, dependency]
+
+
+def _replace_dependency_line(
+    *,
+    lines: list[str],
+    start_index: int,
+    end_index: int,
+    dependency: str,
+) -> bool:
+    for index in range(start_index + 1, end_index):
+        match = DEPENDENCY_ENTRY_PATTERN.match(lines[index])
+        if match is None:
+            continue
+
+        if not _dependency_names_match(match.group("value"), dependency):
+            continue
+
+        lines[index] = (
+            f"{match.group('indent')}{match.group('quote')}{dependency}"
+            f"{match.group('quote')}{match.group('trailing')}"
+        )
+        return True
+
+    return False
+
+
 def _replace_inline_dependencies_array(
     *,
     lines: list[str],
@@ -280,3 +335,75 @@ def _find_array_end_index(
             return index
 
     raise RuntimeError(f"Unsupported dependency layout: {path_label}")
+
+
+def _dependency_contract_satisfied(
+    dependencies: list[str],
+    required_dependency: str,
+) -> bool:
+    required_name = _dependency_name(required_dependency)
+    required_min_version = _dependency_min_version(required_dependency)
+    if required_name is None:
+        return False
+
+    for dependency in dependencies:
+        if _dependency_name(dependency) != required_name:
+            continue
+        if required_min_version is None:
+            return True
+
+        dependency_min_version = _dependency_min_version(dependency)
+        if dependency_min_version is None:
+            continue
+        if _version_at_least(dependency_min_version, required_min_version):
+            return True
+
+    return False
+
+
+def _dependency_names_match(dependency: str, other_dependency: str) -> bool:
+    dependency_name = _dependency_name(dependency)
+    return dependency_name is not None and dependency_name == _dependency_name(
+        other_dependency
+    )
+
+
+def _dependency_name(dependency: str) -> str | None:
+    match = DEPENDENCY_NAME_PATTERN.match(dependency.split(";", 1)[0])
+    if match is None:
+        return None
+    return _normalize_dependency_name(match.group("name"))
+
+
+def _normalize_dependency_name(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _dependency_min_version(dependency: str) -> str | None:
+    lower_bounds: list[str] = []
+    dependency_spec = dependency.split(";", 1)[0]
+    for match in DEPENDENCY_SPECIFIER_PATTERN.finditer(dependency_spec):
+        operator = match.group("operator")
+        if operator not in {">=", ">", "==", "===", "~="}:
+            continue
+        lower_bounds.append(match.group("version"))
+
+    if not lower_bounds:
+        return None
+
+    return max(lower_bounds, key=_version_sort_key)
+
+
+def _version_at_least(version: str, required_version: str) -> bool:
+    if Version is not None:
+        try:
+            return Version(version) >= Version(required_version)
+        except InvalidVersion:
+            pass
+
+    return _version_sort_key(version) >= _version_sort_key(required_version)
+
+
+def _version_sort_key(version: str) -> tuple[int, ...]:
+    parts = [int(part) for part in re.findall(r"\d+", version)]
+    return tuple(parts)

@@ -153,6 +153,29 @@ def test_add_kafka_integration_creates_files_and_updates_project(tmp_path: Path)
     assert "{{" not in factory_content
 
 
+def test_add_kafka_integration_keeps_existing_upgraded_dependency(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_path.write_text(
+        pyproject_path.read_text(encoding="utf-8").replace(
+            '    "pydantic-settings>=2.0.0",\n',
+            '    "pydantic-settings>=2.0.0",\n    "aiokafka>=0.13.0",\n',
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "integration", "kafka")
+
+    assert result.returncode == 0
+    pyproject_content = pyproject_path.read_text(encoding="utf-8")
+    assert '"aiokafka>=0.13.0",' in pyproject_content
+    assert '"aiokafka>=0.12.0",' not in pyproject_content
+    assert pyproject_content.count("aiokafka") == 1
+
+
 def test_add_kafka_integration_completes_partial_settings_and_env(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0

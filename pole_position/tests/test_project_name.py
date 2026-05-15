@@ -22,6 +22,10 @@ def test_validate_project_name_accepts_hyphenated_name() -> None:
     validate_project_name("my-app")
 
 
+def test_validate_project_name_accepts_metadata_separator_name() -> None:
+    validate_project_name("my.app_api")
+
+
 def test_validate_project_name_rejects_empty_name() -> None:
     with pytest.raises(ValueError):
         validate_project_name("")
@@ -30,6 +34,12 @@ def test_validate_project_name_rejects_empty_name() -> None:
 @pytest.mark.parametrize("name", ["foo/bar", "foo\\bar"])
 def test_validate_project_name_rejects_path_separators(name: str) -> None:
     with pytest.raises(ValueError, match="path separators"):
+        validate_project_name(name)
+
+
+@pytest.mark.parametrize("name", ["foo@bar", "foo!bar", "-foo", "foo-"])
+def test_validate_project_name_rejects_invalid_metadata_name(name: str) -> None:
+    with pytest.raises(ValueError, match="letters, digits"):
         validate_project_name(name)
 
 

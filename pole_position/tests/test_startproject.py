@@ -102,6 +102,14 @@ def test_start_rejects_project_name_with_path_separator(tmp_path: Path):
     assert not (tmp_path / "foo").exists()
 
 
+def test_start_rejects_project_name_invalid_for_pyproject_metadata(tmp_path: Path):
+    result = run_cli(tmp_path, "start", "foo@bar")
+
+    assert result.returncode != 0
+    assert "Project name may only contain letters, digits" in result.stdout
+    assert not (tmp_path / "foo@bar").exists()
+
+
 def test_start_help_shows_usage_without_creating_project(tmp_path: Path):
     result = run_cli(tmp_path, "start", "--help")
 
