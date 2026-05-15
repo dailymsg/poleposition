@@ -34,7 +34,7 @@ const config = {
           path: "docs",
           routeBasePath: "/",
           sidebarPath: require.resolve("./sidebars.js"),
-          editUrl: "https://github.com/erenertemden/poleposition/edit/main/docs/",
+          editUrl: "https://github.com/erenertemden/poleposition/edit/main/",
           showLastUpdateTime: true,
         },
         blog: false,

@@ -9,6 +9,7 @@
   --ifm-code-font-size: 95%;
   --ifm-heading-font-weight: 700;
   --ifm-navbar-height: 4rem;
+  --polepos-doc-font-scale: 1;
 }
 
 [data-theme="dark"] {
@@ -25,6 +26,72 @@
 
 .navbar__logo {
   height: 2rem;
+}
+
+html[data-polepos-font-size="small"] {
+  --polepos-doc-font-scale: 0.94;
+}
+
+html[data-polepos-font-size="large"] {
+  --polepos-doc-font-scale: 1.12;
+}
+
+html[data-polepos-font-size="extra-large"] {
+  --polepos-doc-font-scale: 1.28;
+}
+
+.theme-doc-markdown {
+  font-size: calc(1rem * var(--polepos-doc-font-scale));
+}
+
+.theme-doc-markdown code {
+  font-size: 0.95em;
+}
+
+.polepos-font-size {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-left: 0.5rem;
+}
+
+.polepos-font-size__label {
+  color: var(--ifm-navbar-link-color);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.polepos-font-size__select {
+  background: var(--ifm-navbar-background-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 6px;
+  color: var(--ifm-navbar-link-color);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  height: 2rem;
+  max-width: 6.2rem;
+  padding: 0 0.4rem;
+}
+
+.polepos-font-size__select:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 996px) {
+  .polepos-font-size {
+    margin-left: 0.25rem;
+  }
+
+  .polepos-font-size__label {
+    display: none;
+  }
+
+  .polepos-font-size__select {
+    max-width: 5.2rem;
+  }
 }
 
 .theme-doc-markdown figure {
