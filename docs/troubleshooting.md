@@ -205,6 +205,26 @@ Then update the relevant setting and restart the app:
 uv run python -m <package>.run
 ```
 
+Generated apps read settings through a cached `get_settings()` helper. A normal
+process restart is enough after editing `.env`. In tests or scripts that change
+environment variables without restarting Python, clear the cache before creating
+the app:
+
+```python
+from <package>.app import create_app
+from <package>.settings import get_settings
+
+get_settings.cache_clear()
+app = create_app()
+```
+
+Import `create_app` from `<package>.app` for tests. The ASGI global `app` lives
+in `<package>.main` for Uvicorn, and the local command remains:
+
+```bash
+uv run python -m <package>.run
+```
+
 ## Integration Code Imports Optional Dependencies
 
 Kafka and RabbitMQ scaffolds add their transport dependencies to

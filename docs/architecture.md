@@ -159,6 +159,11 @@ src/<package>/
 
 The responsibilities are:
 
+- `app.py`: FastAPI application factory; it reads settings and configures
+  logging when `create_app()` is called
+- `main.py`: ASGI import target; it exposes `app = create_app()` for Uvicorn
+- `run.py`: local/runtime process entrypoint; it prints startup details and
+  starts Uvicorn from settings
 - `auth/`: endpoint authentication foundation
 - `bootstrap/`: logging, middleware, lifespan, error wiring
 - `api/`: API composition and shared dependencies
@@ -166,6 +171,33 @@ The responsibilities are:
 - `domain/`: domain exceptions and shared primitives
 - `integrations/`: external systems such as LLM adapters
 - `modules/`: feature modules such as `status`, `users`, `customers`
+
+## Runtime Entrypoints
+
+Generated apps separate application construction from process startup:
+
+```text
+app.py
+  -> create_app()
+  -> read settings
+  -> setup logging
+  -> build FastAPI app
+
+main.py
+  -> app = create_app()
+  -> ASGI import target for Uvicorn
+
+run.py
+  -> main()
+  -> read settings
+  -> print startup table
+  -> uvicorn.run("<package>.main:app", ...)
+```
+
+This separation is deliberate. Importing `src/<package>/app.py` should not
+freeze `.env` values or configure logging by itself. Tests and dynamic runtime
+overrides can import `create_app`, update environment values, clear the
+`get_settings()` cache when needed, and then call `create_app()`.
 
 ## `add module` Architecture
 
@@ -426,6 +458,7 @@ src/<package>/bootstrap/logging.py
 The generated logging contract is:
 
 - `get_logger(__name__)` is the preferred entrypoint
+- logging setup happens from `create_app()`, not at `app.py` import time
 - text logs are good for development
 - JSON logs are good for production pipelines
 

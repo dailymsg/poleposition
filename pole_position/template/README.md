@@ -103,6 +103,17 @@ The generated project uses `run.py` as the preferred entrypoint:
 {{no_bytecode_command_prefix}}uv run python -m {{project_import_name}}.run
 ```
 
+Runtime code is split intentionally:
+
+* `app.py` defines `create_app()` and wires FastAPI, middleware, exception
+  handlers, logging, and the API router when the factory is called.
+* `main.py` exposes the ASGI `app` used by Uvicorn.
+* `run.py` reads runtime settings, prints the startup table, and starts Uvicorn.
+
+Settings and logging are initialized when `create_app()` runs, not when
+`app.py` is imported. If a test changes environment variables in-process, call
+`get_settings.cache_clear()` before creating a new app.
+
 On startup, the runner prints a small summary table with key runtime details such
 as service name, environment, API prefix, {{runtime_database_summary}}host, port,
 worker count, and docs URL.

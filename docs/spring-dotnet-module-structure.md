@@ -137,7 +137,11 @@ A generated PolePosition app uses this shape:
 ```text
 src/<package>/
   app.py
+  main.py
   run.py
+  settings.py
+  auth/
+  bootstrap/
   api/
     router.py
   db/
@@ -149,6 +153,16 @@ src/<package>/
 ```
 
 The important folder is `modules/`. Each domain feature belongs there.
+
+The runtime entrypoints are intentionally split:
+
+- `app.py` defines `create_app()` and wires FastAPI when that factory is called.
+- `main.py` exposes the ASGI `app` used by Uvicorn.
+- `run.py` starts the local process from settings in `.env`.
+
+This is similar to keeping app composition separate from process hosting in
+Spring Boot or ASP.NET Core. It also prevents settings and logging from being
+initialized merely by importing `app.py`.
 
 ## Standard Module Shape
 
@@ -329,6 +343,10 @@ src/<package>/api/router.py
 
 The FastAPI app includes that API router in `app.py`, and each module router is
 included under it.
+
+The hosted ASGI object lives in `main.py` as `app = create_app()`. This keeps
+`app.py` as a reusable factory surface for tests and tooling, while `run.py`
+remains the normal local entrypoint.
 
 ## API-Only Modules
 

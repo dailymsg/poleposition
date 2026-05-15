@@ -28,6 +28,10 @@ polepos db upgrade
 uv run python -m shop_api.run
 ```
 
+The generated runner reads `.env` at process startup, creates the FastAPI app
+through `create_app()`, and serves the ASGI app exposed from `shop_api.main`.
+Importing `shop_api.app` by itself does not initialize settings or logging.
+
 `polepos start` defaults to `--db sqlite`. Use `--db postgres` when the generated
 project should start with PostgreSQL settings, or `--db none` for a database-free
 starter that omits SQLAlchemy and Alembic wiring.

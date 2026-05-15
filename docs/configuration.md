@@ -7,6 +7,22 @@ Start from:
 cp .env.example .env
 ```
 
+Settings are resolved through `get_settings()`, which is cached for normal
+runtime use. The generated FastAPI application calls `get_settings()` inside
+`create_app()`, and the local runner calls it inside `run.py`'s `main()`. This
+avoids import-time configuration in `app.py`.
+
+When tests or scripts change environment variables in-process, clear the
+settings cache before creating the app:
+
+```python
+from shop_api.app import create_app
+from shop_api.settings import get_settings
+
+get_settings.cache_clear()
+app = create_app()
+```
+
 ## Application
 
 | Setting | Default | Purpose |
@@ -58,6 +74,10 @@ For the full workflow, see [Database and Migrations](database.md).
 
 Optional integer or boolean-like values can be left commented in `.env.example`
 until needed.
+
+`run.py` is the preferred local process entrypoint. It reads these values when
+`main()` runs and starts Uvicorn with `<package>.main:app`. `main.py` exposes the
+ASGI `app`, while `app.py` keeps the reusable `create_app()` factory.
 
 ## Logging
 

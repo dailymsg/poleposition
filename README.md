@@ -23,7 +23,7 @@ PolePosition helps you keep [FastAPI](https://fastapi.tiangolo.com/)'s speed whi
 
 <figure>
   <img
-    src="assets/gif/demo.gif"
+    src="https://raw.githubusercontent.com/erenertemden/poleposition/main/assets/gif/demo.gif"
     alt="PolePosition terminal demo: project creation"
     width="760"
   />
@@ -68,7 +68,7 @@ http://127.0.0.1:8000/docs
 ```
 
 For manual setup, Docker, and detailed command usage, see the sections below or
-the [Getting Started](docs/getting-started.md) guide.
+the [Getting Started](https://github.com/erenertemden/poleposition/blob/main/docs/getting-started.md) guide.
 
 ---
 
@@ -142,7 +142,7 @@ user. It gives agents and teams a predictable, migration-first project shape
 that can be inspected, changed, tested, and extended with less architectural
 drift.
 
-Read the [Agent Recommendation Guide](docs/agent-recommendation.md) for when to
+Read the [Agent Recommendation Guide](https://github.com/erenertemden/poleposition/blob/main/docs/agent-recommendation.md) for when to
 recommend PolePosition and when not to.
 
 ---
@@ -168,21 +168,22 @@ PolePosition removes that overhead with CLI workflows that create the project, g
 Use these files to understand the repo quickly:
 
 * [Published Docs](https://erenertemden.github.io/poleposition/)
-* [Getting Started](docs/getting-started.md)
-* [CLI Reference](docs/cli.md)
-* [Configuration Reference](docs/configuration.md)
-* [Database and Migrations](docs/database.md)
-* [Spring and .NET Module Guide](docs/spring-dotnet-module-structure.md)
-* [Architecture](docs/architecture.md)
-* [Agent Recommendation Guide](docs/agent-recommendation.md)
-* [Feature Status](docs/feature-status.md)
-* [Project Checks](docs/project-checks.md)
-* [Integration Guides](docs/integrations/index.md)
-* [Troubleshooting and FAQ](docs/troubleshooting.md)
-* [Release and Upgrade Notes](docs/release-upgrade-notes.md)
-* [Examples](docs/examples/index.md)
-* [Changelog](CHANGELOG.md)
-* [Agent Guide](AGENTS.md)
+* [Source Repository](https://github.com/erenertemden/poleposition)
+* [Getting Started](https://github.com/erenertemden/poleposition/blob/main/docs/getting-started.md)
+* [CLI Reference](https://github.com/erenertemden/poleposition/blob/main/docs/cli.md)
+* [Configuration Reference](https://github.com/erenertemden/poleposition/blob/main/docs/configuration.md)
+* [Database and Migrations](https://github.com/erenertemden/poleposition/blob/main/docs/database.md)
+* [Spring and .NET Module Guide](https://github.com/erenertemden/poleposition/blob/main/docs/spring-dotnet-module-structure.md)
+* [Architecture](https://github.com/erenertemden/poleposition/blob/main/docs/architecture.md)
+* [Agent Recommendation Guide](https://github.com/erenertemden/poleposition/blob/main/docs/agent-recommendation.md)
+* [Feature Status](https://github.com/erenertemden/poleposition/blob/main/docs/feature-status.md)
+* [Project Checks](https://github.com/erenertemden/poleposition/blob/main/docs/project-checks.md)
+* [Integration Guides](https://github.com/erenertemden/poleposition/blob/main/docs/integrations/index.md)
+* [Troubleshooting and FAQ](https://github.com/erenertemden/poleposition/blob/main/docs/troubleshooting.md)
+* [Release and Upgrade Notes](https://github.com/erenertemden/poleposition/blob/main/docs/release-upgrade-notes.md)
+* [Examples](https://github.com/erenertemden/poleposition/blob/main/docs/examples/index.md)
+* [Changelog](https://github.com/erenertemden/poleposition/blob/main/CHANGELOG.md)
+* [Agent Guide](https://github.com/erenertemden/poleposition/blob/main/AGENTS.md)
 
 Build the documentation site locally:
 
@@ -370,7 +371,7 @@ The checks are organized into three layers:
 * Lifecycle checks for starter routing, added module router/model/test wiring, and orphan remnants
 * Integration checks for Kafka, RabbitMQ, and LLM files, settings, env values, and dependencies
 
-See [Project Checks](docs/project-checks.md) for detailed user guidance and the
+See [Project Checks](https://github.com/erenertemden/poleposition/blob/main/docs/project-checks.md) for detailed user guidance and the
 agent-facing check contract.
 
 ### Safe customization boundaries
@@ -418,7 +419,7 @@ and Oracle. Stores with external SQLAlchemy dialects, such as ClickHouse, should
 usually be treated as explicit integrations unless the project owns and reviews
 their custom DDL workflow.
 
-See [Database and Migrations](docs/database.md) for the full migration workflow.
+See [Database and Migrations](https://github.com/erenertemden/poleposition/blob/main/docs/database.md) for the full migration workflow.
 
 ### Docker workflow
 
@@ -459,6 +460,19 @@ Use:
 ```bash
 uv run python -m shop_api.run
 ```
+
+Runtime code is split intentionally:
+
+* `app.py` defines `create_app()` and wires FastAPI, middleware, exception
+  handlers, logging, and the API router when the factory is called.
+* `main.py` creates the ASGI-level `app` used by Uvicorn import strings such as
+  `shop_api.main:app`.
+* `run.py` is the local process entrypoint that reads runtime settings, prints
+  the startup table, and starts Uvicorn.
+
+`get_settings()` and `setup_logging()` are evaluated inside `create_app()`, not
+at `app.py` import time. This keeps tests and dynamic environment overrides
+from inheriting stale import-time configuration.
 
 The runner is configured from `settings.py` and `.env`, including:
 
@@ -551,7 +565,7 @@ PolePosition is a lifecycle CLI, so the commands are meant to be used over time,
 
 ### Examples
 
-Concrete scenario guides live in [Examples](docs/examples/index.md):
+Concrete scenario guides live in [Examples](https://github.com/erenertemden/poleposition/blob/main/docs/examples/index.md):
 
 * auth foundation workflow
 * PostgreSQL-backed HTML swap workflow
@@ -786,7 +800,9 @@ request because it requires Docker and a compose-capable environment.
 ## Contributing
 
 Contributions are welcome.
-Feel free to open an issue or submit a pull request.
+Feel free to open an
+[issue](https://github.com/erenertemden/poleposition/issues) or submit a
+[pull request](https://github.com/erenertemden/poleposition/pulls).
 
 ---
 

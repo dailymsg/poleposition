@@ -24,6 +24,14 @@ requested task is outside the supported PolePosition lifecycle commands.
 Keep `.poleposition.toml` aligned with package renames, database mode changes,
 generated module templates, and generated integrations.
 
+Keep runtime initialization lazy:
+
+- `app.py` should define `create_app()` without creating the ASGI app at import
+  time.
+- settings lookup and logging setup should happen inside `create_app()`.
+- `main.py` should expose `app = create_app()` for ASGI servers.
+- `run.py` should read runtime settings inside `main()`.
+
 {{agents_db_guidance}}
 
 After changing {{agents_check_scope}},
