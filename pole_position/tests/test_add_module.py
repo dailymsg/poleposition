@@ -218,6 +218,32 @@ def test_add_kafka_integration_completes_partial_settings_and_env(tmp_path: Path
     assert "kafka = true" in manifest
 
 
+def test_add_kafka_integration_does_not_treat_commented_required_env_as_present(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    env_path = project_root / ".env.example"
+    env_path.write_text(
+        env_path.read_text(encoding="utf-8").replace(
+            "# polepos:integration-env",
+            "# KAFKA_BOOTSTRAP_SERVERS=localhost:9092\n"
+            "# polepos:integration-env",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "integration", "kafka")
+
+    assert result.returncode == 0
+    env_lines = env_path.read_text(encoding="utf-8").splitlines()
+    assert env_lines.count("KAFKA_BOOTSTRAP_SERVERS=localhost:9092") == 1
+    assert env_lines.count("# KAFKA_BOOTSTRAP_SERVERS=localhost:9092") == 1
+    assert env_lines.count("# KAFKA_COMPRESSION_TYPE=") == 1
+
+
 def test_add_kafka_integration_rejects_duplicate(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -846,6 +872,32 @@ def test_add_module_ai_prompt_completes_partial_llm_settings_and_env(tmp_path: P
     assert env_content.count("LLM_PROVIDER=") == 1
     assert "LLM_MODEL=gpt-5.4-mini" in env_content
     assert "LLM_TIMEOUT_SECONDS=30" in env_content
+
+
+def test_add_ai_prompt_module_does_not_treat_commented_required_llm_env_as_present(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    env_path = project_root / ".env.example"
+    env_path.write_text(
+        env_path.read_text(encoding="utf-8").replace(
+            "# polepos:llm-env",
+            "# LLM_PROVIDER=openai\n"
+            "# polepos:llm-env",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "module", "assistant", "--template", "ai-prompt")
+
+    assert result.returncode == 0
+    env_lines = env_path.read_text(encoding="utf-8").splitlines()
+    assert env_lines.count("LLM_PROVIDER=openai") == 1
+    assert env_lines.count("# LLM_PROVIDER=openai") == 1
+    assert env_lines.count("# LLM_MAX_TOKENS=") == 1
 
 
 def test_add_module_with_api_only_option_creates_api_module_without_db_files(

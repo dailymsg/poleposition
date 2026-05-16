@@ -372,7 +372,7 @@ The checks are organized into three layers:
 
 * Core checks for project identity, generated structure, Alembic files, and managed markers
 * Lifecycle checks for starter routing, added module router/model/test wiring, and orphan remnants
-* Integration checks for Kafka, RabbitMQ, and LLM files, settings, env values, and dependencies
+* Integration checks for Kafka, RabbitMQ, and LLM files, active settings/env values, and dependencies
 
 See [Project Checks](https://github.com/erenertemden/poleposition/blob/main/docs/project-checks.md) for detailed user guidance and the
 agent-facing check contract.

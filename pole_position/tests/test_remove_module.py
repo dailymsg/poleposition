@@ -658,6 +658,63 @@ def test_remove_module_fails_before_deleting_when_router_alias_drifted(
     assert (project_root / "tests" / "integration" / "test_garage.py").exists()
 
 
+def test_remove_module_fails_before_deleting_when_custom_router_reference_exists(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "api" / "router.py"
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8")
+        + "\n"
+        + "from myapp.modules.garage.router import router as garage_custom_router\n"
+        + 'api_router.include_router(garage_custom_router, prefix="/garage-custom", tags=["garage_custom"])\n',
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "remove", "module", "garage")
+
+    assert result.returncode != 0
+    assert "project layout is not ready" in result.stdout
+    assert "router import" in result.stdout
+    assert "router include" in result.stdout
+    assert (package_root / "modules" / "garage").exists()
+    assert "garage_custom_router" in router_path.read_text(encoding="utf-8")
+
+
+def test_remove_module_fails_before_deleting_when_custom_model_reference_exists(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    models_path = package_root / "db" / "models.py"
+    models_path.write_text(
+        models_path.read_text(encoding="utf-8")
+        + "\nfrom myapp.modules.garage import model as garage_model\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "remove", "module", "garage")
+
+    assert result.returncode != 0
+    assert "project layout is not ready" in result.stdout
+    assert "model import" in result.stdout
+    assert (package_root / "modules" / "garage").exists()
+    assert "garage_model" in models_path.read_text(encoding="utf-8")
+
+
 def test_remove_module_ignores_comments_when_router_import_is_already_missing(
     tmp_path: Path,
 ):

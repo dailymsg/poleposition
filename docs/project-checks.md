@@ -189,8 +189,10 @@ so upgraded CLI versions can still validate older generated projects.
 
 Lifecycle check also validates that the starter `status` module remains wired
 into `api/router.py` without an added router prefix, and reports orphan
-generated references when a module directory was deleted manually but managed
-router/model/export/test references remain.
+generated references when a module directory was deleted manually but
+router/model/export/test references remain. Python references are parsed from
+the full managed file, so custom imports below PolePosition markers are still
+reported when they point at a missing module.
 
 For a standard module, `check` expects:
 
@@ -232,7 +234,10 @@ For an `api-only` module, `check` expects:
 Integration check validates opt-in external-system scaffolds when the project
 contains signals that those integrations are present. In projects with
 `.poleposition.toml`, explicit manifest entries and file, dependency, setting,
-or env signals are both treated as integration signals.
+or active env signals are both treated as integration signals. Commented
+settings or env lines do not satisfy required integration values; generated
+commented env examples such as optional Kafka compression or LLM token limits
+are treated as optional examples.
 
 Kafka is checked when `integrations/kafka`, Kafka settings, Kafka env values,
 or the Kafka dependency are present. `check` expects:

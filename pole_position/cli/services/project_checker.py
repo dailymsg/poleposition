@@ -1164,9 +1164,8 @@ def _collect_orphan_module_exports(
     if lines is None:
         return []
 
-    marker_index = _safe_marker_index(lines, "    # polepos:module-exports")
     references: list[tuple[str, Path, str]] = []
-    for line in lines[:marker_index]:
+    for line in lines:
         match = re.match(r"^\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\s*,?\s*$", line)
         if match is None:
             continue
@@ -1191,26 +1190,41 @@ def _collect_orphan_router_references(
     except SyntaxError:
         return []
 
-    lines = content.splitlines()
-    import_marker_line = _safe_marker_index(lines, "# polepos:router-imports") + 1
-    include_marker_line = _safe_marker_index(lines, "# polepos:router-includes") + 1
     package_name = package_root.name
     references: list[tuple[str, Path, str]] = []
+    router_aliases = _router_aliases_by_module_name(tree, package_name)
 
     for node in ast.walk(tree):
-        lineno = getattr(node, "lineno", 0)
-        if isinstance(node, ast.ImportFrom) and lineno <= import_marker_line:
+        if isinstance(node, ast.ImportFrom):
             module_name = _module_name_from_router_import(node, package_name)
             if module_name is not None and module_name not in ignored_modules:
                 references.append((module_name, path, "router import"))
             continue
 
-        if isinstance(node, ast.Call) and lineno <= include_marker_line:
-            module_name = _module_name_from_router_include(node)
+        if isinstance(node, ast.Call):
+            module_name = _module_name_from_router_include(node, router_aliases)
             if module_name is not None and module_name not in ignored_modules:
                 references.append((module_name, path, "router include"))
 
     return references
+
+
+def _router_aliases_by_module_name(
+    tree: ast.Module,
+    package_name: str,
+) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        module_name = _module_name_from_router_import(node, package_name)
+        if module_name is None:
+            continue
+        for alias in node.names:
+            if alias.name == "router":
+                aliases[alias.asname or alias.name] = module_name
+
+    return aliases
 
 
 def _module_name_from_router_import(
@@ -1228,12 +1242,17 @@ def _module_name_from_router_import(
     return module_name if module_name.isidentifier() else None
 
 
-def _module_name_from_router_include(node: ast.Call) -> str | None:
+def _module_name_from_router_include(
+    node: ast.Call,
+    router_aliases: dict[str, str],
+) -> str | None:
     if not _is_api_router_include_call(node):
         return None
 
     if node.args and isinstance(node.args[0], ast.Name):
         alias = node.args[0].id
+        if alias in router_aliases:
+            return router_aliases[alias]
         if alias.endswith("_router"):
             module_name = alias[: -len("_router")]
             if module_name.isidentifier():
@@ -1258,10 +1277,6 @@ def _collect_orphan_model_references(
     if content is None:
         return []
 
-    marker_line = _safe_marker_index(
-        content.splitlines(),
-        "    # polepos:model-imports",
-    ) + 1
     package_name = package_root.name
     references: list[tuple[str, Path, str]] = []
 
@@ -1271,34 +1286,42 @@ def _collect_orphan_model_references(
         return []
 
     for node in ast.walk(tree):
-        if not isinstance(node, ast.ImportFrom):
-            continue
-        if getattr(node, "lineno", 0) > marker_line:
-            continue
-        module_name = _module_name_from_model_import(node, package_name)
+        module_name = _module_name_from_model_reference(node, package_name)
         if module_name is not None and module_name not in ignored_modules:
             references.append((module_name, path, "model import"))
 
     return references
 
 
-def _module_name_from_model_import(
-    node: ast.ImportFrom,
+def _module_name_from_model_reference(
+    node: ast.AST,
+    package_name: str,
+) -> str | None:
+    if isinstance(node, ast.ImportFrom):
+        return _module_name_from_import_module(node.module, package_name)
+
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            module_name = _module_name_from_import_module(alias.name, package_name)
+            if module_name is not None:
+                return module_name
+
+    return None
+
+
+def _module_name_from_import_module(
+    module: str | None,
     package_name: str,
 ) -> str | None:
     prefix = f"{package_name}.modules."
-    if node.module is None or not node.module.startswith(prefix):
+    if module is None or not module.startswith(prefix):
         return None
 
-    module_name = node.module[len(prefix) :]
+    module_name = module[len(prefix) :].split(".", 1)[0]
     if not module_name.isidentifier():
         return None
 
-    for alias in node.names:
-        if alias.name == "model":
-            return module_name
-
-    return None
+    return module_name
 
 
 def _collect_orphan_generated_tests(
@@ -1469,14 +1492,15 @@ def _has_integration_signal(
         return True
 
     if settings_content is not None:
-        for setting in contract.settings:
-            if f"{setting}:" in settings_content:
-                return True
+        settings_keys = _settings_keys(settings_content)
+        if any(setting in settings_keys for setting in contract.settings):
+            return True
 
     if env_content is not None:
-        for env_name in contract.env:
-            if f"{env_name}=" in env_content:
-                return True
+        env_keys = _env_keys(env_content)
+        integration_env = contract.env + contract.optional_env
+        if any(env_name in env_keys for env_name in integration_env):
+            return True
 
     if contract.name == "llm":
         return _has_ai_prompt_module(project_root, package_root)
@@ -1669,8 +1693,9 @@ def _check_integration_settings(
         return
 
     settings_path = package_root / "settings.py"
+    settings_keys = _settings_keys(settings_content)
     for setting in contract.settings:
-        if f"{setting}:" not in settings_content:
+        if setting not in settings_keys:
             problems.append(
                 f"Integration '{contract.name}' is missing setting in "
                 f"{settings_path}: {setting}"
@@ -1688,12 +1713,39 @@ def _check_integration_env(
         return
 
     env_path = project_root / ".env.example"
+    env_keys = _env_keys(env_content)
     for env_name in contract.env:
-        if f"{env_name}=" not in env_content:
+        if env_name not in env_keys:
             problems.append(
                 f"Integration '{contract.name}' is missing env value in "
                 f"{env_path}: {env_name}"
             )
+
+
+def _settings_keys(settings_content: str) -> set[str]:
+    keys: set[str] = set()
+    for line in settings_content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or ":" not in stripped:
+            continue
+        key = stripped.split(":", 1)[0]
+        if key.isidentifier():
+            keys.add(key)
+
+    return keys
+
+
+def _env_keys(env_content: str) -> set[str]:
+    keys: set[str] = set()
+    for line in env_content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key = stripped.split("=", 1)[0]
+        if key:
+            keys.add(key)
+
+    return keys
 
 
 def _read_file_lines(path: Path) -> list[str] | None:

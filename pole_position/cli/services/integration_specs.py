@@ -9,6 +9,7 @@ class IntegrationContract:
     env: tuple[str, ...]
     dependency: str | None = None
     creatable: bool = True
+    optional_env: tuple[str, ...] = ()
 
 
 KAFKA_INTEGRATION_CONTRACT = IntegrationContract(
@@ -42,8 +43,10 @@ KAFKA_INTEGRATION_CONTRACT = IntegrationContract(
         "KAFKA_GROUP_ID",
         "KAFKA_AUTO_OFFSET_RESET",
         "KAFKA_ACKS",
-        "KAFKA_COMPRESSION_TYPE",
         "KAFKA_REQUEST_TIMEOUT_MS",
+    ),
+    optional_env=(
+        "KAFKA_COMPRESSION_TYPE",
     ),
 )
 
@@ -112,6 +115,8 @@ LLM_INTEGRATION_CONTRACT = IntegrationContract(
         "LLM_BASE_URL",
         "LLM_TIMEOUT_SECONDS",
         "LLM_TEMPERATURE",
+    ),
+    optional_env=(
         "LLM_MAX_TOKENS",
     ),
     creatable=False,

@@ -160,12 +160,12 @@ def _collect_missing_marker_unless_entries_exist(
 def _entry_exists(content: str, entry: str, *, entry_type: str) -> bool:
     if entry_type == "setting":
         return any(
-            line.strip().startswith(f"{entry}:")
+            _settings_line_key(line) == entry
             for line in content.splitlines()
         )
 
     return any(
-        _env_line_key(line) == entry
+        _active_env_line_key(line) == entry
         for line in content.splitlines()
     )
 
@@ -394,16 +394,11 @@ def _ensure_block_entries_before_marker_or_anchor(
     key_for_line,
 ) -> None:
     lines = path.read_text(encoding="utf-8").splitlines()
-    existing_keys = {
-        key
-        for line in lines
-        if (key := key_for_line(line)) is not None
-    }
-    missing_lines = [
-        line
-        for line in block
-        if (key := key_for_line(line)) is not None and key not in existing_keys
-    ]
+    missing_lines = _missing_block_lines(
+        lines=lines,
+        block=block,
+        key_for_line=key_for_line,
+    )
 
     if not missing_lines:
         return
@@ -415,6 +410,8 @@ def _ensure_block_entries_before_marker_or_anchor(
 
 def _settings_line_key(line: str) -> str | None:
     stripped = line.strip()
+    if stripped.startswith("#"):
+        return None
     if ":" not in stripped:
         return None
     key = stripped.split(":", 1)[0]
@@ -422,13 +419,73 @@ def _settings_line_key(line: str) -> str | None:
 
 
 def _env_line_key(line: str) -> str | None:
+    return _active_env_line_key(line)
+
+
+def _active_env_line_key(line: str) -> str | None:
     stripped = line.strip()
-    if stripped.startswith("# "):
-        stripped = stripped[2:].strip()
+    if not stripped or stripped.startswith("#"):
+        return None
     if "=" not in stripped:
         return None
     key = stripped.split("=", 1)[0]
     return key if key else None
+
+
+def _commented_env_line_key(line: str) -> str | None:
+    stripped = line.strip()
+    if not stripped.startswith("#"):
+        return None
+    stripped = stripped[1:].strip()
+    if "=" not in stripped:
+        return None
+    key = stripped.split("=", 1)[0]
+    return key if key else None
+
+
+def _missing_block_lines(
+    *,
+    lines: list[str],
+    block: list[str],
+    key_for_line,
+) -> list[str]:
+    if key_for_line is not _env_line_key:
+        existing_keys = {
+            key
+            for line in lines
+            if (key := key_for_line(line)) is not None
+        }
+        return [
+            line
+            for line in block
+            if (key := key_for_line(line)) is not None and key not in existing_keys
+        ]
+
+    active_keys = {
+        key
+        for line in lines
+        if (key := _active_env_line_key(line)) is not None
+    }
+    commented_keys = {
+        key
+        for line in lines
+        if (key := _commented_env_line_key(line)) is not None
+    }
+    missing_lines: list[str] = []
+    for line in block:
+        active_key = _active_env_line_key(line)
+        if active_key is not None:
+            if active_key not in active_keys:
+                missing_lines.append(line)
+            continue
+
+        commented_key = _commented_env_line_key(line)
+        if commented_key is None:
+            continue
+        if commented_key not in active_keys and commented_key not in commented_keys:
+            missing_lines.append(line)
+
+    return missing_lines
 
 
 def _insert_block_before_marker_or_anchor(

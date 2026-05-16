@@ -629,13 +629,16 @@ def _collect_unsupported_reference(
         return
 
     lines = content.splitlines()
-    if any(line in lines for line in exact_lines):
-        return
-
-    if any(token in content for token in reference_tokens):
-        problems.append(
-            f"Module {description} for removal is not in a managed layout: {path}"
-        )
+    for line in lines:
+        if line in exact_lines:
+            continue
+        if line.strip().startswith("#"):
+            continue
+        if any(token in line for token in reference_tokens):
+            problems.append(
+                f"Module {description} for removal is not in a managed layout: {path}"
+            )
+            return
 
 
 def _collect_unsupported_router_wiring(
@@ -655,24 +658,33 @@ def _collect_unsupported_router_wiring(
     if tree is None:
         return
 
-    if _has_router_import_reference(tree, router_module) and _find_router_import_range(
+    managed_import_range = _find_router_import_range(
         tree,
         router_module,
         router_alias,
-    ) is None:
+    )
+    if any(
+        line_range != managed_import_range
+        for line_range in _router_import_reference_ranges(tree, router_module)
+    ):
         problems.append(
             f"Module router import for removal is not in a managed layout: {path}"
         )
 
-    if _has_router_include_reference(
+    router_aliases = _router_aliases_from_imports(tree, router_module) | {router_alias}
+    managed_include_range = _find_router_include_range(
         tree,
         router_alias,
         module_name,
-    ) and _find_router_include_range(
-        tree,
-        router_alias,
-        module_name,
-    ) is None:
+    )
+    if any(
+        line_range != managed_include_range
+        for line_range in _router_include_reference_ranges(
+            tree,
+            router_aliases,
+            module_name,
+        )
+    ):
         problems.append(
             f"Module router include for removal is not in a managed layout: {path}"
         )
@@ -784,11 +796,35 @@ def _find_router_import_range(
     return None
 
 
-def _has_router_import_reference(tree: ast.Module, router_module: str) -> bool:
-    return any(
-        isinstance(node, ast.ImportFrom) and node.module == router_module
-        for node in tree.body
-    )
+def _router_import_reference_ranges(
+    tree: ast.Module,
+    router_module: str,
+) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module != router_module:
+            continue
+        line_range = _node_line_range(node)
+        if line_range is not None:
+            ranges.append(line_range)
+
+    return ranges
+
+
+def _router_aliases_from_imports(tree: ast.Module, router_module: str) -> set[str]:
+    aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module != router_module:
+            continue
+        for alias in node.names:
+            if alias.name == "router":
+                aliases.add(alias.asname or alias.name)
+
+    return aliases
 
 
 def _find_router_include_range(
@@ -811,24 +847,41 @@ def _find_router_include_range(
     return None
 
 
-def _has_router_include_reference(
+def _router_include_reference_ranges(
     tree: ast.Module,
-    router_alias: str,
+    router_aliases: set[str],
     module_name: str,
-) -> bool:
+) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        if not _is_api_router_include_call(node):
+        if not _router_include_references_module(
+            node,
+            router_aliases,
+            module_name,
+        ):
             continue
-        if node.args and _is_name(node.args[0], router_alias):
-            return True
-        if _literal_keyword_value(node, "prefix") == f"/{module_name}":
-            return True
-        if _literal_keyword_value(node, "tags") in ([module_name], (module_name,)):
-            return True
+        line_range = _node_line_range(node)
+        if line_range is not None:
+            ranges.append(line_range)
 
-    return False
+    return ranges
+
+
+def _router_include_references_module(
+    node: ast.Call,
+    router_aliases: set[str],
+    module_name: str,
+) -> bool:
+    if not _is_api_router_include_call(node):
+        return False
+    if node.args and isinstance(node.args[0], ast.Name):
+        if node.args[0].id in router_aliases:
+            return True
+    if _literal_keyword_value(node, "prefix") == f"/{module_name}":
+        return True
+    return _literal_keyword_value(node, "tags") in ([module_name], (module_name,))
 
 
 def _node_line_range(node: ast.AST) -> tuple[int, int] | None:

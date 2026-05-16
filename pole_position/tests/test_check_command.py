@@ -325,6 +325,69 @@ def test_check_reports_orphan_module_wiring_after_manual_directory_delete(
     assert "polepos remove module garage" in result.stdout
 
 
+def test_check_reports_orphan_custom_module_references_after_marker(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    shutil.rmtree(package_root / "modules" / "garage")
+    (project_root / "tests" / "integration" / "test_garage.py").unlink()
+    (project_root / "tests" / "unit" / "test_garage_service.py").unlink()
+
+    router_path = package_root / "api" / "router.py"
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8")
+        .replace(
+            "from myapp.modules.garage.router import router as garage_router\n",
+            "",
+        )
+        .replace(
+            'api_router.include_router(garage_router, prefix="/garage", tags=["garage"])\n',
+            "",
+        )
+        + "\n"
+        + "from myapp.modules.garage.router import router as garage_custom_router\n"
+        + 'api_router.include_router(garage_custom_router, prefix="/garage-custom", tags=["garage_custom"])\n',
+        encoding="utf-8",
+    )
+
+    models_path = package_root / "db" / "models.py"
+    models_path.write_text(
+        models_path.read_text(encoding="utf-8").replace(
+            "    from myapp.modules.garage import model  # noqa: F401\n",
+            "",
+        )
+        + "\nfrom myapp.modules.garage import model as garage_model\n",
+        encoding="utf-8",
+    )
+
+    modules_init_path = package_root / "modules" / "__init__.py"
+    modules_init_path.write_text(
+        modules_init_path.read_text(encoding="utf-8")
+        .replace('    "garage",\n', "")
+        .replace(
+            "    # polepos:module-exports\n",
+            "    # polepos:module-exports\n    'garage',\n",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Orphan module reference to missing module 'garage'" in result.stdout
+    assert "router import" in result.stdout
+    assert "router include" in result.stdout
+    assert "model import" in result.stdout
+    assert "module export" in result.stdout
+
+
 def test_check_reports_missing_status_router_wiring(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -626,6 +689,45 @@ def test_check_reports_missing_rabbitmq_settings_and_env(tmp_path: Path) -> None
     assert "rabbitmq_url" in result.stdout
     assert "Integration 'rabbitmq' is missing env value" in result.stdout
     assert "RABBITMQ_URL" in result.stdout
+
+
+def test_check_reports_commented_required_integration_settings_and_env(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "kafka")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    settings_path.write_text(
+        settings_path.read_text(encoding="utf-8").replace(
+            '    kafka_bootstrap_servers: str = "localhost:9092"\n',
+            '    # kafka_bootstrap_servers: str = "localhost:9092"\n',
+        ),
+        encoding="utf-8",
+    )
+
+    env_path = project_root / ".env.example"
+    env_path.write_text(
+        env_path.read_text(encoding="utf-8").replace(
+            "KAFKA_BOOTSTRAP_SERVERS=localhost:9092\n",
+            "# KAFKA_BOOTSTRAP_SERVERS=localhost:9092\n",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'kafka' is missing setting" in result.stdout
+    assert "kafka_bootstrap_servers" in result.stdout
+    assert "Integration 'kafka' is missing env value" in result.stdout
+    assert "KAFKA_BOOTSTRAP_SERVERS" in result.stdout
+    assert "KAFKA_COMPRESSION_TYPE" not in result.stdout
 
 
 def test_check_reports_missing_llm_integration_file_and_env(tmp_path: Path) -> None:
