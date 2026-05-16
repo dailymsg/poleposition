@@ -278,6 +278,12 @@ the project is not left partially cleaned. If module files or generated tests
 appear to contain custom changes, it also stops unless `--force` is used.
 `--trace` reports the planned removals and updates without mutating files.
 
+Router and model wiring checks are Python-aware. The remover can delete the
+generated `from <package>.modules.<name>.router ...` import and matching
+`api_router.include_router(...)` call, including multi-line generated calls. It
+does not delete additional custom imports or includes for the same module. Those
+custom references block removal until the user removes or rewires them.
+
 `--wiring-only` is the escape hatch for customized module directories. It
 removes PolePosition-managed exports, router wiring, standard-module model
 imports, and generated tests, but preserves the module directory and shared
@@ -299,6 +305,13 @@ helpers and adds `aiokafka`; RabbitMQ writes `integrations/rabbitmq` helpers
 and adds `aio-pika`. Both integrations patch settings and `.env.example`
 values. Consumer loops are left as explicit worker/runtime code instead of
 being started inside the FastAPI app process.
+
+Integration env handling distinguishes active required keys from optional
+commented examples. A required key that appears only as a comment is treated as
+missing, so `polepos add integration kafka` inserts an active
+`KAFKA_BOOTSTRAP_SERVERS=...` line even if `# KAFKA_BOOTSTRAP_SERVERS=...`
+already exists. Optional examples such as `# KAFKA_COMPRESSION_TYPE=` and
+`# LLM_MAX_TOKENS=` are allowed to remain commented.
 
 Integration dependency patching targets `[project].dependencies` in
 `pyproject.toml`. It tolerates normal TOML formatting differences such as
@@ -329,6 +342,12 @@ Current check layers:
 - core checks: project identity, generated structure, Alembic config, and managed markers
 - lifecycle checks: added module files, exports, router wiring, model wiring, and generated tests
 - integration checks: Kafka, RabbitMQ, and LLM files, dependencies, settings keys, and env keys
+
+Lifecycle orphan checks parse router and model Python files across the whole
+file, not just lines before managed markers. This lets `check` report custom
+imports that still reference a missing module after the generated block was
+cleaned. Integration checks parse exact active setting/env keys so comments and
+substring matches do not hide missing required values.
 
 Core-only behavior is available through `check_core_project()` for internal
 callers that need the foundation without lifecycle or integration checks.

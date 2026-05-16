@@ -304,6 +304,12 @@ managed files. It stops before deleting files if the module wiring has drifted
 away from a managed layout, or if the module directory or generated tests appear
 to contain custom changes.
 
+Only the PolePosition-generated wiring is removed automatically. If
+`api/router.py`, `db/models.py`, or `modules/__init__.py` also contains custom
+references to the same module, the command reports the unmanaged reference and
+leaves the module directory in place. Remove or rewrite those custom references
+explicitly, then rerun the command.
+
 If the module directory was already deleted manually, rerun
 `polepos remove module <name>` to clean remaining generated tests and managed
 router, model, and export wiring.
@@ -359,6 +365,11 @@ such as `polepos add module`, `polepos remove module`, and
 
 When `.poleposition.toml` is present, generated integration entries must use
 unquoted TOML booleans such as `kafka = true` or `kafka = false`.
+Integration settings and env values are matched as active keys, not comments or
+loose substrings. A commented required value such as
+`# KAFKA_BOOTSTRAP_SERVERS=...` is reported as missing, while optional generated
+examples such as `# KAFKA_COMPRESSION_TYPE=` and `# LLM_MAX_TOKENS=` may stay
+commented until needed.
 
 Use it after adding modules or integrations, after resolving merge conflicts in
 managed files, and before handing a project to another teammate or coding
@@ -390,6 +401,8 @@ surface manually:
 * Do not rewrite managed router includes, model imports, module exports,
   integration settings, or `.env.example` values into a shape the CLI cannot
   recognize.
+* Keep required generated settings and env values active; use comments only for
+  optional examples or explanatory notes.
 * Do not delete generated module directories by hand. Use
   `polepos remove module <name>` so generated wiring and tests are cleaned too.
 * Do not move generated core files such as `api/router.py`, `db/models.py`,

@@ -74,6 +74,12 @@ wiring, and standard-module model imports.
 If the module directory was already deleted manually, the command still cleans
 remaining generated tests and managed router, model, and export wiring.
 
+The remover is conservative about wiring. It removes generated imports and
+includes that still match the managed layout, but it will not silently delete
+custom references to the same module. For example, an extra router include with
+a custom prefix or a custom model import must be removed or rewritten by the
+user before the module directory is deleted.
+
 By default, the command stops before deleting the module directory when the
 module files or generated tests appear to contain custom changes. Use `--trace`
 to preview the planned removals and updates without changing files. Use
@@ -105,8 +111,8 @@ shared LLM settings, `.env.example` values, and `integrations/llm` scaffold.
 If another AI prompt module remains, the shared LLM scaffold is kept.
 
 The command also stops before deleting files when managed wiring has drifted
-into a layout it cannot clean safely. Fix the reported layout or remove the
-custom wiring manually, then retry.
+into a layout it cannot clean safely. Fix the reported layout, restore the
+generated wiring shape, or remove the custom wiring manually, then retry.
 
 ## Add Integrations
 
@@ -131,6 +137,15 @@ polepos check
 starter module routing, added module wiring, orphan generated remnants,
 generated tests, and supported integration scaffolds. It works from nested
 directories inside a PolePosition project.
+
+For orphan module checks, `check` parses Python files rather than looking only
+at generated marker blocks. A custom import below `# polepos:router-imports` or
+`# polepos:model-imports` is still reported when it points at a missing module.
+
+For integration checks, required settings and `.env.example` values must be
+active keys. Commented required values are treated as missing; optional
+generated examples such as `# KAFKA_COMPRESSION_TYPE=` and
+`# LLM_MAX_TOKENS=` may remain commented.
 
 When it fails, each issue includes a `PPCHK` code and a `Fix:` hint so humans,
 coding agents, and CI logs can point to the same remediation.

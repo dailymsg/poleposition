@@ -54,6 +54,11 @@ KAFKA_ACKS=all
 KAFKA_REQUEST_TIMEOUT_MS=40000
 ```
 
+Required Kafka values should remain active in `.env.example`. A commented
+required value such as `# KAFKA_BOOTSTRAP_SERVERS=localhost:9092` is treated as
+missing by `polepos check`. `KAFKA_COMPRESSION_TYPE` is optional and may remain
+commented until needed.
+
 ## Use the Producer
 
 The generated factory builds a producer from settings. Keep producer lifetime
@@ -81,5 +86,5 @@ polepos check
 ```
 
 The check command validates Kafka files, settings, env values, and dependency
-signals without connecting to Kafka.
-
+signals without connecting to Kafka. It distinguishes required active env keys
+from optional commented examples.

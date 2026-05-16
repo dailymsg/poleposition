@@ -85,13 +85,23 @@ If the directory was already deleted manually, rerun
 wiring and tests.
 
 If `polepos check` reports orphan module references, it means generated wiring
-or tests still point at a module directory that no longer exists. Run:
+or tests still point at a module directory that no longer exists. This includes
+custom Python imports below PolePosition markers, not only the original
+generated lines. Run:
 
 ```bash
 polepos remove module <name>
 ```
 
-or restore the missing module directory.
+or restore the missing module directory. If the remaining line is custom code,
+remove or rewire it manually. Examples of references that can keep a missing
+module visible to `check`:
+
+```python
+from myapp.modules.garage.router import router as garage_custom_router
+api_router.include_router(garage_custom_router, prefix="/garage-custom")
+from myapp.modules.garage import model as garage_model
+```
 
 ## `polepos add module` Fails Before Writing Files
 
@@ -112,6 +122,8 @@ Fix the reported structure issue, then retry the module command.
 The command removes only wiring it can recognize as PolePosition-managed. If a
 router include, model import, or module export has been manually reformatted or
 rewritten, `remove module` stops before deleting the module directory.
+It also stops when a custom reference to the same module would remain after the
+generated wiring is removed.
 
 It also stops when the module directory or generated tests appear to contain
 custom changes. Run `polepos remove module <name> --trace` to see what would be
@@ -137,6 +149,33 @@ polepos check
 
 Then either restore the generated managed wiring shape and retry, or remove the
 custom wiring manually before deleting the module.
+
+## Integration Env Exists But `check` Says It Is Missing
+
+`polepos check` only counts active settings and env keys. A required key in a
+comment is treated as inactive:
+
+```env
+# KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+```
+
+Uncomment or restore the generated active line:
+
+```env
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+```
+
+Optional generated examples may stay commented. These are examples, not
+required active values:
+
+```env
+# KAFKA_COMPRESSION_TYPE=
+# LLM_MAX_TOKENS=
+```
+
+The same rule applies in `settings.py`. A commented field such as
+`# kafka_bootstrap_servers: str = "localhost:9092"` is not a setting and will
+be reported as missing when Kafka is enabled.
 
 ## A Removed Module's Table Still Exists
 

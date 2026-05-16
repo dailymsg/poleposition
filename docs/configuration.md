@@ -73,7 +73,9 @@ For the full workflow, see [Database and Migrations](database.md).
 | `UVICORN_BACKLOG` | `2048` | Socket backlog |
 
 Optional integer or boolean-like values can be left commented in `.env.example`
-until needed.
+until needed. Required generated values should stay active. `polepos check`
+treats commented required settings and env keys as missing so disabled examples
+do not accidentally satisfy the project contract.
 
 `run.py` is the preferred local process entrypoint. It reads these values when
 `main()` runs and starts Uvicorn with `<package>.main:app`. `main.py` exposes the
@@ -139,6 +141,10 @@ Important values:
 - `KAFKA_GROUP_ID`
 - `KAFKA_REQUEST_TIMEOUT_MS`
 
+`KAFKA_COMPRESSION_TYPE` is generated as an optional commented example. Leave
+it commented until compression is needed; keep required values such as
+`KAFKA_BOOTSTRAP_SERVERS` active.
+
 ## RabbitMQ
 
 RabbitMQ settings are added by:
@@ -174,3 +180,7 @@ Important values:
 - `LLM_TIMEOUT_SECONDS`
 - `LLM_TEMPERATURE`
 - `LLM_MAX_TOKENS`
+
+`LLM_MAX_TOKENS` is generated as an optional commented example. Required values
+such as `LLM_PROVIDER`, `LLM_MODEL`, and `LLM_API_KEY` should remain active in
+`.env.example`, even when the value is empty.

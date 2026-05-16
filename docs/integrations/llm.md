@@ -47,6 +47,8 @@ LLM_TEMPERATURE=0.2
 ```
 
 Set `LLM_API_KEY` before calling generated endpoints against a real provider.
+The key should remain active in `.env.example`, even when its value is empty.
+`LLM_MAX_TOKENS` is optional and may remain commented until needed.
 
 ## Provider Boundary
 
@@ -78,4 +80,6 @@ polepos check
 ```
 
 The check command validates LLM files, settings, and env values without
-contacting a provider.
+contacting a provider. It treats commented required values such as
+`# LLM_PROVIDER=openai` as missing, while allowing optional examples such as
+`# LLM_MAX_TOKENS=`.

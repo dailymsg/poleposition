@@ -60,6 +60,16 @@ It does not connect to the database and does not verify whether a removed
 module's table still exists. Schema cleanup remains an Alembic migration
 decision.
 
+When `check` reports a removed module, it is reporting file drift, not runtime
+state. The usual fix is to restore the missing module directory or run:
+
+```bash
+polepos remove module <name>
+```
+
+If the remaining reference is custom code, remove or rewire that reference
+manually before rerunning `check`.
+
 ## Safe Customization Boundaries
 
 PolePosition projects are normal FastAPI projects, so users can and should edit
@@ -93,6 +103,9 @@ lifecycle management for that file:
 - partially adding integration settings or `.env.example` values by hand while
   relying on `polepos add integration ...` or `polepos check` to manage the same
   integration later
+- commenting out required generated integration values such as
+  `KAFKA_BOOTSTRAP_SERVERS` or `LLM_PROVIDER` while expecting `check` to treat
+  them as present
 - editing `.env.example` as a secret store; put local secrets in `.env`
 
 If a module was already deleted manually, run
@@ -194,6 +207,25 @@ router/model/export/test references remain. Python references are parsed from
 the full managed file, so custom imports below PolePosition markers are still
 reported when they point at a missing module.
 
+For example, if `src/myapp/modules/garage/` is gone, all of these count as
+orphan references:
+
+```python
+from myapp.modules.garage.router import router as garage_router
+api_router.include_router(garage_router, prefix="/garage", tags=["garage"])
+from myapp.modules.garage import model as garage_model
+```
+
+Generated wiring can usually be cleaned with:
+
+```bash
+polepos remove module garage
+```
+
+Custom references are not guessed away. If the project intentionally replaced
+the generated router include or model import with a custom line, remove or
+rewrite that custom line explicitly before expecting `check` to pass.
+
 For a standard module, `check` expects:
 
 - module files: `__init__.py`, `model.py`, `repository.py`, `router.py`,
@@ -239,6 +271,25 @@ settings or env lines do not satisfy required integration values; generated
 commented env examples such as optional Kafka compression or LLM token limits
 are treated as optional examples.
 
+The distinction is deliberate:
+
+```env
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092   # required and active
+# KAFKA_BOOTSTRAP_SERVERS=localhost:9092 # required but inactive, reported missing
+# KAFKA_COMPRESSION_TYPE=                # optional example, allowed commented
+```
+
+The same rule applies to generated settings in `settings.py`:
+
+```python
+kafka_bootstrap_servers: str = "localhost:9092"  # present
+# kafka_bootstrap_servers: str = "localhost:9092"  # commented out, missing
+```
+
+If a required env key was accidentally pre-seeded as a comment before running
+`polepos add integration kafka`, the add command inserts an active generated
+line instead of treating the comment as complete.
+
 Kafka is checked when `integrations/kafka`, Kafka settings, Kafka env values,
 or the Kafka dependency are present. `check` expects:
 
@@ -253,6 +304,7 @@ or the Kafka dependency are present. `check` expects:
   `kafka_request_timeout_ms`
 - env values such as `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_CLIENT_ID`, and
   `KAFKA_REQUEST_TIMEOUT_MS`
+- optional commented env example: `KAFKA_COMPRESSION_TYPE`
 
 RabbitMQ is checked when `integrations/rabbitmq`, RabbitMQ settings, RabbitMQ
 env values, or the RabbitMQ dependency are present. `check` expects:
@@ -280,6 +332,7 @@ LLM is checked when `integrations/llm`, LLM settings, LLM env values, or an
 - `schemas.py`
 - settings such as `llm_provider`, `llm_model`, and `llm_api_key`
 - env values such as `LLM_PROVIDER`, `LLM_MODEL`, and `LLM_API_KEY`
+- optional commented env example: `LLM_MAX_TOKENS`
 
 LLM does not require a provider SDK dependency by default because the generated
 adapters are provider-agnostic stubs.

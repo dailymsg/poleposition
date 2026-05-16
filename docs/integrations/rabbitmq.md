@@ -55,6 +55,10 @@ RABBITMQ_QUEUE_DURABLE=true
 RABBITMQ_PREFETCH_COUNT=10
 ```
 
+RabbitMQ currently has no optional commented env examples. Required values in
+`.env.example` should remain active so `polepos check` can validate the
+integration contract.
+
 ## Use the Publisher
 
 The generated factory builds a publisher from settings. Keep connection and
@@ -83,4 +87,3 @@ polepos check
 
 The check command validates RabbitMQ files, settings, env values, and
 dependency signals without connecting to RabbitMQ.
-
