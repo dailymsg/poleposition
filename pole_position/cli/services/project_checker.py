@@ -221,6 +221,8 @@ def _project_check_issue_code(problem: str) -> str:
         return "PPCHK013"
     if problem.startswith("Project manifest has unsupported module template"):
         return "PPCHK014"
+    if problem.startswith("Project manifest has unsupported integration value"):
+        return "PPCHK015"
     if problem.startswith("Managed file is missing"):
         return "PPCHK020"
     if problem.startswith("Managed marker"):
@@ -303,6 +305,8 @@ def _project_check_remediation(problem: str) -> str:
     if problem.startswith("Project manifest has unsupported module template"):
         supported = ", ".join((*SUPPORTED_MODULE_TEMPLATES, "starter"))
         return f"Use one of these module template values: {supported}."
+    if problem.startswith("Project manifest has unsupported integration value"):
+        return "Use unquoted true or false for generated integration values."
     if problem.startswith("Managed file is missing"):
         return (
             "Restore the managed file before running PolePosition lifecycle "
@@ -627,6 +631,12 @@ def _check_project_manifest(
         problems.append(
             "Project manifest has unsupported module template in "
             f"{manifest_path}: {module_name} = {template}"
+        )
+
+    for integration_name, value in manifest.invalid_integration_values.items():
+        problems.append(
+            "Project manifest has unsupported integration value in "
+            f"{manifest_path}: {integration_name} = {value}"
         )
 
 

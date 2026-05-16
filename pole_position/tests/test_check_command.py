@@ -770,6 +770,31 @@ def test_check_reports_invalid_manifest_module_template_without_traceback(
     assert "Traceback" not in result.stderr
 
 
+def test_check_reports_invalid_manifest_integration_value_without_wiring_noise(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8") + 'kafka = "false"\n',
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK015]" in result.stdout
+    assert "Project manifest has unsupported integration value" in result.stdout
+    assert 'kafka = "false"' in result.stdout
+    assert "Fix: Use unquoted true or false" in result.stdout
+    assert "Integration 'kafka'" not in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
 def test_check_reports_status_router_include_with_added_prefix(
     tmp_path: Path,
 ) -> None:

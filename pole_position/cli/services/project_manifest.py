@@ -14,6 +14,7 @@ class ProjectManifest:
     database: str | None = None
     modules: dict[str, str] | None = None
     integrations: dict[str, bool] | None = None
+    invalid_integrations: dict[str, str] | None = None
     exists: bool = False
 
     @property
@@ -23,6 +24,10 @@ class ProjectManifest:
     @property
     def enabled_integrations(self) -> dict[str, bool]:
         return dict(self.integrations or {})
+
+    @property
+    def invalid_integration_values(self) -> dict[str, str]:
+        return dict(self.invalid_integrations or {})
 
 
 def manifest_path(project_root: Path) -> Path:
@@ -39,6 +44,7 @@ def read_project_manifest(project_root: Path) -> ProjectManifest:
     database: str | None = None
     modules: dict[str, str] = {}
     integrations: dict[str, bool] = {}
+    invalid_integrations: dict[str, str] = {}
 
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = _strip_comment(raw_line).strip()
@@ -55,7 +61,8 @@ def read_project_manifest(project_root: Path) -> ProjectManifest:
             continue
 
         key = assignment_match.group(1)
-        value = _parse_value(assignment_match.group(2))
+        raw_value = assignment_match.group(2)
+        value = _parse_value(raw_value)
 
         if section == "poleposition" and key == "package":
             package_name = str(value)
@@ -64,13 +71,19 @@ def read_project_manifest(project_root: Path) -> ProjectManifest:
         elif section == "modules":
             modules[key] = str(value)
         elif section == "integrations":
-            integrations[key] = bool(value)
+            if isinstance(value, bool):
+                integrations[key] = value
+                invalid_integrations.pop(key, None)
+            else:
+                integrations.pop(key, None)
+                invalid_integrations[key] = raw_value.strip()
 
     return ProjectManifest(
         package_name=package_name,
         database=database,
         modules=modules,
         integrations=integrations,
+        invalid_integrations=invalid_integrations,
         exists=True,
     )
 
@@ -80,6 +93,7 @@ def write_project_manifest(project_root: Path, manifest: ProjectManifest) -> Non
     database = manifest.database or "custom"
     modules = manifest.module_templates
     integrations = manifest.enabled_integrations
+    invalid_integrations = manifest.invalid_integration_values
 
     lines = [
         "[poleposition]",
@@ -93,9 +107,13 @@ def write_project_manifest(project_root: Path, manifest: ProjectManifest) -> Non
         lines.append(f'{module_name} = "{modules[module_name]}"')
 
     lines.extend(["", "[integrations]"])
-    for integration_name in sorted(integrations):
-        enabled = "true" if integrations[integration_name] else "false"
-        lines.append(f"{integration_name} = {enabled}")
+    for integration_name in sorted({*integrations, *invalid_integrations}):
+        if integration_name in integrations:
+            enabled = "true" if integrations[integration_name] else "false"
+            lines.append(f"{integration_name} = {enabled}")
+            continue
+
+        lines.append(f"{integration_name} = {invalid_integrations[integration_name]}")
 
     manifest_path(project_root).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -119,6 +137,7 @@ def record_manifest_module(
             database=manifest.database,
             modules=modules,
             integrations=manifest.enabled_integrations,
+            invalid_integrations=manifest.invalid_integration_values,
             exists=True,
         ),
     )
@@ -138,6 +157,7 @@ def remove_manifest_module(*, project_root: Path, module_name: str) -> None:
             database=manifest.database,
             modules=modules,
             integrations=manifest.enabled_integrations,
+            invalid_integrations=manifest.invalid_integration_values,
             exists=True,
         ),
     )
@@ -155,6 +175,8 @@ def record_manifest_integration(
 
     integrations = manifest.enabled_integrations
     integrations[integration_name] = enabled
+    invalid_integrations = manifest.invalid_integration_values
+    invalid_integrations.pop(integration_name, None)
     write_project_manifest(
         project_root,
         ProjectManifest(
@@ -162,6 +184,7 @@ def record_manifest_integration(
             database=manifest.database,
             modules=manifest.module_templates,
             integrations=integrations,
+            invalid_integrations=invalid_integrations,
             exists=True,
         ),
     )
@@ -173,7 +196,9 @@ def remove_manifest_integration(*, project_root: Path, integration_name: str) ->
         return
 
     integrations = manifest.enabled_integrations
+    invalid_integrations = manifest.invalid_integration_values
     integrations.pop(integration_name, None)
+    invalid_integrations.pop(integration_name, None)
     write_project_manifest(
         project_root,
         ProjectManifest(
@@ -181,6 +206,7 @@ def remove_manifest_integration(*, project_root: Path, integration_name: str) ->
             database=manifest.database,
             modules=manifest.module_templates,
             integrations=integrations,
+            invalid_integrations=invalid_integrations,
             exists=True,
         ),
     )

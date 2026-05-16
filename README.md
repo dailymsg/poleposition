@@ -357,6 +357,9 @@ orphan generated references, and opt-in integration wiring used by commands
 such as `polepos add module`, `polepos remove module`, and
 `polepos add integration`.
 
+When `.poleposition.toml` is present, generated integration entries must use
+unquoted TOML booleans such as `kafka = true` or `kafka = false`.
+
 Use it after adding modules or integrations, after resolving merge conflicts in
 managed files, and before handing a project to another teammate or coding
 agent. The command is read-only: it reports drift but does not rewrite files,

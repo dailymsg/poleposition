@@ -143,7 +143,10 @@ accepts that shape and skips database-specific structure checks.
 New generated projects include `.poleposition.toml`. The file records the
 application package, database mode, generated modules, and generated
 integrations. Older projects without the file still work through structural
-inference. If a project intentionally uses a user-managed database workflow
+inference. Integration values must use TOML booleans such as `kafka = true` or
+`kafka = false`; quoted strings such as `kafka = "false"` are reported as
+invalid manifest values instead of being treated as generated integration
+signals. If a project intentionally uses a user-managed database workflow
 outside PolePosition's SQLAlchemy/Alembic lifecycle, set:
 
 ```toml
@@ -290,6 +293,7 @@ Issue text still names the layer by implication:
 
 - `Required generated path is missing`: core generated structure drift
 - `Required Alembic path is missing`: migration setup drift
+- `Project manifest has unsupported ...`: invalid lifecycle manifest metadata
 - `Managed marker ... is missing`: a managed insertion point was removed
 - `Lifecycle module ...`: added module wiring drift
 - `Orphan module reference ...`: generated remnants point at a missing module
