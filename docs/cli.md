@@ -131,6 +131,7 @@ scaffold details.
 
 ```bash
 polepos check
+polepos check --json
 ```
 
 `check` validates generated structure, managed markers, Alembic configuration,
@@ -149,6 +150,10 @@ generated examples such as `# KAFKA_COMPRESSION_TYPE=` and
 
 When it fails, each issue includes a `PPCHK` code and a `Fix:` hint so humans,
 coding agents, and CI logs can point to the same remediation.
+
+Use `--json` for CI and agent workflows that need a machine-readable result.
+The JSON payload contains `passed`, `project_root`, `package_name`, and
+`issues`. Each issue includes `code`, `message`, and `remediation`.
 
 New generated projects include `.poleposition.toml`, which records package,
 database mode, module templates, and generated integrations. If that file is

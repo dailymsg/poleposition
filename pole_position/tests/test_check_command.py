@@ -1,8 +1,9 @@
-from pathlib import Path
+import json
 import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -30,7 +31,8 @@ def test_check_help_shows_usage_without_project(tmp_path: Path) -> None:
     result = run_cli(tmp_path, "check", "--help")
 
     assert result.returncode == 0
-    assert "Usage: polepos check" in result.stdout
+    assert "Usage: polepos check [--json]" in result.stdout
+    assert "--json" in result.stdout
     assert "Unexpected argument" not in result.stdout
 
 
@@ -47,6 +49,23 @@ def test_check_passes_for_generated_project(tmp_path: Path) -> None:
     assert "Package: myapp" in result.stdout
 
 
+def test_check_json_passes_for_generated_project(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "check", "--json")
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload == {
+        "passed": True,
+        "project_root": str(project_root),
+        "package_name": "myapp",
+        "issues": [],
+    }
+
+
 def test_check_reports_missing_status_integration_test(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -59,6 +78,35 @@ def test_check_reports_missing_status_integration_test(tmp_path: Path) -> None:
     assert result.returncode != 0
     assert "Required generated path is missing" in result.stdout
     assert "tests/integration/test_status.py" in result.stdout
+
+
+def test_check_json_reports_issues(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    (project_root / "tests" / "integration" / "test_status.py").unlink()
+
+    result = run_cli(project_root, "check", "--json")
+
+    assert result.returncode != 0
+    payload = json.loads(result.stdout)
+    assert payload["passed"] is False
+    assert payload["project_root"] == str(project_root)
+    assert payload["package_name"] == "myapp"
+    assert payload["issues"] == [
+        {
+            "code": "PPCHK010",
+            "message": (
+                "Required generated path is missing: "
+                f"{project_root / 'tests' / 'integration' / 'test_status.py'}"
+            ),
+            "remediation": (
+                "Restore the generated path, or intentionally opt out and document "
+                "the drift."
+            ),
+        }
+    ]
 
 
 def test_check_works_from_nested_directory(tmp_path: Path) -> None:
@@ -178,6 +226,26 @@ def test_check_fails_outside_project(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "does not look like a PolePosition project" in result.stdout
+
+
+def test_check_json_fails_outside_project(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "check", "--json")
+
+    assert result.returncode != 0
+    payload = json.loads(result.stdout)
+    assert payload["passed"] is False
+    assert payload["project_root"] is None
+    assert payload["package_name"] is None
+    assert payload["issues"] == [
+        {
+            "code": "PPCHK000",
+            "message": "Current directory does not look like a PolePosition project.",
+            "remediation": (
+                "Run the command from a PolePosition project root or a nested "
+                "directory inside one."
+            ),
+        }
+    ]
 
 
 def test_check_reports_missing_managed_marker(tmp_path: Path) -> None:

@@ -5,6 +5,7 @@ const sidebars = {
     {type: "doc", id: "getting-started", label: "Getting Started"},
     {type: "doc", id: "cli", label: "CLI Reference"},
     {type: "doc", id: "configuration", label: "Configuration Reference"},
+    {type: "doc", id: "data-structures", label: "Data Structures"},
     {type: "doc", id: "database", label: "Database and Migrations"},
     {
       type: "doc",

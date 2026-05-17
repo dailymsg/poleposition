@@ -19,6 +19,7 @@ PolePosition project:
 
 ```bash
 polepos check
+polepos check --json
 ```
 
 Run it after:
@@ -49,6 +50,41 @@ Package: myapp
 Issues:
   - [PPCHK034] Lifecycle module 'garage' is missing API router include in ...
     Fix: Restore the router include, or clean the detached module with ...
+```
+
+For CI and coding-agent workflows, use `--json`:
+
+```bash
+polepos check --json
+```
+
+Successful JSON output looks like this:
+
+```json
+{
+  "issues": [],
+  "package_name": "myapp",
+  "passed": true,
+  "project_root": "/path/to/myapp"
+}
+```
+
+Failed JSON output keeps the same process exit behavior as the text output and
+reports issues as structured objects:
+
+```json
+{
+  "issues": [
+    {
+      "code": "PPCHK034",
+      "message": "Lifecycle module 'garage' is missing API router include in ...",
+      "remediation": "Restore the router include, or clean the detached module with ..."
+    }
+  ],
+  "package_name": "myapp",
+  "passed": false,
+  "project_root": "/path/to/myapp"
+}
 ```
 
 The command is intentionally diagnostic. It does not rewrite files, install

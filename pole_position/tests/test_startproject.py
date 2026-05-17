@@ -383,10 +383,12 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "`polepos remove module <name>`" in agents_guide
     assert "`polepos remove module <name> --wiring-only`" in agents_guide
     assert "`polepos check`" in agents_guide
+    assert "`polepos check --json`" in agents_guide
     assert "{{project" not in agents_guide
     assert "src/demo_app/api/router.py" in readme
     assert 'prefix="/garage"' in readme
     assert "GET /api/v1/garage/" in readme
+    assert "polepos check --json" in readme
     assert "If the module directory was already deleted manually" in readme
     assert "router, model, and export wiring" in readme
     assert "polepos remove module <name> --wiring-only" in readme
@@ -783,12 +785,15 @@ def test_generated_env_example_is_safe_to_copy(tmp_path: Path):
 
 def test_packaging_includes_hidden_template_files() -> None:
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    packages = pyproject["tool"]["setuptools"]["packages"]["find"]["include"]
     package_data = pyproject["tool"]["setuptools"]["package-data"]["pole_position"]
     exclude_package_data = pyproject["tool"]["setuptools"]["exclude-package-data"][
         "pole_position"
     ]
     manifest = (REPO_ROOT / "MANIFEST.in").read_text(encoding="utf-8")
 
+    assert "pole_position*" in packages
+    assert "polepos*" in packages
     assert "template/AGENTS.md" in package_data
     assert "template/.env.example" in package_data
     assert "template/.gitignore" in package_data

@@ -30,8 +30,9 @@ Instead, it clarifies whether a feature is:
 | `polepos remove module` | Growing | Removes generated module scaffolds and managed wiring; supports `--wiring-only` for detaching managed references while preserving customized module files. |
 | `polepos add integration kafka` | Growing | First messaging integration; producer, consumer factory, settings, env, and test double support are scaffolded. |
 | `polepos add integration rabbitmq` | Growing | Second messaging integration; publisher, queue factory, settings, env, and test double support are scaffolded. |
-| `polepos check` | Stable foundation | Runs core checks for project identity, generated structure, Alembic config, managed markers, starter routing, added module lifecycle wiring, orphan remnants, and opt-in integration wiring. |
+| `polepos check` | Stable foundation | Runs core checks for project identity, generated structure, Alembic config, managed markers, starter routing, added module lifecycle wiring, orphan remnants, opt-in integration wiring, and JSON output for CI/agent workflows. |
 | `polepos db ...` commands | Stable foundation | Good migration lifecycle wrapper around Alembic. |
+| `polepos.data` runtime structures | Growing | Provides dependency-free in-memory structures such as caches, sorted containers, trie, graph, priority queue, and union-find. |
 | Alembic migration support | Stable foundation | Generated projects are migration-first. |
 | Docker and PostgreSQL workflow | Growing | Good local runtime story; Docker e2e exists as opt-in smoke coverage. |
 | Auth foundation | Partial by design | Strong route-boundary pattern scoped to endpoint protection rather than full login/user management. |
@@ -88,6 +89,17 @@ Kafka and RabbitMQ are opt-in messaging integrations rather than default
 AMQP exchange/queue messaging. Both should remain explicit runtime or worker
 surfaces instead of being started automatically inside the API process.
 
+### Runtime data structures
+
+`polepos.data` is a runtime namespace for application code. It is intentionally
+separate from the internal `pole_position` CLI implementation package.
+
+The first scope is dependency-free, in-memory structures that are useful inside
+generated projects: caches, sorted containers, ordered sets, indexed priority
+queues, tries, union-find, and small graph workflows. These structures are
+process-local. Shared or persistent state should still live in Redis,
+PostgreSQL, Kafka, RabbitMQ, or another reviewed infrastructure dependency.
+
 ### Project checks
 
 `polepos check` is now a stable lifecycle validation surface rather than a
@@ -106,6 +118,8 @@ It currently validates:
 The command is intentionally read-only and file-based. It is safe to run from
 local development, CI, and agent workflows without requiring a running
 database, message broker, LLM provider, or optional integration dependency.
+Use `polepos check --json` when CI or agent tooling needs structured issue
+codes, messages, and remediation text.
 
 ### Auth foundation
 

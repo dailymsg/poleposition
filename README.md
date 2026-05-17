@@ -172,6 +172,7 @@ Use these files to understand the repo quickly:
 * [Getting Started](https://github.com/erenertemden/poleposition/blob/main/docs/getting-started.md)
 * [CLI Reference](https://github.com/erenertemden/poleposition/blob/main/docs/cli.md)
 * [Configuration Reference](https://github.com/erenertemden/poleposition/blob/main/docs/configuration.md)
+* [Data Structures](https://github.com/erenertemden/poleposition/blob/main/docs/data-structures.md)
 * [Database and Migrations](https://github.com/erenertemden/poleposition/blob/main/docs/database.md)
 * [Spring and .NET Module Guide](https://github.com/erenertemden/poleposition/blob/main/docs/spring-dotnet-module-structure.md)
 * [Architecture](https://github.com/erenertemden/poleposition/blob/main/docs/architecture.md)
@@ -350,10 +351,25 @@ dependencies. Kafka uses `aiokafka`; RabbitMQ uses `aio-pika`. Consumers are
 intentionally left as explicit worker/runtime code instead of being started
 inside the API process.
 
+### Data structures
+
+PolePosition also exposes a small runtime namespace for structures Python does
+not provide as first-class built-in containers:
+
+```python
+from polepos.data import IndexedPriorityQueue, LRUCache, SortedDict, Trie
+```
+
+These structures are dependency-free and process-local. Use them for local
+indices, bounded caches, scheduling helpers, graph workflows, and test doubles.
+Use Redis, PostgreSQL, Kafka, or RabbitMQ when state must be shared across
+workers or persisted outside the process.
+
 ### Project checks
 
 ```bash
 polepos check
+polepos check --json
 ```
 
 `check` runs the core project health checks for the current PolePosition
@@ -378,6 +394,10 @@ install dependencies, run migrations, or contact external services.
 
 Failed checks include stable `PPCHK` issue codes and `Fix:` hints so humans,
 coding agents, and CI logs can refer to the same remediation.
+
+Use `polepos check --json` in CI or agent workflows when you need a
+machine-readable result. The JSON output includes `passed`, `project_root`,
+`package_name`, and an `issues` list with `code`, `message`, and `remediation`.
 
 The checks are organized into three layers:
 

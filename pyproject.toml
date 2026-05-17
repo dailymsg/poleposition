@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "poleposition"
-version = "0.0.34"
+version = "0.0.35"
 description = "Project lifecycle CLI for starting and growing enterprise FastAPI projects"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -42,7 +42,7 @@ Repository = "https://github.com/erenertemden/poleposition"
 Issues = "https://github.com/erenertemden/poleposition/issues"
 
 [tool.setuptools.packages.find]
-include = ["pole_position*"]
+include = ["pole_position*", "polepos*"]
 
 [tool.setuptools.package-data]
 pole_position = [
@@ -72,7 +72,7 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-source = ["pole_position"]
+source = ["pole_position", "polepos"]
 omit = [
     "pole_position/tests/*",
 ]

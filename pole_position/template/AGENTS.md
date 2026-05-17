@@ -16,6 +16,7 @@ Prefer these lifecycle commands when they fit the request:
 - `polepos add integration kafka`
 - `polepos add integration rabbitmq`
 - `polepos check`
+- `polepos check --json`
 {{agents_db_commands}}
 
 Use manual edits after PolePosition generates the starting point, or when the

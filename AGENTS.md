@@ -164,6 +164,7 @@ Current CLI command groups:
 - `polepos add integration kafka`
 - `polepos add integration rabbitmq`
 - `polepos check`
+- `polepos check --json`
 - `polepos db upgrade`
 - `polepos db revision -m "..."`
 - `polepos db downgrade`
@@ -457,9 +458,7 @@ Do not assume these are implemented unless you add them:
 - `polepos delete module`
 - full auth workflow
 - production presets
-- `polepos check --json`
 - `polepos check --fix`
-- stable machine-readable check issue codes
 
 If you introduce one of these, document it clearly and add tests.
 

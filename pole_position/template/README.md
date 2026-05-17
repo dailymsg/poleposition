@@ -95,6 +95,9 @@ After structural changes, run:
 {{no_bytecode_command_prefix}}polepos check
 ```
 
+Use `{{no_bytecode_command_prefix}}polepos check --json` when CI or agent
+tooling needs a machine-readable project contract result.
+
 ## Runtime Configuration
 
 The generated project uses `run.py` as the preferred entrypoint:

@@ -8,6 +8,7 @@ It is meant to help both humans and coding agents answer the same questions quic
 
 - what the product does
 - where CLI behavior lives
+- where runtime helper APIs live
 - where generated project behavior lives
 - how `add module` and `remove module` safely update files
 - which parts are stable conventions versus evolving surfaces
@@ -35,6 +36,16 @@ That means the product helps at:
 Templates are a delivery mechanism for those workflows, not the product boundary.
 
 The generated project should stay FastAPI-native while still giving teams opinionated structure and defaults.
+
+PolePosition also ships a small runtime helper package for application code:
+
+```python
+from polepos.data import LRUCache, Trie
+```
+
+The import package `polepos` is intentionally separate from the internal
+`pole_position` implementation package. Generated applications may import
+`polepos.data`; they should not import `pole_position.cli...`.
 
 ## High-Level Flow
 

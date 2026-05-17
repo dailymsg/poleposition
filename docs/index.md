@@ -50,6 +50,7 @@ example, the `customers` module starter exposes collection handlers at
 - SQLAlchemy and Alembic migration foundations
 - JWT-based authentication foundations
 - Optional integration scaffolds for Kafka, RabbitMQ, and LLM adapters
+- Runtime data structures under `polepos.data`
 - Read-only project contract checks
 - A dedicated runtime entrypoint with `uv run python -m <package>.run`
 
@@ -76,6 +77,7 @@ helps teams and agents keep FastAPI projects consistent as they grow.
 - [Getting Started](getting-started.md): create and run a project.
 - [CLI Reference](cli.md): command groups and common usage.
 - [Configuration Reference](configuration.md): generated `.env` and runtime settings.
+- [Data Structures](data-structures.md): runtime helpers under `polepos.data`.
 - [Database and Migrations](database.md): `polepos db`, Alembic, and schema workflow.
 - [Spring and .NET Module Guide](spring-dotnet-module-structure.md): module
   structure explained for Spring Boot and ASP.NET Core teams.
