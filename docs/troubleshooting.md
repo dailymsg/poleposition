@@ -137,7 +137,7 @@ files, run:
 polepos remove module <name> --wiring-only
 ```
 
-This removes managed exports, router wiring, standard-module model imports, and
+This removes managed exports, router wiring, database-backed module model imports, and
 generated tests. It keeps the module directory. Move, delete, or rewire that
 directory before expecting `polepos check` to pass.
 
@@ -183,7 +183,7 @@ be reported as missing when Kafka is enabled.
 does not connect to the database, drop tables, delete rows, or create an
 Alembic revision.
 
-For a standard module with a SQLAlchemy model, removal also deletes the
+For a generated database-backed module with a SQLAlchemy model, removal also deletes the
 generated import from `src/<package>/db/models.py`. That changes what Alembic
 sees in `Base.metadata`, but the database schema remains unchanged until you
 write and apply a migration:
@@ -266,7 +266,7 @@ uv run python -m <package>.run
 
 ## Integration Code Imports Optional Dependencies
 
-Kafka and RabbitMQ scaffolds add their transport dependencies to
+Kafka, RabbitMQ, Redis, and RQ scaffolds add their transport dependencies to
 `pyproject.toml`. Run:
 
 ```bash

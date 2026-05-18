@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import subprocess
 import sys
+from unittest.mock import call
 from unittest.mock import patch
 
 import pytest
@@ -36,6 +37,7 @@ def test_db_command_shows_usage(tmp_path: Path):
     assert "upgrade" in result.stdout
     assert "revision" in result.stdout
     assert "downgrade" in result.stdout
+    assert "status" in result.stdout
 
 
 def test_db_help_shows_namespace_usage(tmp_path: Path):
@@ -47,6 +49,7 @@ def test_db_help_shows_namespace_usage(tmp_path: Path):
     assert "upgrade" in result.stdout
     assert "revision" in result.stdout
     assert "downgrade" in result.stdout
+    assert "status" in result.stdout
 
 
 def test_db_upgrade_defaults_to_head(tmp_path: Path):
@@ -158,6 +161,35 @@ def test_db_downgrade_help_rejects_extra_argument(tmp_path: Path):
     assert result.returncode != 0
     assert "Unexpected argument: -1" in result.stdout
     assert "Usage: polepos db downgrade <target>" in result.stdout
+
+
+def test_db_status_invokes_current_and_heads(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    from pole_position.cli.commands.db.status import run
+
+    with patch("pole_position.cli.commands.db.status.run_alembic_command") as mock_run:
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(tmp_path)
+            run([])
+
+    captured = capsys.readouterr()
+    assert "Alembic current revision:" in captured.out
+    assert "Alembic heads:" in captured.out
+    assert mock_run.call_args_list == [call("current", []), call("heads", [])]
+
+
+def test_db_status_help_shows_usage_without_project(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "status", "--help")
+
+    assert result.returncode == 0
+    assert "Usage: polepos db status" in result.stdout
+
+
+def test_db_status_rejects_extra_argument(tmp_path: Path):
+    result = run_cli(tmp_path, "db", "status", "head")
+
+    assert result.returncode != 0
+    assert "Unexpected argument: head" in result.stdout
+    assert "Usage: polepos db status" in result.stdout
 
 
 def test_db_upgrade_requires_poleposition_project(tmp_path: Path):

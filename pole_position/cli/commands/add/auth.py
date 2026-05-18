@@ -1,0 +1,55 @@
+from pathlib import Path
+
+from pole_position.cli.command import Command
+from pole_position.cli.services.auth_creator import AddedAuthResult
+from pole_position.cli.services.auth_creator import add_auth
+
+
+USAGE = "Usage: polepos add auth"
+HELP_OPTIONS = {"-h", "--help"}
+
+
+def run(args: list[str]) -> None:
+    if len(args) == 1 and args[0] in HELP_OPTIONS:
+        print(USAGE)
+        return
+
+    if args:
+        print(f"Unexpected argument: {args[0]}")
+        print(USAGE)
+        raise SystemExit(1)
+
+    try:
+        result = add_auth()
+    except RuntimeError as exc:
+        print(str(exc))
+        raise SystemExit(1)
+
+    _print_success(result)
+
+
+def _print_success(result: AddedAuthResult) -> None:
+    print("Added auth workflow")
+
+    print("Created:")
+    for path in (*result.auth_files, *result.test_files):
+        print(f"  {_relative_path(result, path)}")
+
+    print("Updated:")
+    for path in result.updated_files:
+        print(f"  {_relative_path(result, path)}")
+
+    print("Next steps:")
+    for step in result.next_steps:
+        print(f"  {step}")
+
+
+def _relative_path(result: AddedAuthResult, path: Path) -> str:
+    return path.relative_to(result.project_root).as_posix()
+
+
+command = Command(
+    name="auth",
+    handler=run,
+    description="Add an optional database-backed auth workflow",
+)

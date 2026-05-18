@@ -4,6 +4,8 @@ from pole_position.cli.services.integration_specs import (
     IntegrationContract,
     KAFKA_INTEGRATION_CONTRACT,
     RABBITMQ_INTEGRATION_CONTRACT,
+    REDIS_INTEGRATION_CONTRACT,
+    RQ_INTEGRATION_CONTRACT,
     SUPPORTED_INTEGRATIONS,
     get_creatable_integration_contract,
 )
@@ -58,6 +60,34 @@ def add_integration(integration_name: str, cwd: Path | None = None) -> None:
         )
         _ensure_rabbitmq_settings(package_root / "settings.py", package_name)
         _ensure_rabbitmq_env(project_root / ".env.example", package_name)
+        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
+        record_manifest_integration(
+            project_root=project_root,
+            integration_name=contract.name,
+        )
+        return
+
+    if contract.name == "redis":
+        _ensure_integration_files(
+            package_root,
+            _redis_integration_files(package_name),
+        )
+        _ensure_redis_settings(package_root / "settings.py", package_name)
+        _ensure_redis_env(project_root / ".env.example", package_name)
+        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
+        record_manifest_integration(
+            project_root=project_root,
+            integration_name=contract.name,
+        )
+        return
+
+    if contract.name == "rq":
+        _ensure_integration_files(
+            package_root,
+            _rq_integration_files(package_name),
+        )
+        _ensure_rq_settings(package_root / "settings.py", package_name)
+        _ensure_rq_env(project_root / ".env.example", package_name)
         ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
         record_manifest_integration(
             project_root=project_root,
@@ -259,6 +289,64 @@ def _rabbitmq_integration_files(package_name: str) -> dict[str, str]:
     return _files_for_contract(RABBITMQ_INTEGRATION_CONTRACT, files)
 
 
+def _redis_integration_files(package_name: str) -> dict[str, str]:
+    files = {
+        "integrations/__init__.py": "",
+        "integrations/redis/__init__.py": _render_integration_template(
+            "redis/__init__.py",
+            package_name,
+        ),
+        "integrations/redis/cache.py": _render_integration_template(
+            "redis/cache.py",
+            package_name,
+        ),
+        "integrations/redis/factory.py": _render_integration_template(
+            "redis/factory.py",
+            package_name,
+        ),
+        "integrations/redis/schemas.py": _render_integration_template(
+            "redis/schemas.py",
+            package_name,
+        ),
+        "integrations/redis/testing.py": _render_integration_template(
+            "redis/testing.py",
+            package_name,
+        ),
+    }
+    return _files_for_contract(REDIS_INTEGRATION_CONTRACT, files)
+
+
+def _rq_integration_files(package_name: str) -> dict[str, str]:
+    files = {
+        "integrations/__init__.py": "",
+        "integrations/rq/__init__.py": _render_integration_template(
+            "rq/__init__.py",
+            package_name,
+        ),
+        "integrations/rq/factory.py": _render_integration_template(
+            "rq/factory.py",
+            package_name,
+        ),
+        "integrations/rq/jobs.py": _render_integration_template(
+            "rq/jobs.py",
+            package_name,
+        ),
+        "integrations/rq/schemas.py": _render_integration_template(
+            "rq/schemas.py",
+            package_name,
+        ),
+        "integrations/rq/testing.py": _render_integration_template(
+            "rq/testing.py",
+            package_name,
+        ),
+        "integrations/rq/worker.py": _render_integration_template(
+            "rq/worker.py",
+            package_name,
+        ),
+    }
+    return _files_for_contract(RQ_INTEGRATION_CONTRACT, files)
+
+
 def _ensure_kafka_settings(path: Path, package_name: str) -> None:
     _ensure_settings_entries_before_marker_or_anchor(
         path=path,
@@ -350,6 +438,84 @@ def _rabbitmq_env_block(package_name: str) -> list[str]:
         f"RABBITMQ_DEFAULT_QUEUE={package_name}.events",
         "RABBITMQ_QUEUE_DURABLE=true",
         "RABBITMQ_PREFETCH_COUNT=10",
+    ]
+
+
+def _ensure_redis_settings(path: Path, package_name: str) -> None:
+    _ensure_settings_entries_before_marker_or_anchor(
+        path=path,
+        block=_redis_settings_block(package_name),
+        markers=[SETTINGS_INTEGRATION_MARKER, SETTINGS_LLM_MARKER],
+        anchor="    model_config = SettingsConfigDict(",
+    )
+
+
+def _redis_settings_block(package_name: str) -> list[str]:
+    return [
+        "    redis_enabled: bool = False",
+        '    redis_url: str = "redis://localhost:6379/0"',
+        f'    redis_client_name: str = "{package_name}"',
+        f'    redis_key_prefix: str = "{package_name}"',
+        "    redis_socket_timeout_seconds: float = 5.0",
+    ]
+
+
+def _ensure_redis_env(path: Path, package_name: str) -> None:
+    _ensure_env_entries_before_marker_or_anchor(
+        path=path,
+        block=_redis_env_block(package_name),
+        markers=[ENV_INTEGRATION_MARKER, ENV_LLM_MARKER],
+        anchor=None,
+    )
+
+
+def _redis_env_block(package_name: str) -> list[str]:
+    return [
+        "REDIS_ENABLED=false",
+        "REDIS_URL=redis://localhost:6379/0",
+        f"REDIS_CLIENT_NAME={package_name}",
+        f"REDIS_KEY_PREFIX={package_name}",
+        "REDIS_SOCKET_TIMEOUT_SECONDS=5.0",
+    ]
+
+
+def _ensure_rq_settings(path: Path, package_name: str) -> None:
+    _ensure_settings_entries_before_marker_or_anchor(
+        path=path,
+        block=_rq_settings_block(package_name),
+        markers=[SETTINGS_INTEGRATION_MARKER, SETTINGS_LLM_MARKER],
+        anchor="    model_config = SettingsConfigDict(",
+    )
+
+
+def _rq_settings_block(package_name: str) -> list[str]:
+    return [
+        "    rq_enabled: bool = False",
+        '    rq_redis_url: str = "redis://localhost:6379/0"',
+        f'    rq_default_queue: str = "{package_name}.default"',
+        f'    rq_worker_name: str = "{package_name}-worker"',
+        "    rq_job_timeout_seconds: int = 300",
+        "    rq_result_ttl_seconds: int = 500",
+    ]
+
+
+def _ensure_rq_env(path: Path, package_name: str) -> None:
+    _ensure_env_entries_before_marker_or_anchor(
+        path=path,
+        block=_rq_env_block(package_name),
+        markers=[ENV_INTEGRATION_MARKER, ENV_LLM_MARKER],
+        anchor=None,
+    )
+
+
+def _rq_env_block(package_name: str) -> list[str]:
+    return [
+        "RQ_ENABLED=false",
+        "RQ_REDIS_URL=redis://localhost:6379/0",
+        f"RQ_DEFAULT_QUEUE={package_name}.default",
+        f"RQ_WORKER_NAME={package_name}-worker",
+        "RQ_JOB_TIMEOUT_SECONDS=300",
+        "RQ_RESULT_TTL_SECONDS=500",
     ]
 
 

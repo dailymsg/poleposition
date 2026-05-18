@@ -35,6 +35,10 @@ Then verify:
 polepos version
 ```
 
+Use `polepos upgrade` inside a generated project for a read-only readiness
+report that includes the CLI version, package, database mode, recorded module
+templates, enabled integrations, and current `polepos check` status.
+
 ## Generated Projects Are Not Auto-Rewritten
 
 Upgrading the CLI does not rewrite an existing generated project. New versions
@@ -74,6 +78,8 @@ For an existing generated project:
 ```bash
 uv tool upgrade poleposition
 cd shop-api
+polepos upgrade
+polepos check --fix
 polepos check
 uv sync
 uv run pytest

@@ -163,6 +163,39 @@ Important values:
 - `RABBITMQ_DEFAULT_QUEUE`
 - `RABBITMQ_PREFETCH_COUNT`
 
+## Redis
+
+Redis settings are added by:
+
+```bash
+polepos add integration redis
+```
+
+Important values:
+
+- `REDIS_ENABLED`
+- `REDIS_URL`
+- `REDIS_CLIENT_NAME`
+- `REDIS_KEY_PREFIX`
+- `REDIS_SOCKET_TIMEOUT_SECONDS`
+
+## RQ
+
+RQ settings are added by:
+
+```bash
+polepos add integration rq
+```
+
+Important values:
+
+- `RQ_ENABLED`
+- `RQ_REDIS_URL`
+- `RQ_DEFAULT_QUEUE`
+- `RQ_WORKER_NAME`
+- `RQ_JOB_TIMEOUT_SECONDS`
+- `RQ_RESULT_TTL_SECONDS`
+
 ## LLM
 
 LLM settings are added when an AI prompt module is generated:

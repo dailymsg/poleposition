@@ -29,6 +29,7 @@ no SQLAlchemy, Alembic, migrations, or generated `db/` wiring.
 ```bash
 polepos add --help
 polepos add module customers
+polepos add module customers --template crud
 polepos add module assistant --template ai-prompt
 polepos add module webhook --api-only
 polepos add module webhook --template api-only
@@ -37,6 +38,9 @@ polepos add module webhook --template api-only
 The standard module template generates a REST-friendly starting point with
 model, repository, schemas, a module-local `services/` package, router, and
 tests.
+
+The `crud` template generates a fuller REST CRUD module with collection,
+detail, update, delete, repository, service, and generated tests.
 
 The `ai-prompt` template generates a provider-agnostic LLM-oriented module
 skeleton and shared `integrations/llm` files when they are missing.
@@ -57,6 +61,17 @@ With the generated app-level API prefix, that route is served as
 `GET /api/v1/customers/`. Other modules can also define `/` handlers because
 each module gets its own router prefix.
 
+## Add Auth
+
+```bash
+polepos add auth
+```
+
+`add auth` adds the optional database-backed registration and token workflow:
+auth user model, password hashing, repository, service, router, tests,
+dependency, and router/model wiring. It requires a generated database layer, so
+projects created with `--db none` need an explicit database layer first.
+
 ## Remove a Module
 
 ```bash
@@ -69,7 +84,7 @@ polepos remove module customers --wiring-only
 
 `remove module` is the counterpart to `add module`. It removes the module
 directory, generated integration and unit tests, module exports, API router
-wiring, and standard-module model imports.
+wiring, and database-backed module model imports.
 
 If the module directory was already deleted manually, the command still cleans
 remaining generated tests and managed router, model, and export wiring.
@@ -88,7 +103,7 @@ directory.
 
 Use `--wiring-only` when a module directory contains custom code you want to
 keep, but the PolePosition-managed references should be removed. This mode
-cleans module exports, API router wiring, standard-module model imports, and
+cleans module exports, API router wiring, database-backed module model imports, and
 generated tests. It does not delete the module directory or shared integration
 scaffold.
 
@@ -119,19 +134,22 @@ generated wiring shape, or remove the custom wiring manually, then retry.
 ```bash
 polepos add integration kafka
 polepos add integration rabbitmq
+polepos add integration redis
+polepos add integration rq
 ```
 
 Integration commands add opt-in adapter scaffolds, settings, environment
 examples, transport dependencies, and lightweight test doubles.
 
-See the [Integration Guides](integrations/index.md) for Kafka, RabbitMQ, and LLM
-scaffold details.
+See the [Integration Guides](integrations/index.md) for Kafka, RabbitMQ, Redis,
+RQ, and LLM scaffold details.
 
 ## Check a Project
 
 ```bash
 polepos check
 polepos check --json
+polepos check --fix
 ```
 
 `check` validates generated structure, managed markers, Alembic configuration,
@@ -155,6 +173,9 @@ Use `--json` for CI and agent workflows that need a machine-readable result.
 The JSON payload contains `passed`, `project_root`, `package_name`, and
 `issues`. Each issue includes `code`, `message`, and `remediation`.
 
+Use `--fix` to restore safe PolePosition-managed markers before validation.
+It does not install dependencies, run migrations, or call external services.
+
 New generated projects include `.poleposition.toml`, which records package,
 database mode, module templates, and generated integrations. If that file is
 missing in an older project, `check` falls back to structural inference.
@@ -166,6 +187,7 @@ Project contract validation is handled by `polepos check`.
 
 ```bash
 polepos db --help
+polepos db status
 polepos db upgrade
 polepos db revision -m "add customers table"
 polepos db downgrade -1
@@ -184,6 +206,7 @@ For generated `.env` values, see the
 
 ```bash
 polepos help
+polepos upgrade
 polepos version
 polepos version --help
 ```

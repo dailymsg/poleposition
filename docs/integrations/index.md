@@ -9,6 +9,10 @@ Current integration surfaces:
   dependency, and test double.
 - [RabbitMQ](rabbitmq.md): AMQP publisher, consumer helper, queue factory,
   settings, env, dependency, and test double.
+- [Redis](redis.md): async cache helper, settings, env, dependency, and test
+  double.
+- [RQ](rq.md): Redis-backed background job queue helpers, worker factory,
+  settings, env, dependency, and test double.
 - [LLM](llm.md): provider-agnostic adapter stubs generated with an AI prompt
   module.
 
@@ -22,4 +26,3 @@ After adding an integration, run:
 polepos check
 uv sync
 ```
-

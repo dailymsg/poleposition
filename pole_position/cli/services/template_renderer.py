@@ -123,6 +123,7 @@ def build_context(
         runtime_database_summary = "database backend, "
         agents_db_commands = (
             "- `polepos db revision -m \"...\"`\n"
+            "- `polepos db status`\n"
             "- `polepos db upgrade`\n"
             "- `polepos db downgrade <target>`"
         )

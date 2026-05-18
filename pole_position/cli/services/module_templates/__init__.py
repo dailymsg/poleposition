@@ -15,6 +15,7 @@ from pole_position.cli.services.module_templates.registry import (
 from pole_position.cli.services.module_templates.spec import (
     API_ONLY_MODULE_TEMPLATE_CONTRACT,
     AI_PROMPT_MODULE_TEMPLATE_CONTRACT,
+    CRUD_MODULE_TEMPLATE_CONTRACT,
     ModuleTemplate,
     ModuleTemplateContract,
     STANDARD_MODULE_TEMPLATE_CONTRACT,
@@ -26,6 +27,7 @@ __all__ = [
     "ModuleTemplateContract",
     "API_ONLY_MODULE_TEMPLATE_CONTRACT",
     "AI_PROMPT_MODULE_TEMPLATE_CONTRACT",
+    "CRUD_MODULE_TEMPLATE_CONTRACT",
     "DEFAULT_MODULE_TEMPLATE",
     "MODULE_TEMPLATE_CONTRACTS",
     "MODULE_TEMPLATE_DETECTION_ORDER",

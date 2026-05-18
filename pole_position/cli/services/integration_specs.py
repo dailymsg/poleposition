@@ -88,6 +88,63 @@ RABBITMQ_INTEGRATION_CONTRACT = IntegrationContract(
     ),
 )
 
+REDIS_INTEGRATION_CONTRACT = IntegrationContract(
+    name="redis",
+    dependency="redis>=5.0.0",
+    file_names=(
+        "integrations/__init__.py",
+        "integrations/redis/__init__.py",
+        "integrations/redis/cache.py",
+        "integrations/redis/factory.py",
+        "integrations/redis/schemas.py",
+        "integrations/redis/testing.py",
+    ),
+    settings=(
+        "redis_enabled",
+        "redis_url",
+        "redis_client_name",
+        "redis_key_prefix",
+        "redis_socket_timeout_seconds",
+    ),
+    env=(
+        "REDIS_ENABLED",
+        "REDIS_URL",
+        "REDIS_CLIENT_NAME",
+        "REDIS_KEY_PREFIX",
+        "REDIS_SOCKET_TIMEOUT_SECONDS",
+    ),
+)
+
+RQ_INTEGRATION_CONTRACT = IntegrationContract(
+    name="rq",
+    dependency="rq>=1.16.0",
+    file_names=(
+        "integrations/__init__.py",
+        "integrations/rq/__init__.py",
+        "integrations/rq/factory.py",
+        "integrations/rq/jobs.py",
+        "integrations/rq/schemas.py",
+        "integrations/rq/testing.py",
+        "integrations/rq/worker.py",
+    ),
+    settings=(
+        "rq_enabled",
+        "rq_redis_url",
+        "rq_default_queue",
+        "rq_worker_name",
+        "rq_job_timeout_seconds",
+        "rq_result_ttl_seconds",
+    ),
+    env=(
+        "RQ_ENABLED",
+        "RQ_REDIS_URL",
+        "RQ_DEFAULT_QUEUE",
+        "RQ_WORKER_NAME",
+        "RQ_JOB_TIMEOUT_SECONDS",
+        "RQ_RESULT_TTL_SECONDS",
+    ),
+)
+
 LLM_INTEGRATION_CONTRACT = IntegrationContract(
     name="llm",
     file_names=(
@@ -127,6 +184,8 @@ INTEGRATION_CONTRACTS = {
     for contract in (
         KAFKA_INTEGRATION_CONTRACT,
         RABBITMQ_INTEGRATION_CONTRACT,
+        REDIS_INTEGRATION_CONTRACT,
+        RQ_INTEGRATION_CONTRACT,
         LLM_INTEGRATION_CONTRACT,
     )
 }

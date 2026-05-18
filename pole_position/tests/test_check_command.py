@@ -31,8 +31,9 @@ def test_check_help_shows_usage_without_project(tmp_path: Path) -> None:
     result = run_cli(tmp_path, "check", "--help")
 
     assert result.returncode == 0
-    assert "Usage: polepos check [--json]" in result.stdout
+    assert "Usage: polepos check [--json] [--fix]" in result.stdout
     assert "--json" in result.stdout
+    assert "--fix" in result.stdout
     assert "Unexpected argument" not in result.stdout
 
 
@@ -120,12 +121,22 @@ def test_check_works_from_nested_directory(tmp_path: Path) -> None:
     assert "PolePosition project check passed." in result.stdout
 
 
-def test_check_passes_after_added_standard_and_ai_prompt_modules(tmp_path: Path) -> None:
+def test_check_passes_after_added_standard_crud_and_ai_prompt_modules(
+    tmp_path: Path,
+) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
 
     project_root = tmp_path / "myapp"
     standard_result = run_cli(project_root, "add", "module", "garage")
+    crud_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "customers",
+        "--template",
+        "crud",
+    )
     ai_prompt_result = run_cli(
         project_root,
         "add",
@@ -136,6 +147,7 @@ def test_check_passes_after_added_standard_and_ai_prompt_modules(tmp_path: Path)
     )
 
     assert standard_result.returncode == 0
+    assert crud_result.returncode == 0
     assert ai_prompt_result.returncode == 0
 
     result = run_cli(project_root, "check")
@@ -157,6 +169,95 @@ def test_check_passes_after_added_api_only_module(tmp_path: Path) -> None:
 
     assert result.returncode == 0
     assert "PolePosition project check passed." in result.stdout
+
+
+def test_check_passes_after_added_auth_workflow(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "auth")
+    assert add_result.returncode == 0
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode == 0
+    assert "PolePosition project check passed." in result.stdout
+
+
+def test_check_reports_missing_auth_workflow_file(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "auth")
+    assert add_result.returncode == 0
+
+    (project_root / "src" / "myapp" / "auth" / "router.py").unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK045]" in result.stdout
+    assert "Auth workflow is missing generated file" in result.stdout
+    assert "auth/router.py" in result.stdout
+
+
+def test_check_reports_missing_auth_dependency_and_router_wiring(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "auth")
+    assert add_result.returncode == 0
+
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_path.write_text(
+        pyproject_path.read_text(encoding="utf-8").replace(
+            '    "pwdlib[argon2]>=0.2.0",\n',
+            "",
+        ),
+        encoding="utf-8",
+    )
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8").replace(
+            'api_router.include_router(auth_router, prefix="/auth", tags=["auth"])\n',
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK048]" in result.stdout
+    assert "Auth workflow is missing dependency" in result.stdout
+    assert "pwdlib[argon2]>=0.2.0" in result.stdout
+    assert "[PPCHK050]" in result.stdout
+    assert "Auth workflow is missing API router include" in result.stdout
+
+
+def test_check_reports_auth_workflow_on_database_free_project(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp", "--db", "none")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8") + "auth = true\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK044]" in result.stdout
+    assert "Auth workflow requires generated database wiring" in result.stdout
 
 
 def test_check_reports_database_free_database_remnants(tmp_path: Path) -> None:
@@ -211,9 +312,13 @@ def test_check_passes_after_added_messaging_integrations(tmp_path: Path) -> None
     project_root = tmp_path / "myapp"
     kafka_result = run_cli(project_root, "add", "integration", "kafka")
     rabbitmq_result = run_cli(project_root, "add", "integration", "rabbitmq")
+    redis_result = run_cli(project_root, "add", "integration", "redis")
+    rq_result = run_cli(project_root, "add", "integration", "rq")
 
     assert kafka_result.returncode == 0
     assert rabbitmq_result.returncode == 0
+    assert redis_result.returncode == 0
+    assert rq_result.returncode == 0
 
     result = run_cli(project_root, "check")
 
@@ -588,6 +693,31 @@ def test_check_reports_missing_api_only_module_files_without_model_requirement(
     assert "missing model import" not in result.stdout
 
 
+def test_check_reports_missing_crud_module_files(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "customers",
+        "--template",
+        "crud",
+    )
+    assert add_result.returncode == 0
+
+    module_root = project_root / "src" / "myapp" / "modules" / "customers"
+    (module_root / "services" / "customers_crud_service.py").unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Lifecycle module 'customers' is missing generated path" in result.stdout
+    assert "services/customers_crud_service.py" in result.stdout
+
+
 def test_check_reports_missing_kafka_integration_file(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -759,6 +889,155 @@ def test_check_reports_missing_rabbitmq_settings_and_env(tmp_path: Path) -> None
     assert "RABBITMQ_URL" in result.stdout
 
 
+def test_check_reports_missing_redis_integration_file(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "redis")
+    assert add_result.returncode == 0
+
+    (
+        project_root
+        / "src"
+        / "myapp"
+        / "integrations"
+        / "redis"
+        / "cache.py"
+    ).unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'redis' is missing generated file" in result.stdout
+    assert "cache.py" in result.stdout
+
+
+def test_check_reports_missing_redis_dependency(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "redis")
+    assert add_result.returncode == 0
+
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_content = pyproject_path.read_text(encoding="utf-8").replace(
+        '    "redis>=5.0.0",\n',
+        "",
+    )
+    pyproject_path.write_text(pyproject_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'redis' is missing dependency" in result.stdout
+    assert "redis>=5.0.0" in result.stdout
+
+
+def test_check_reports_missing_redis_settings_and_env(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "redis")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    settings_content = settings_path.read_text(encoding="utf-8").replace(
+        '    redis_url: str = "redis://localhost:6379/0"\n',
+        "",
+    )
+    settings_path.write_text(settings_content, encoding="utf-8")
+
+    env_path = project_root / ".env.example"
+    env_content = env_path.read_text(encoding="utf-8").replace(
+        "REDIS_URL=redis://localhost:6379/0\n",
+        "",
+    )
+    env_path.write_text(env_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'redis' is missing setting" in result.stdout
+    assert "redis_url" in result.stdout
+    assert "Integration 'redis' is missing env value" in result.stdout
+    assert "REDIS_URL" in result.stdout
+
+
+def test_check_reports_missing_rq_integration_file(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "rq")
+    assert add_result.returncode == 0
+
+    (project_root / "src" / "myapp" / "integrations" / "rq" / "jobs.py").unlink()
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'rq' is missing generated file" in result.stdout
+    assert "jobs.py" in result.stdout
+
+
+def test_check_reports_missing_rq_dependency(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "rq")
+    assert add_result.returncode == 0
+
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_content = pyproject_path.read_text(encoding="utf-8").replace(
+        '    "rq>=1.16.0",\n',
+        "",
+    )
+    pyproject_path.write_text(pyproject_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'rq' is missing dependency" in result.stdout
+    assert "rq>=1.16.0" in result.stdout
+
+
+def test_check_reports_missing_rq_settings_and_env(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "integration", "rq")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    settings_content = settings_path.read_text(encoding="utf-8").replace(
+        '    rq_redis_url: str = "redis://localhost:6379/0"\n',
+        "",
+    )
+    settings_path.write_text(settings_content, encoding="utf-8")
+
+    env_path = project_root / ".env.example"
+    env_content = env_path.read_text(encoding="utf-8").replace(
+        "RQ_REDIS_URL=redis://localhost:6379/0\n",
+        "",
+    )
+    env_path.write_text(env_content, encoding="utf-8")
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "Integration 'rq' is missing setting" in result.stdout
+    assert "rq_redis_url" in result.stdout
+    assert "Integration 'rq' is missing env value" in result.stdout
+    assert "RQ_REDIS_URL" in result.stdout
+
+
 def test_check_reports_commented_required_integration_settings_and_env(
     tmp_path: Path,
 ) -> None:
@@ -847,11 +1126,57 @@ def test_check_reports_missing_alembic_config(tmp_path: Path) -> None:
     assert "alembic.ini" in result.stdout
 
 
+def test_check_fix_restores_missing_managed_marker(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8").replace(
+            "# polepos:router-imports\n",
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check", "--fix")
+
+    assert result.returncode == 0
+    assert "Applied fixes:" in result.stdout
+    assert "src/myapp/api/router.py" in result.stdout
+    assert "PolePosition project check passed." in result.stdout
+    assert "# polepos:router-imports" in router_path.read_text(encoding="utf-8")
+
+
+def test_check_fix_json_reports_fixed_paths(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    modules_init_path = project_root / "src" / "myapp" / "modules" / "__init__.py"
+    modules_init_path.write_text(
+        modules_init_path.read_text(encoding="utf-8").replace(
+            "    # polepos:module-exports\n",
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check", "--fix", "--json")
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["passed"] is True
+    assert payload["fixed"] == ["src/myapp/modules/__init__.py"]
+    assert payload["issues"] == []
+
+
 def test_check_rejects_unexpected_arguments(tmp_path: Path) -> None:
-    result = run_cli(tmp_path, "check", "--fix")
+    result = run_cli(tmp_path, "check", "--bogus")
 
     assert result.returncode != 0
-    assert "Unexpected argument: --fix" in result.stdout
+    assert "Unexpected argument: --bogus" in result.stdout
     assert "Usage: polepos check" in result.stdout
 
 

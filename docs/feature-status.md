@@ -25,17 +25,22 @@ Instead, it clarifies whether a feature is:
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
 | Lifecycle manifest | Growing | New projects include `.poleposition.toml` so package, database mode, module templates, and generated integrations do not depend only on inference. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
+| `polepos add module` with `crud` | Growing | Database-backed CRUD skeleton with list/create/get/update/delete routes, repository/service layers, and generated tests. |
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level boundaries for real provider integration. |
 | `polepos add module` with `api-only` | Growing | Useful lightweight module archetype for routes that do not need model, repository, or database wiring. |
+| `polepos add auth` | Growing | Optional database-backed registration and token workflow with generated model, router, service, tests, and check coverage. |
 | `polepos remove module` | Growing | Removes generated module scaffolds and managed wiring; supports `--wiring-only` for detaching managed references while preserving customized module files. |
 | `polepos add integration kafka` | Growing | First messaging integration; producer, consumer factory, settings, env, and test double support are scaffolded. |
 | `polepos add integration rabbitmq` | Growing | Second messaging integration; publisher, queue factory, settings, env, and test double support are scaffolded. |
-| `polepos check` | Stable foundation | Runs core checks for project identity, generated structure, Alembic config, managed markers, starter routing, added module lifecycle wiring, orphan remnants, opt-in integration wiring, and JSON output for CI/agent workflows. |
-| `polepos db ...` commands | Stable foundation | Good migration lifecycle wrapper around Alembic. |
+| `polepos add integration redis` | Growing | Shared cache integration; async cache helper, settings, env, dependency, and test double support are scaffolded. |
+| `polepos add integration rq` | Growing | Redis-backed background job queue helpers, worker factory, settings, env, dependency, and test double support are scaffolded. |
+| `polepos check` | Stable foundation | Runs core checks for project identity, generated structure, Alembic config, managed markers, starter routing, added module lifecycle wiring, orphan remnants, opt-in integration wiring, JSON output, and safe marker fixes. |
+| `polepos db ...` commands | Stable foundation | Good migration lifecycle wrapper around Alembic, including read-only status reporting. |
+| `polepos upgrade` | Growing | Read-only project upgrade readiness report that summarizes CLI version, manifest state, integrations, modules, and check status. |
 | `polepos.data` runtime structures | Growing | Provides dependency-free in-memory structures such as caches, sorted containers, trie, graph, priority queue, and union-find. |
 | Alembic migration support | Stable foundation | Generated projects are migration-first. |
 | Docker and PostgreSQL workflow | Growing | Good local runtime story; Docker e2e exists as opt-in smoke coverage. |
-| Auth foundation | Partial by design | Strong route-boundary pattern scoped to endpoint protection rather than full login/user management. |
+| Auth foundation | Growing | Base auth helpers remain lightweight, and `polepos add auth` can now add the optional database-backed workflow. |
 | JSON logging support | Stable foundation | Works as a runtime format choice. |
 | CORS support | Stable foundation | Settings-driven and production-aware. |
 | Example scenarios | Growing | Scenario guides for onboarding and product understanding. |
@@ -65,7 +70,7 @@ service classes as a module grows without pushing logic into global folders.
 This is the cleanup counterpart to `add module`.
 
 It removes generated module directories, generated tests, module exports,
-router wiring, and standard-module model imports. `--trace` previews planned
+router wiring, and database-backed module model imports. `--trace` previews planned
 removals and updates without mutating files. For AI prompt modules, the last
 remaining AI prompt module removal also cleans up shared LLM scaffold settings
 and files.
@@ -82,12 +87,14 @@ The command is conservative around custom layout drift: if it cannot recognize
 managed wiring well enough to remove it cleanly, it stops before deleting the
 module directory.
 
-### Messaging integrations
+### External integrations
 
-Kafka and RabbitMQ are opt-in messaging integrations rather than default
-`polepos start` behavior. Kafka covers event streaming workflows; RabbitMQ covers
-AMQP exchange/queue messaging. Both should remain explicit runtime or worker
-surfaces instead of being started automatically inside the API process.
+Kafka, RabbitMQ, Redis, and RQ are opt-in integrations rather than default
+`polepos start` behavior. Kafka covers event streaming workflows, RabbitMQ covers
+AMQP exchange/queue messaging, Redis covers shared cache helpers, and RQ covers
+Redis-backed background job workers. Messaging consumers and job workers should
+remain explicit runtime surfaces instead of being started automatically inside
+the API process.
 
 ### Runtime data structures
 
@@ -98,7 +105,8 @@ The first scope is dependency-free, in-memory structures that are useful inside
 generated projects: caches, sorted containers, ordered sets, indexed priority
 queues, tries, union-find, and small graph workflows. These structures are
 process-local. Shared or persistent state should still live in Redis,
-PostgreSQL, Kafka, RabbitMQ, or another reviewed infrastructure dependency.
+PostgreSQL, Kafka, RabbitMQ, Redis/RQ, or another reviewed infrastructure
+dependency.
 
 ### Project checks
 
@@ -113,13 +121,14 @@ It currently validates:
 - starter status router wiring
 - added module lifecycle wiring
 - orphan generated remnants after manual module deletion
-- Kafka, RabbitMQ, and LLM opt-in integration wiring
+- Kafka, RabbitMQ, Redis, RQ, LLM, and auth workflow wiring
 
-The command is intentionally read-only and file-based. It is safe to run from
-local development, CI, and agent workflows without requiring a running
+The default command is intentionally read-only and file-based. It is safe to run
+from local development, CI, and agent workflows without requiring a running
 database, message broker, LLM provider, or optional integration dependency.
 Use `polepos check --json` when CI or agent tooling needs structured issue
-codes, messages, and remediation text.
+codes, messages, and remediation text. Use `polepos check --fix` when safe
+managed markers should be restored before validation.
 
 ### Auth foundation
 
@@ -128,13 +137,11 @@ The current auth layer covers:
 - public vs protected endpoint boundaries
 - current user resolution
 - simple role-gated authorization
+- optional generated registration and token login via `polepos add auth`
 
 It is scoped away from:
 
-- login
-- password storage
 - refresh tokens
-- database-backed users
 - advanced permission systems
 
 ### AI prompt modules

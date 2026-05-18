@@ -13,7 +13,7 @@ from pole_position.cli.services.module_templates.renderer import render_template
 
 
 def test_supported_module_templates_are_stable() -> None:
-    assert SUPPORTED_MODULE_TEMPLATES == ("standard", "ai-prompt", "api-only")
+    assert SUPPORTED_MODULE_TEMPLATES == ("standard", "crud", "ai-prompt", "api-only")
 
 
 def test_to_class_name_normalizes_module_names() -> None:
@@ -57,6 +57,25 @@ def test_standard_template_contract() -> None:
     assert 'extra={"item_name": payload.name}' in service_content
     assert 'extra={"name": payload.name}' not in service_content
     assert 'client.post("/api/v1/customers/"' in template.integration_test_content
+
+
+def test_crud_template_contract() -> None:
+    contract = get_module_template_contract("crud")
+    template = build_module_template(
+        template="crud",
+        package_name="shop_api",
+        module_name="customers",
+    )
+
+    assert set(template.files) == set(contract.file_names_for("customers"))
+    assert template.integration_test_name == contract.integration_test_name("customers")
+    assert template.unit_test_name == contract.unit_test_name("customers")
+    assert template.update_db_models is contract.update_db_models
+    assert "services/customers_crud_service.py" in template.files
+    assert "def get_customers" in template.files["services/customers_crud_service.py"]
+    assert "def update(self" in template.files["repository.py"]
+    assert "@router.delete" in template.files["router.py"]
+    assert 'client.patch(' in template.integration_test_content
 
 
 def test_ai_prompt_template_contract() -> None:
@@ -107,7 +126,7 @@ def test_unknown_module_template_raises_clear_error() -> None:
         )
 
     assert "Unsupported module template 'unknown'" in str(exc_info.value)
-    assert "standard, ai-prompt, api-only" in str(exc_info.value)
+    assert "standard, crud, ai-prompt, api-only" in str(exc_info.value)
 
 
 def test_llm_integration_files_contract() -> None:

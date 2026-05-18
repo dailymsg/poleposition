@@ -21,6 +21,7 @@ from pole_position.cli.services.integration_specs import (
     CHECKED_INTEGRATION_CONTRACTS,
     IntegrationContract,
 )
+from pole_position.cli.services.auth_creator import AUTH_DEPENDENCY
 from pole_position.cli.services.module_templates import (
     DEFAULT_MODULE_TEMPLATE,
     ModuleTemplateContract,
@@ -62,6 +63,10 @@ DATABASE_MANAGED_MARKERS = {
 
 STARTER_MODULES = {
     "status",
+}
+
+IGNORED_ORPHAN_MODULE_REFERENCES = {
+    "auth",
 }
 
 IGNORED_MODULE_DIRECTORIES = {
@@ -131,6 +136,20 @@ DATABASE_PACKAGE_PATHS = [
     "db/base.py",
     "db/models.py",
     "db/session.py",
+]
+
+AUTH_WORKFLOW_PACKAGE_PATHS = [
+    "auth/model.py",
+    "auth/password.py",
+    "auth/repository.py",
+    "auth/router.py",
+    "auth/user_schemas.py",
+    "auth/user_service.py",
+]
+
+AUTH_WORKFLOW_TEST_PATHS = [
+    "tests/integration/test_auth.py",
+    "tests/unit/test_auth_service.py",
 ]
 
 DATABASE_FREE_FORBIDDEN_PROJECT_CONTENT = {
@@ -233,6 +252,22 @@ def _project_check_issue_code(problem: str) -> str:
         "Lifecycle module directory is not a valid Python identifier"
     ):
         return "PPCHK030"
+    if problem.startswith("Auth workflow requires generated database wiring"):
+        return "PPCHK044"
+    if problem.startswith("Auth workflow is missing generated file:"):
+        return "PPCHK045"
+    if problem.startswith("Auth workflow is missing integration test:"):
+        return "PPCHK046"
+    if problem.startswith("Auth workflow is missing unit test:"):
+        return "PPCHK047"
+    if problem.startswith("Auth workflow is missing dependency "):
+        return "PPCHK048"
+    if problem.startswith("Auth workflow is missing router import "):
+        return "PPCHK049"
+    if problem.startswith("Auth workflow is missing API router include "):
+        return "PPCHK050"
+    if problem.startswith("Auth workflow is missing model import "):
+        return "PPCHK051"
     if " is missing generated path:" in problem:
         return "PPCHK031"
     if " is missing module export " in problem:
@@ -320,6 +355,17 @@ def _project_check_remediation(problem: str) -> str:
         "Lifecycle module directory is not a valid Python identifier"
     ):
         return "Rename the module directory to a valid Python identifier."
+    if problem.startswith("Auth workflow requires generated database wiring"):
+        return (
+            "Create the project with database support or fully detach the auth "
+            "workflow."
+        )
+    if problem.startswith("Auth workflow "):
+        return (
+            "Restore the missing auth workflow piece or fully detach auth from "
+            "router wiring, db/models.py, pyproject.toml, tests, and "
+            ".poleposition.toml."
+        )
     if " is missing generated path:" in problem:
         return _module_fix(
             module_name,
@@ -466,6 +512,13 @@ def _run_project_checks(
         _check_lifecycle_wiring(problems, project_root, package_root, manifest)
     if include_integrations:
         _check_integration_wiring(problems, project_root, package_root, manifest)
+        _check_auth_workflow(
+            problems=problems,
+            project_root=project_root,
+            package_root=package_root,
+            manifest=manifest,
+            uses_database=uses_database,
+        )
 
     return ProjectCheckResult(
         project_root=project_root,
@@ -1137,7 +1190,7 @@ def _collect_orphan_module_references(
     module_names: set[str],
 ) -> list[tuple[str, Path, str]]:
     references: list[tuple[str, Path, str]] = []
-    ignored_modules = module_names | STARTER_MODULES
+    ignored_modules = module_names | STARTER_MODULES | IGNORED_ORPHAN_MODULE_REFERENCES
 
     references.extend(
         _collect_orphan_module_exports(package_root, ignored_modules)
@@ -1365,6 +1418,8 @@ def _module_name_from_generated_test_path(path: Path) -> str | None:
         if stem.endswith(suffix[:-len(".py")]):
             stem = stem[: -len(suffix[:-len(".py")])]
             break
+    if stem.endswith("_crud"):
+        stem = stem[: -len("_crud")]
 
     return stem if stem.isidentifier() else None
 
@@ -1383,6 +1438,154 @@ def _safe_marker_index(lines: list[str], marker: str) -> int:
         return lines.index(marker)
     except ValueError:
         return len(lines)
+
+
+def _check_auth_workflow(
+    *,
+    problems: list[str],
+    project_root: Path,
+    package_root: Path,
+    manifest: ProjectManifest,
+    uses_database: bool,
+) -> None:
+    pyproject_content = _read_file_text(project_root / "pyproject.toml")
+    if not _should_check_auth_workflow(
+        project_root=project_root,
+        package_root=package_root,
+        manifest=manifest,
+        pyproject_content=pyproject_content,
+    ):
+        return
+
+    if not uses_database:
+        problems.append(
+            "Auth workflow requires generated database wiring but the project is "
+            "configured without a database."
+        )
+        return
+
+    _check_auth_files(problems, package_root)
+    _check_auth_tests(problems, project_root)
+    _check_auth_dependency(
+        problems=problems,
+        project_root=project_root,
+        pyproject_content=pyproject_content,
+    )
+    _check_auth_router_wiring(problems, package_root)
+    _check_auth_model_wiring(problems, package_root)
+
+
+def _should_check_auth_workflow(
+    *,
+    project_root: Path,
+    package_root: Path,
+    manifest: ProjectManifest,
+    pyproject_content: str | None,
+) -> bool:
+    if manifest.exists and manifest.enabled_integrations.get("auth"):
+        return True
+
+    if any((package_root / relative_path).exists() for relative_path in AUTH_WORKFLOW_PACKAGE_PATHS):
+        return True
+
+    if any((project_root / relative_path).exists() for relative_path in AUTH_WORKFLOW_TEST_PATHS):
+        return True
+
+    router_content = _read_file_text(package_root / "api" / "router.py") or ""
+    if f"{package_root.name}.auth.router" in router_content or "/auth" in router_content:
+        return True
+
+    models_content = _read_file_text(package_root / "db" / "models.py") or ""
+    if f"{package_root.name}.auth import model" in models_content:
+        return True
+
+    return (
+        pyproject_content is not None
+        and _pyproject_has_dependency(pyproject_content, AUTH_DEPENDENCY)
+    )
+
+
+def _check_auth_files(problems: list[str], package_root: Path) -> None:
+    for relative_path in AUTH_WORKFLOW_PACKAGE_PATHS:
+        path = package_root / relative_path
+        if not path.exists():
+            problems.append(f"Auth workflow is missing generated file: {path}")
+
+
+def _check_auth_tests(problems: list[str], project_root: Path) -> None:
+    integration_test = project_root / "tests" / "integration" / "test_auth.py"
+    unit_test = project_root / "tests" / "unit" / "test_auth_service.py"
+
+    if not integration_test.exists():
+        problems.append(f"Auth workflow is missing integration test: {integration_test}")
+
+    if not unit_test.exists():
+        problems.append(f"Auth workflow is missing unit test: {unit_test}")
+
+
+def _check_auth_dependency(
+    *,
+    problems: list[str],
+    project_root: Path,
+    pyproject_content: str | None,
+) -> None:
+    if pyproject_content is None:
+        return
+
+    if not _pyproject_has_dependency(pyproject_content, AUTH_DEPENDENCY):
+        problems.append(
+            f"Auth workflow is missing dependency in "
+            f"{project_root / 'pyproject.toml'}: {AUTH_DEPENDENCY}"
+        )
+
+
+def _check_auth_router_wiring(problems: list[str], package_root: Path) -> None:
+    router_path = package_root / "api" / "router.py"
+    content = _read_file_text(router_path)
+    if content is None:
+        return
+
+    tree = _parse_python_source(content, router_path, problems)
+    if tree is None:
+        return
+
+    package_name = package_root.name
+    router_module = f"{package_name}.auth.router"
+    import_line = f"from {package_name}.auth.router import router as auth_router"
+    include_line = 'api_router.include_router(auth_router, prefix="/auth", tags=["auth"])'
+
+    if not _has_router_import(tree, router_module, "auth_router"):
+        problems.append(
+            f"Auth workflow is missing router import in {router_path}: {import_line}"
+        )
+
+    if not _has_router_include(tree, "auth_router", "auth"):
+        problems.append(
+            f"Auth workflow is missing API router include in "
+            f"{router_path}: {include_line}"
+        )
+
+
+def _check_auth_model_wiring(problems: list[str], package_root: Path) -> None:
+    models_path = package_root / "db" / "models.py"
+    content = _read_file_text(models_path)
+    if content is None:
+        return
+
+    if _has_reported_parse_error(problems, models_path):
+        return
+
+    tree = _parse_python_source(content, models_path, problems)
+    if tree is None:
+        return
+
+    import_line = (
+        f"    from {package_root.name}.auth import model as auth_model  # noqa: F401"
+    )
+    if import_line not in content.splitlines():
+        problems.append(
+            f"Auth workflow is missing model import in {models_path}: {import_line}"
+        )
 
 
 def _check_integration_wiring(

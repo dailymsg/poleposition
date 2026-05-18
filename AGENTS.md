@@ -22,6 +22,7 @@ Today that flow is centered around:
 
 - `polepos start` for creating a project
 - `polepos add module` for growing the codebase
+- `polepos add auth` for adding the optional database-backed auth workflow
 - `polepos remove module` for removing generated module scaffolds
 - `polepos add integration ...` for opt-in external-system scaffolds
 - `polepos check` for validating the project lifecycle contract
@@ -160,14 +161,20 @@ Current CLI command groups:
 - `polepos start`
 - `polepos start --db sqlite|postgres|none`
 - `polepos add module`
+- `polepos add auth`
 - `polepos remove module`
 - `polepos add integration kafka`
 - `polepos add integration rabbitmq`
+- `polepos add integration redis`
+- `polepos add integration rq`
 - `polepos check`
 - `polepos check --json`
+- `polepos check --fix`
+- `polepos db status`
 - `polepos db upgrade`
 - `polepos db revision -m "..."`
 - `polepos db downgrade`
+- `polepos upgrade`
 - `polepos help`
 - `polepos version`
 
@@ -242,7 +249,7 @@ Current layers:
 
 - core checks: project identity, generated structure, Alembic config, and managed markers
 - lifecycle checks: added module files, module exports, router wiring, model wiring, and generated tests
-- integration checks: Kafka, RabbitMQ, and LLM files, settings, env values, and dependencies
+- integration checks: Kafka, RabbitMQ, Redis, RQ, LLM, and auth workflow files, settings, env values, and dependencies
 
 When changing generated structure, module generation, integration generation,
 managed markers, or Alembic behavior:
@@ -301,6 +308,20 @@ It also updates:
 - `src/<package>/modules/__init__.py`
 - `src/<package>/api/router.py`
 - `src/<package>/db/models.py`
+
+`polepos add module <name> --template crud` generates a fuller database-backed
+CRUD module:
+
+- `__init__.py`
+- `model.py`
+- `repository.py`
+- `router.py`
+- `schemas.py`
+- `services/__init__.py`
+- `services/<module>_crud_service.py`
+- CRUD integration and unit tests
+
+It also updates module exports, API router wiring, and `db/models.py`.
 
 `polepos add module <name> --template ai-prompt` generates an LLM-oriented
 module skeleton instead:
@@ -456,9 +477,7 @@ If you cannot run a heavier integration flow because a dependency is missing in 
 Do not assume these are implemented unless you add them:
 
 - `polepos delete module`
-- full auth workflow
 - production presets
-- `polepos check --fix`
 
 If you introduce one of these, document it clearly and add tests.
 

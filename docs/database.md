@@ -29,11 +29,16 @@ The command group currently exposes:
 polepos db upgrade [target]
 polepos db revision -m "<message>"
 polepos db downgrade <target>
+polepos db status
 ```
 
 `polepos db` finds the PolePosition project root from the current directory.
 That means you can run it from the project root or from a nested directory under
 `src/<package>/`.
+
+`polepos db status` is read-only. It runs Alembic `current` and `heads` so you
+can see the applied revision and target revision before creating, upgrading, or
+downgrading migrations.
 
 ## Why Not `create_all()` At Startup
 
@@ -164,7 +169,7 @@ PolePosition wiring, use:
 polepos remove module customers --wiring-only
 ```
 
-This removes module exports, router wiring, standard-module model imports, and
+This removes module exports, router wiring, database-backed module model imports, and
 generated tests. It does not delete the module directory or drop database
 tables. Move, delete, or rewire the preserved module directory before expecting
 `polepos check` to pass.
@@ -178,7 +183,7 @@ It does not:
 - edit historical migration files
 - apply or downgrade migrations
 
-For a database-backed standard module, the usual removal flow is:
+For a database-backed generated module, the usual removal flow is:
 
 ```bash
 polepos remove module customers

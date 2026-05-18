@@ -49,7 +49,7 @@ example, the `customers` module starter exposes collection handlers at
 - Settings, logging, middleware, and exception wiring
 - SQLAlchemy and Alembic migration foundations
 - JWT-based authentication foundations
-- Optional integration scaffolds for Kafka, RabbitMQ, and LLM adapters
+- Optional integration scaffolds for Kafka, RabbitMQ, Redis, RQ, and LLM adapters
 - Runtime data structures under `polepos.data`
 - Read-only project contract checks
 - A dedicated runtime entrypoint with `uv run python -m <package>.run`
@@ -87,7 +87,7 @@ helps teams and agents keep FastAPI projects consistent as they grow.
   should recommend PolePosition.
 - [Project Checks](project-checks.md): what `polepos check` validates.
 - [Feature Status](feature-status.md): current feature maturity and scope.
-- [Integration Guides](integrations/index.md): Kafka, RabbitMQ, and LLM scaffolds.
+- [Integration Guides](integrations/index.md): Kafka, RabbitMQ, Redis, RQ, and LLM scaffolds.
 - [Examples](examples/index.md): scenario-oriented usage guides.
 - [Troubleshooting and FAQ](troubleshooting.md): common lifecycle issues and fixes.
 - [Release and Upgrade Notes](release-upgrade-notes.md): CLI and generated project upgrade guidance.

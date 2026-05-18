@@ -1,13 +1,16 @@
 import json
 
 from pole_position.cli.command import Command
+from pole_position.cli.services.project_fixer import ProjectFixResult
+from pole_position.cli.services.project_fixer import fix_project
 from pole_position.cli.services.project_checker import ProjectCheckResult
 from pole_position.cli.services.project_checker import check_project
 
 
-USAGE = "Usage: polepos check [--json]"
+USAGE = "Usage: polepos check [--json] [--fix]"
 HELP_OPTIONS = {"-h", "--help"}
 JSON_OPTIONS = {"--json"}
+FIX_OPTIONS = {"--fix"}
 
 
 def run(args: list[str]) -> None:
@@ -15,18 +18,26 @@ def run(args: list[str]) -> None:
         print(USAGE)
         print("Options:")
         print("  --json    Print a machine-readable JSON result.")
+        print("  --fix     Restore safe PolePosition-managed markers before checking.")
         return
 
     json_output = False
+    fix = False
     for arg in args:
         if arg in JSON_OPTIONS:
             json_output = True
+            continue
+        if arg in FIX_OPTIONS:
+            fix = True
             continue
         print(f"Unexpected argument: {arg}")
         print(USAGE)
         raise SystemExit(1)
 
+    fix_result: ProjectFixResult | None = None
     try:
+        if fix:
+            fix_result = fix_project()
         result = check_project()
     except RuntimeError as exc:
         if json_output:
@@ -36,10 +47,13 @@ def run(args: list[str]) -> None:
         raise SystemExit(1)
 
     if json_output:
-        _print_json_result(result)
+        _print_json_result(result, fix_result=fix_result)
         if not result.passed:
             raise SystemExit(1)
         return
+
+    if fix_result is not None:
+        _print_fix_result(fix_result)
 
     if not result.passed:
         print("PolePosition project check failed.")
@@ -56,7 +70,21 @@ def run(args: list[str]) -> None:
     print(f"Package: {result.package_name}")
 
 
-def _print_json_result(result: ProjectCheckResult) -> None:
+def _print_fix_result(result: ProjectFixResult) -> None:
+    if not result.fixed_files:
+        print("No automatic fixes were applied.")
+        return
+
+    print("Applied fixes:")
+    for path in result.fixed_files:
+        print(f"  {_relative_path(result, path)}")
+
+
+def _print_json_result(
+    result: ProjectCheckResult,
+    *,
+    fix_result: ProjectFixResult | None = None,
+) -> None:
     payload = {
         "passed": result.passed,
         "project_root": str(result.project_root),
@@ -70,6 +98,11 @@ def _print_json_result(result: ProjectCheckResult) -> None:
             for issue in result.issues
         ],
     }
+    if fix_result is not None:
+        payload["fixed"] = [
+            _relative_path(fix_result, path)
+            for path in fix_result.fixed_files
+        ]
     print(json.dumps(payload, indent=2, sort_keys=True))
 
 
@@ -90,6 +123,10 @@ def _print_json_error(message: str) -> None:
         ],
     }
     print(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _relative_path(result: ProjectFixResult, path) -> str:
+    return path.relative_to(result.project_root).as_posix()
 
 
 command = Command(

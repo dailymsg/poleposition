@@ -104,7 +104,7 @@ def test_add_integration_help_shows_usage_without_project(tmp_path: Path):
 
     assert result.returncode == 0
     assert "Usage: polepos add integration <integration_name>" in result.stdout
-    assert "Integrations: kafka, rabbitmq" in result.stdout
+    assert "Integrations: kafka, rabbitmq, redis, rq" in result.stdout
 
 
 def test_add_kafka_integration_creates_files_and_updates_project(tmp_path: Path):
@@ -390,30 +390,161 @@ def test_add_rabbitmq_integration_rejects_duplicate(tmp_path: Path):
     assert "Integration already exists: rabbitmq" in second_result.stdout
 
 
-def test_add_kafka_and_rabbitmq_integrations_can_coexist(tmp_path: Path):
+def test_add_redis_integration_creates_files_and_updates_project(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "integration", "redis")
+
+    assert result.returncode == 0
+    assert "Added integration: redis" in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    redis_root = package_root / "integrations" / "redis"
+    expected_files = [
+        package_root / "integrations" / "__init__.py",
+        redis_root / "__init__.py",
+        redis_root / "cache.py",
+        redis_root / "factory.py",
+        redis_root / "schemas.py",
+        redis_root / "testing.py",
+    ]
+    for path in expected_files:
+        assert path.exists(), f"Expected generated Redis file is missing: {path}"
+
+    settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
+    env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+    pyproject_content = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    cache_content = (redis_root / "cache.py").read_text(encoding="utf-8")
+    factory_content = (redis_root / "factory.py").read_text(encoding="utf-8")
+    testing_content = (redis_root / "testing.py").read_text(encoding="utf-8")
+    manifest = (project_root / ".poleposition.toml").read_text(encoding="utf-8")
+
+    assert 'redis_url: str = "redis://localhost:6379/0"' in settings_content
+    assert 'redis_client_name: str = "myapp"' in settings_content
+    assert 'redis_key_prefix: str = "myapp"' in settings_content
+    assert "REDIS_URL=redis://localhost:6379/0" in env_content
+    assert "REDIS_CLIENT_NAME=myapp" in env_content
+    assert '"redis>=5.0.0",' in pyproject_content
+    assert "class RedisCache:" in cache_content
+    assert "from redis.asyncio import from_url" in factory_content
+    assert "class InMemoryRedisClient:" in testing_content
+    assert "redis = true" in manifest
+    assert "{{" not in cache_content
+    assert "{{" not in factory_content
+
+
+def test_add_redis_integration_rejects_duplicate(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    first_result = run_cli(project_root, "add", "integration", "redis")
+    second_result = run_cli(project_root, "add", "integration", "redis")
+
+    assert first_result.returncode == 0
+    assert second_result.returncode != 0
+    assert "Integration already exists: redis" in second_result.stdout
+
+
+def test_add_rq_integration_creates_files_and_updates_project(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "integration", "rq")
+
+    assert result.returncode == 0
+    assert "Added integration: rq" in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    rq_root = package_root / "integrations" / "rq"
+    expected_files = [
+        package_root / "integrations" / "__init__.py",
+        rq_root / "__init__.py",
+        rq_root / "factory.py",
+        rq_root / "jobs.py",
+        rq_root / "schemas.py",
+        rq_root / "testing.py",
+        rq_root / "worker.py",
+    ]
+    for path in expected_files:
+        assert path.exists(), f"Expected generated RQ file is missing: {path}"
+
+    settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
+    env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+    pyproject_content = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    factory_content = (rq_root / "factory.py").read_text(encoding="utf-8")
+    jobs_content = (rq_root / "jobs.py").read_text(encoding="utf-8")
+    testing_content = (rq_root / "testing.py").read_text(encoding="utf-8")
+    manifest = (project_root / ".poleposition.toml").read_text(encoding="utf-8")
+
+    assert 'rq_redis_url: str = "redis://localhost:6379/0"' in settings_content
+    assert 'rq_default_queue: str = "myapp.default"' in settings_content
+    assert 'rq_worker_name: str = "myapp-worker"' in settings_content
+    assert "RQ_REDIS_URL=redis://localhost:6379/0" in env_content
+    assert "RQ_DEFAULT_QUEUE=myapp.default" in env_content
+    assert '"rq>=1.16.0",' in pyproject_content
+    assert "from rq import Queue" in factory_content
+    assert "def enqueue_job(" in jobs_content
+    assert "class InMemoryRqQueue:" in testing_content
+    assert "rq = true" in manifest
+    assert "{{" not in factory_content
+    assert "{{" not in jobs_content
+
+
+def test_add_rq_integration_rejects_duplicate(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    first_result = run_cli(project_root, "add", "integration", "rq")
+    second_result = run_cli(project_root, "add", "integration", "rq")
+
+    assert first_result.returncode == 0
+    assert second_result.returncode != 0
+    assert "Integration already exists: rq" in second_result.stdout
+
+
+def test_add_messaging_integrations_can_coexist(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
 
     project_root = tmp_path / "myapp"
     kafka_result = run_cli(project_root, "add", "integration", "kafka")
     rabbitmq_result = run_cli(project_root, "add", "integration", "rabbitmq")
+    redis_result = run_cli(project_root, "add", "integration", "redis")
+    rq_result = run_cli(project_root, "add", "integration", "rq")
 
     assert kafka_result.returncode == 0
     assert rabbitmq_result.returncode == 0
+    assert redis_result.returncode == 0
+    assert rq_result.returncode == 0
 
     package_root = project_root / "src" / "myapp"
     pyproject_content = (project_root / "pyproject.toml").read_text(encoding="utf-8")
     settings_content = (package_root / "settings.py").read_text(encoding="utf-8")
     env_content = (project_root / ".env.example").read_text(encoding="utf-8")
+    settings_lines = settings_content.splitlines()
+    env_lines = env_content.splitlines()
 
     assert (package_root / "integrations" / "kafka" / "producer.py").exists()
     assert (package_root / "integrations" / "rabbitmq" / "publisher.py").exists()
+    assert (package_root / "integrations" / "redis" / "cache.py").exists()
+    assert (package_root / "integrations" / "rq" / "jobs.py").exists()
     assert pyproject_content.count('"aiokafka>=0.12.0",') == 1
     assert pyproject_content.count('"aio-pika>=9.0.0",') == 1
-    assert settings_content.count("kafka_bootstrap_servers:") == 1
-    assert settings_content.count("rabbitmq_url:") == 1
-    assert env_content.count("KAFKA_BOOTSTRAP_SERVERS=") == 1
-    assert env_content.count("RABBITMQ_URL=") == 1
+    assert pyproject_content.count('"redis>=5.0.0",') == 1
+    assert pyproject_content.count('"rq>=1.16.0",') == 1
+    assert settings_lines.count('    kafka_bootstrap_servers: str = "localhost:9092"') == 1
+    assert settings_lines.count('    rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"') == 1
+    assert settings_lines.count('    redis_url: str = "redis://localhost:6379/0"') == 1
+    assert settings_lines.count('    rq_redis_url: str = "redis://localhost:6379/0"') == 1
+    assert env_lines.count("KAFKA_BOOTSTRAP_SERVERS=localhost:9092") == 1
+    assert env_lines.count("RABBITMQ_URL=amqp://guest:guest@localhost:5672/") == 1
+    assert env_lines.count("REDIS_URL=redis://localhost:6379/0") == 1
+    assert env_lines.count("RQ_REDIS_URL=redis://localhost:6379/0") == 1
 
 
 def test_add_integration_rejects_unknown_integration(tmp_path: Path):
@@ -421,11 +552,11 @@ def test_add_integration_rejects_unknown_integration(tmp_path: Path):
     assert create_result.returncode == 0
 
     project_root = tmp_path / "myapp"
-    result = run_cli(project_root, "add", "integration", "redis")
+    result = run_cli(project_root, "add", "integration", "elasticsearch")
 
     assert result.returncode != 0
-    assert "Unsupported integration 'redis'" in result.stdout
-    assert "Integrations: kafka, rabbitmq" in result.stdout
+    assert "Unsupported integration 'elasticsearch'" in result.stdout
+    assert "Integrations: kafka, rabbitmq, redis, rq" in result.stdout
 
 
 def test_module_templates_render_without_leftover_placeholders() -> None:
@@ -438,6 +569,11 @@ def test_module_templates_render_without_leftover_placeholders() -> None:
         template="standard",
         package_name="myapp",
         module_name="garage",
+    )
+    crud_template = build_module_template(
+        template="crud",
+        package_name="myapp",
+        module_name="customers",
     )
     ai_template = build_module_template(
         template="ai-prompt",
@@ -453,6 +589,9 @@ def test_module_templates_render_without_leftover_placeholders() -> None:
         *standard_template.files.values(),
         standard_template.integration_test_content,
         standard_template.unit_test_content,
+        *crud_template.files.values(),
+        crud_template.integration_test_content,
+        crud_template.unit_test_content,
         *ai_template.files.values(),
         ai_template.integration_test_content,
         ai_template.unit_test_content,
@@ -523,6 +662,47 @@ def test_add_module_creates_module_files_and_updates_router(tmp_path: Path):
     assert "logger = get_logger(__name__)" in service_content
 
 
+def test_add_module_with_crud_template_creates_full_crud_module(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "module", "customers", "--template", "crud")
+
+    assert result.returncode == 0
+    assert "Added module: customers" in result.stdout
+    assert "Template: crud" in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    module_root = package_root / "modules" / "customers"
+    expected_files = [
+        module_root / "__init__.py",
+        module_root / "model.py",
+        module_root / "repository.py",
+        module_root / "router.py",
+        module_root / "schemas.py",
+        module_root / "services" / "__init__.py",
+        module_root / "services" / "customers_crud_service.py",
+        project_root / "tests" / "integration" / "test_customers_crud.py",
+        project_root / "tests" / "unit" / "test_customers_crud_service.py",
+    ]
+    for path in expected_files:
+        assert path.exists(), f"Expected generated CRUD module file is missing: {path}"
+
+    router_content = (module_root / "router.py").read_text(encoding="utf-8")
+    service_content = (
+        module_root / "services" / "customers_crud_service.py"
+    ).read_text(encoding="utf-8")
+    manifest = (project_root / ".poleposition.toml").read_text(encoding="utf-8")
+
+    assert "@router.get(\"/{item_id}\"" in router_content
+    assert "@router.patch(\"/{item_id}\"" in router_content
+    assert "@router.delete(\"/{item_id}\"" in router_content
+    assert "from myapp.domain.exceptions import NotFoundError" in service_content
+    assert "def delete_customers" in service_content
+    assert 'customers = "crud"' in manifest
+
+
 def test_added_module_templates_keep_project_python_files_compileable(
     tmp_path: Path,
 ) -> None:
@@ -531,6 +711,14 @@ def test_added_module_templates_keep_project_python_files_compileable(
 
     project_root = tmp_path / "myapp"
     standard_result = run_cli(project_root, "add", "module", "garage")
+    crud_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "customers",
+        "--template",
+        "crud",
+    )
     ai_result = run_cli(
         project_root,
         "add",
@@ -548,6 +736,7 @@ def test_added_module_templates_keep_project_python_files_compileable(
     )
 
     assert standard_result.returncode == 0
+    assert crud_result.returncode == 0
     assert ai_result.returncode == 0
     assert api_only_result.returncode == 0
     _assert_python_files_compile(project_root)
@@ -1024,4 +1213,4 @@ def test_add_module_rejects_unknown_template(tmp_path: Path):
 
     assert result.returncode != 0
     assert "Unsupported module template 'unknown'" in result.stdout
-    assert "Templates: standard, ai-prompt, api-only" in result.stdout
+    assert "Templates: standard, crud, ai-prompt, api-only" in result.stdout

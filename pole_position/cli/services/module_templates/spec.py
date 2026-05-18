@@ -59,6 +59,22 @@ STANDARD_MODULE_TEMPLATE_CONTRACT = ModuleTemplateContract(
     detection_file_names=("model.py", "repository.py"),
 )
 
+CRUD_MODULE_TEMPLATE_CONTRACT = ModuleTemplateContract(
+    name="crud",
+    file_names=(
+        "__init__.py",
+        "model.py",
+        "repository.py",
+        "router.py",
+        "schemas.py",
+        "services/__init__.py",
+        "services/{module_name}_crud_service.py",
+    ),
+    integration_test_name_template="test_{module_name}_crud.py",
+    unit_test_name_template="test_{module_name}_crud_service.py",
+    detection_file_names=("services/{module_name}_crud_service.py",),
+)
+
 AI_PROMPT_MODULE_TEMPLATE_CONTRACT = ModuleTemplateContract(
     name="ai-prompt",
     file_names=(

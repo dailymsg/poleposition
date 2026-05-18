@@ -10,7 +10,8 @@ Can this project still be grown safely with PolePosition lifecycle commands?
 ```
 
 It does not connect to the database, start FastAPI, call Kafka, call RabbitMQ,
-or contact an LLM provider. It reads files and reports structural drift.
+call Redis/RQ, or contact an LLM provider. It reads files and reports
+structural drift.
 
 ## User Guide
 
@@ -20,6 +21,7 @@ PolePosition project:
 ```bash
 polepos check
 polepos check --json
+polepos check --fix
 ```
 
 Run it after:
@@ -27,7 +29,8 @@ Run it after:
 - creating a project with `polepos start`
 - adding a module with `polepos add module`
 - removing a module with `polepos remove module`
-- adding Kafka or RabbitMQ with `polepos add integration ...`
+- adding Kafka, RabbitMQ, Redis, or RQ with `polepos add integration ...`
+- adding auth with `polepos add auth`
 - manually editing `.poleposition.toml`, `api/router.py`, `db/models.py`,
   `modules/__init__.py`, `settings.py`, `.env.example`, or `pyproject.toml`
 - resolving merge conflicts in generated or managed files
@@ -68,6 +71,16 @@ Successful JSON output looks like this:
   "project_root": "/path/to/myapp"
 }
 ```
+
+Use `--fix` when only safe managed markers need restoration:
+
+```bash
+polepos check --fix
+```
+
+`--fix` restores missing PolePosition markers in managed files, then runs the
+same checks again. It does not install packages, generate migrations, or call
+external services.
 
 Failed JSON output keeps the same process exit behavior as the text output and
 reports issues as structured objects:
@@ -273,6 +286,12 @@ For a standard module, `check` expects:
 - integration test under `tests/integration/test_<module>.py`
 - unit test under `tests/unit/test_<module>_service.py`
 
+For a `crud` module, `check` expects the standard database-backed wiring plus:
+
+- module service file: `services/<module>_crud_service.py`
+- integration test under `tests/integration/test_<module>_crud.py`
+- unit test under `tests/unit/test_<module>_crud_service.py`
+
 For an `ai-prompt` module, `check` expects:
 
 - module files: `__init__.py`, `orchestrator.py`, `prompts.py`, `router.py`,
@@ -296,6 +315,22 @@ For an `api-only` module, `check` expects:
 
 `api-only` modules are intentionally not required to have model, repository, or
 `db/models.py` wiring.
+
+### Auth Workflow Check
+
+Auth workflow check validates projects that ran `polepos add auth` or otherwise
+contain auth workflow signals. It expects:
+
+- generated auth files such as `auth/model.py`, `auth/router.py`,
+  `auth/user_schemas.py`, and `auth/user_service.py`
+- generated tests under `tests/integration/test_auth.py` and
+  `tests/unit/test_auth_service.py`
+- dependency: `pwdlib[argon2]>=0.2.0`
+- auth router import/include in `api/router.py`
+- auth model import in `db/models.py`
+
+The auth workflow requires generated database wiring. Projects created with
+`--db none` must add an explicit database layer before using this workflow.
 
 ### 3. Integration Check
 
@@ -356,6 +391,33 @@ env values, or the RabbitMQ dependency are present. `check` expects:
   `rabbitmq_prefetch_count`
 - env values such as `RABBITMQ_URL`, `RABBITMQ_EXCHANGE`, and
   `RABBITMQ_PREFETCH_COUNT`
+
+Redis is checked when `integrations/redis`, Redis settings, Redis env values,
+or the Redis dependency are present. `check` expects:
+
+- `src/<package>/integrations/redis/__init__.py`
+- `cache.py`
+- `factory.py`
+- `schemas.py`
+- `testing.py`
+- dependency: `redis>=5.0.0`
+- settings such as `redis_url`, `redis_client_name`, and `redis_key_prefix`
+- env values such as `REDIS_URL`, `REDIS_CLIENT_NAME`, and `REDIS_KEY_PREFIX`
+
+RQ is checked when `integrations/rq`, RQ settings, RQ env values, or the RQ
+dependency are present. `check` expects:
+
+- `src/<package>/integrations/rq/__init__.py`
+- `factory.py`
+- `jobs.py`
+- `schemas.py`
+- `testing.py`
+- `worker.py`
+- dependency: `rq>=1.16.0`
+- settings such as `rq_redis_url`, `rq_default_queue`, and
+  `rq_job_timeout_seconds`
+- env values such as `RQ_REDIS_URL`, `RQ_DEFAULT_QUEUE`, and
+  `RQ_JOB_TIMEOUT_SECONDS`
 
 LLM is checked when `integrations/llm`, LLM settings, LLM env values, or an
 `ai-prompt` module are present. `check` expects:

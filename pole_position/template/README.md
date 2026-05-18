@@ -97,6 +97,8 @@ After structural changes, run:
 
 Use `{{no_bytecode_command_prefix}}polepos check --json` when CI or agent
 tooling needs a machine-readable project contract result.
+Use `{{no_bytecode_command_prefix}}polepos check --fix` when safe managed
+markers should be restored before validation.
 
 ## Runtime Configuration
 

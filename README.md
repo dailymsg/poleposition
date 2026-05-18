@@ -300,7 +300,7 @@ polepos remove module garage --wiring-only
 ```
 
 `remove module` deletes the module directory and generated tests, then removes
-the module export, router include, and standard-module model import from the
+the module export, router include, and database-backed module model import from the
 managed files. It stops before deleting files if the module wiring has drifted
 away from a managed layout, or if the module directory or generated tests appear
 to contain custom changes.
@@ -321,12 +321,12 @@ customized module directory.
 
 Use `--wiring-only` when you want to keep a customized module directory but
 remove PolePosition-managed references to it. This mode cleans module exports,
-router wiring, standard-module model imports, and generated tests. It does not
+router wiring, database-backed module model imports, and generated tests. It does not
 delete the module directory or shared integration scaffold. If the preserved
 directory should no longer be part of the PolePosition lifecycle, move, delete,
 or rewire it before expecting `polepos check` to pass.
 
-The command does not change the live database. If a removed standard module had
+The command does not change the live database. If a removed database-backed module had
 a table and you want that table removed too, create and review a migration after
 the code cleanup:
 
@@ -343,13 +343,15 @@ do not generate a drop-table migration.
 ```bash
 polepos add integration kafka
 polepos add integration rabbitmq
+polepos add integration redis
+polepos add integration rq
 ```
 
-Messaging integrations add helper modules for JSON message publishing, consumer
-construction, test doubles, settings, `.env.example` values, and transport
-dependencies. Kafka uses `aiokafka`; RabbitMQ uses `aio-pika`. Consumers are
-intentionally left as explicit worker/runtime code instead of being started
-inside the API process.
+Integration commands add helper modules, test doubles, settings,
+`.env.example` values, and transport dependencies. Kafka uses `aiokafka`,
+RabbitMQ uses `aio-pika`, Redis uses `redis`, and RQ uses `rq` for Redis-backed
+background jobs. Long-running consumers and workers are intentionally left as
+explicit runtime code instead of being started inside the API process.
 
 ### Data structures
 
@@ -362,7 +364,7 @@ from polepos.data import IndexedPriorityQueue, LRUCache, SortedDict, Trie
 
 These structures are dependency-free and process-local. Use them for local
 indices, bounded caches, scheduling helpers, graph workflows, and test doubles.
-Use Redis, PostgreSQL, Kafka, or RabbitMQ when state must be shared across
+Use Redis, PostgreSQL, Kafka, RabbitMQ, or RQ when state must be shared across
 workers or persisted outside the process.
 
 ### Project checks
@@ -370,6 +372,7 @@ workers or persisted outside the process.
 ```bash
 polepos check
 polepos check --json
+polepos check --fix
 ```
 
 `check` runs the core project health checks for the current PolePosition
@@ -389,8 +392,10 @@ commented until needed.
 
 Use it after adding modules or integrations, after resolving merge conflicts in
 managed files, and before handing a project to another teammate or coding
-agent. The command is read-only: it reports drift but does not rewrite files,
-install dependencies, run migrations, or contact external services.
+agent. The default command is read-only: it reports drift but does not rewrite
+files, install dependencies, run migrations, or contact external services.
+Use `polepos check --fix` when you want PolePosition to restore safe managed
+markers before checking again.
 
 Failed checks include stable `PPCHK` issue codes and `Fix:` hints so humans,
 coding agents, and CI logs can refer to the same remediation.
@@ -403,7 +408,7 @@ The checks are organized into three layers:
 
 * Core checks for project identity, generated structure, Alembic files, and managed markers
 * Lifecycle checks for starter routing, added module router/model/test wiring, and orphan remnants
-* Integration checks for Kafka, RabbitMQ, and LLM files, active settings/env values, and dependencies
+* Integration checks for Kafka, RabbitMQ, Redis, RQ, LLM, and auth workflow files, active settings/env values, and dependencies
 
 See [Project Checks](https://github.com/erenertemden/poleposition/blob/main/docs/project-checks.md) for detailed user guidance and the
 agent-facing check contract.
@@ -590,14 +595,20 @@ The JSON formatter includes:
 PolePosition is a lifecycle CLI, so the commands are meant to be used over time, not only on day one:
 
 * `polepos start` when you want to create a new FastAPI project with the PolePosition structure
-* `polepos add module` when you want to add a new REST/domain module or an AI prompt module to an existing project
+* `polepos add module` when you want to add a new REST/domain module, CRUD module, API-only module, or AI prompt module to an existing project
+* `polepos add auth` when you want to add the optional database-backed registration and token workflow
 * `polepos remove module` when you want to remove a generated module and its managed wiring
 * `polepos add integration kafka` when you want Kafka producer and consumer wiring in an existing project
 * `polepos add integration rabbitmq` when you want RabbitMQ publisher and consumer wiring in an existing project
+* `polepos add integration redis` when you want shared Redis cache helpers in an existing project
+* `polepos add integration rq` when you want Redis-backed background job helpers in an existing project
 * `polepos check` when you want to validate the project contract: generated structure, Alembic config, managed markers, module wiring, and integration wiring
+* `polepos check --fix` when safe managed markers should be restored before validation
+* `polepos db status` when you want to inspect current and target Alembic revisions
 * `polepos db upgrade` when you want to apply migrations to the database
 * `polepos db revision -m "..."` when you changed models and need a new migration
 * `polepos db downgrade` when you need to roll back a migration
+* `polepos upgrade` when you want a read-only project upgrade readiness report
 
 ### Examples
 
@@ -622,13 +633,21 @@ polepos help
 polepos start <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos startproject <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos add module <name>
+polepos add module <name> --template crud
+polepos add auth
 polepos remove module <name> [--force] [--trace] [--wiring-only]
 polepos add integration kafka
 polepos add integration rabbitmq
+polepos add integration redis
+polepos add integration rq
 polepos check
+polepos check --json
+polepos check --fix
+polepos db status
 polepos db upgrade [target]
 polepos db revision -m "<message>"
 polepos db downgrade <target>
+polepos upgrade
 polepos version
 ```
 

@@ -24,6 +24,8 @@ const sidebars = {
         {type: "doc", id: "integrations/index", label: "Overview"},
         {type: "doc", id: "integrations/kafka", label: "Kafka"},
         {type: "doc", id: "integrations/rabbitmq", label: "RabbitMQ"},
+        {type: "doc", id: "integrations/redis", label: "Redis"},
+        {type: "doc", id: "integrations/rq", label: "RQ"},
         {type: "doc", id: "integrations/llm", label: "LLM"},
       ],
     },

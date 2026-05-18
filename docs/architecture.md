@@ -120,9 +120,11 @@ Current command groups:
 - `remove module`
 - `add integration`
 - `check`
+- `db status`
 - `db upgrade`
 - `db revision`
 - `db downgrade`
+- `upgrade`
 - `help`
 - `version`
 
@@ -226,6 +228,7 @@ pole_position/cli/services/module_templates/
 Current templates:
 
 - `standard`
+- `crud`
 - `ai-prompt`
 - `api-only`
 
@@ -254,6 +257,9 @@ The `--api-only` CLI option is a shortcut for the `api-only` template. It
 generates router, schemas, a module-local `services/` package, and tests
 without model, repository, or database model wiring.
 
+The `crud` template stays database-backed like `standard`, but generates
+detail, update, and delete routes plus CRUD-specific service and test names.
+
 ## `remove module` Architecture
 
 `polepos remove module` is the cleanup counterpart to `add module`.
@@ -270,7 +276,7 @@ The remover detects the generated module template, then removes:
 - generated integration and unit tests for the detected template
 - the module export from `modules/__init__.py`
 - the API router import and include from `api/router.py`
-- the model import from `db/models.py` for standard modules
+- the model import from `db/models.py` for database-backed generated modules
 
 It is a project-file operation, not a database operation. It does not open a
 database connection, create a migration, drop tables, delete data, or rewrite
@@ -296,7 +302,7 @@ does not delete additional custom imports or includes for the same module. Those
 custom references block removal until the user removes or rewires them.
 
 `--wiring-only` is the escape hatch for customized module directories. It
-removes PolePosition-managed exports, router wiring, standard-module model
+removes PolePosition-managed exports, router wiring, database-backed module model
 imports, and generated tests, but preserves the module directory and shared
 integration scaffolds. This lets users detach generated wiring without deleting
 custom code.
@@ -310,12 +316,16 @@ Current integrations:
 
 - `kafka`
 - `rabbitmq`
+- `redis`
+- `rq`
 
-Messaging support is intentionally opt-in. Kafka writes `integrations/kafka`
-helpers and adds `aiokafka`; RabbitMQ writes `integrations/rabbitmq` helpers
-and adds `aio-pika`. Both integrations patch settings and `.env.example`
-values. Consumer loops are left as explicit worker/runtime code instead of
-being started inside the FastAPI app process.
+External-system support is intentionally opt-in. Kafka writes
+`integrations/kafka` helpers and adds `aiokafka`; RabbitMQ writes
+`integrations/rabbitmq` helpers and adds `aio-pika`; Redis writes
+`integrations/redis` helpers and adds `redis`; RQ writes `integrations/rq`
+helpers and adds `rq`. These integrations patch settings and `.env.example`
+values. Consumer loops and background workers are left as explicit worker/runtime
+code instead of being started inside the FastAPI app process.
 
 Integration env handling distinguishes active required keys from optional
 commented examples. A required key that appears only as a comment is treated as
@@ -352,7 +362,7 @@ Current check layers:
 
 - core checks: project identity, generated structure, Alembic config, and managed markers
 - lifecycle checks: added module files, exports, router wiring, model wiring, and generated tests
-- integration checks: Kafka, RabbitMQ, and LLM files, dependencies, settings keys, and env keys
+- integration checks: Kafka, RabbitMQ, Redis, RQ, LLM, and auth workflow files, dependencies, settings keys, and env keys
 
 Lifecycle orphan checks parse router and model Python files across the whole
 file, not just lines before managed markers. This lets `check` report custom
