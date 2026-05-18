@@ -62,7 +62,9 @@ src/secure_api/modules/account/
   __init__.py
   router.py
   schemas.py
-  service.py
+  services/
+    __init__.py
+    account_service.py
 tests/integration/test_account.py
 tests/unit/test_account_api_service.py
 ```

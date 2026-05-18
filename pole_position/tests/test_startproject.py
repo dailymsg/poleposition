@@ -234,6 +234,7 @@ def test_start_with_no_database_option(tmp_path: Path):
     assert "polepos add module garage\n" not in readme
     assert "If the module directory was already deleted manually" in readme
     assert "router/export wiring" in readme
+    assert readme.count("Use `polepos remove module <name> --wiring-only`") == 1
     assert "alembic.ini" not in readme
     assert "migrations/" not in readme
     assert "\n  db/\n" not in readme
@@ -392,6 +393,7 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "If the module directory was already deleted manually" in readme
     assert "router, model, and export wiring" in readme
     assert "polepos remove module <name> --wiring-only" in readme
+    assert readme.count("Use `polepos remove module <name> --wiring-only`") == 1
     assert "{{project" not in readme
     assert "CORS_ENABLED=true" in env_example
     assert 'CORS_ALLOW_ORIGINS=["http://localhost:3000"' in env_example

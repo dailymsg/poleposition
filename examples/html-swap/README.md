@@ -124,7 +124,9 @@ src/html_tools/modules/html/
   __init__.py
   router.py
   schemas.py
-  service.py
+  services/
+    __init__.py
+    html_service.py
 tests/integration/test_html.py
 tests/unit/test_html_api_service.py
 ```
@@ -162,7 +164,7 @@ For this scenario:
 
 - `router.py` stays
 - `schemas.py` stays
-- `service.py` stays
+- `services/html_service.py` stays
 - `model.py` is added for swap history
 - `repository.py` is added for persistence
 
@@ -323,7 +325,7 @@ class HtmlSwapRepository:
         return item
 ```
 
-## Step 9: Rewrite `service.py`
+## Step 9: Rewrite `services/html_service.py`
 
 This is the core of the scenario.
 
@@ -396,7 +398,7 @@ from sqlalchemy.orm import Session
 
 from html_tools.api.deps import db_session
 from html_tools.modules.html.schemas import HtmlSwapRequest
-from html_tools.modules.html.service import HtmlService
+from html_tools.modules.html.services import HtmlService
 
 
 router = APIRouter()
@@ -481,7 +483,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from html_tools.modules.html.schemas import HtmlSwapRequest, LinkReplacement
-from html_tools.modules.html.service import HtmlService
+from html_tools.modules.html.services import HtmlService
 
 
 def test_swap_links_replaces_matching_anchor_targets() -> None:

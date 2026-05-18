@@ -63,10 +63,6 @@ module can define `@router.get("/")`, while
 
 {{module_database_removal_note}}
 
-Use `polepos remove module <name> --wiring-only` when you want to keep a
-customized module directory but remove generated exports, router wiring,
-standard-module model imports when present, and generated tests.
-
 ## Safe Customization
 
 This is a normal FastAPI project, so edit module internals for your domain:
