@@ -7,6 +7,7 @@
 [![License](https://img.shields.io/github/license/erenertemden/poleposition?label=License)](https://raw.githubusercontent.com/erenertemden/poleposition/refs/heads/main/LICENSE)
 [![CI](https://github.com/erenertemden/poleposition/actions/workflows/ci.yml/badge.svg)](https://github.com/erenertemden/poleposition/actions/workflows/ci.yml)
 [![E2E](https://github.com/erenertemden/poleposition/actions/workflows/e2e.yml/badge.svg)](https://github.com/erenertemden/poleposition/actions/workflows/e2e.yml)
+[![Release](https://github.com/erenertemden/poleposition/actions/workflows/release.yml/badge.svg)](https://github.com/erenertemden/poleposition/actions/workflows/release.yml)
 [![Deploy Docs](https://github.com/erenertemden/poleposition/actions/workflows/docs.yml/badge.svg)](https://github.com/erenertemden/poleposition/actions/workflows/docs.yml)
 [![Docs](https://img.shields.io/badge/docs-published-blue)](https://erenertemden.github.io/poleposition/)
 [![FastAPI native](https://img.shields.io/badge/FastAPI-native-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -843,6 +844,7 @@ The repository CI currently runs the CLI test suite on Python `3.10`, `3.11`,
 |---|---|---|
 | `CI` | push, pull request, manual dispatch | Repo test suite on Python `3.10`, `3.11`, `3.12`, `3.13`, and `3.14`; Docusaurus production build |
 | `E2E` | release tags, relevant pull requests, manual dispatch | Generated-project non-Docker e2e smoke tests on Python `3.11` |
+| `Release` | published GitHub release | Build and verify Python distributions, then publish to PyPI with Trusted Publishing |
 | `Deploy Docs` | pushes to `main`, manual dispatch | Docusaurus production build and GitHub Pages deploy |
 
 The `CI` workflow runs `pytest` with `pytest-cov`, prints a terminal coverage
@@ -852,6 +854,11 @@ Coverage is currently informational; no minimum threshold is enforced yet.
 Docker e2e coverage exists as an opt-in local or release-readiness smoke path
 via the `docker_e2e` pytest marker. It is intentionally not run on every pull
 request because it requires Docker and a compose-capable environment.
+
+The `Release` workflow uses PyPI Trusted Publishing, so it does not require a
+`PYPI_API_TOKEN` repository secret. PyPI must trust the
+`erenertemden/poleposition` repository, `.github/workflows/release.yml`, and the
+`pypi` GitHub Actions environment before the first publish.
 
 ---
 

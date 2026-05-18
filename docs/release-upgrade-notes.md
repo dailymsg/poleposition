@@ -39,6 +39,33 @@ Use `polepos upgrade` inside a generated project for a read-only readiness
 report that includes the CLI version, package, database mode, recorded module
 templates, enabled integrations, and current `polepos check` status.
 
+## Publish a Release
+
+Repository releases publish to PyPI through GitHub Actions and PyPI Trusted
+Publishing. The workflow is `.github/workflows/release.yml`, and it runs when a
+GitHub release is published.
+
+Before the first trusted publish, configure the existing PyPI project with a
+GitHub Actions Trusted Publisher:
+
+```text
+PyPI project: poleposition
+Owner: erenertemden
+Repository: poleposition
+Workflow name: release.yml
+Environment name: pypi
+```
+
+The release workflow builds the source distribution and wheel, checks the
+package metadata with `twine check`, and publishes through
+`pypa/gh-action-pypi-publish` without a `PYPI_API_TOKEN` secret. The publish job
+is the only job with `id-token: write`; keep that permission scoped to the
+publish job if the workflow grows.
+
+The `pypi` GitHub Actions environment is intentionally part of the trusted
+publisher identity. Configure any required reviewer or branch/tag restrictions
+on that environment in GitHub before relying on automated publishing.
+
 ## Generated Projects Are Not Auto-Rewritten
 
 Upgrading the CLI does not rewrite an existing generated project. New versions
