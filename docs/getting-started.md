@@ -79,6 +79,17 @@ Refine the generated files for the real domain:
 - `repository.py`
 - `router.py`
 
+Use a different module template when the boundary is clearer:
+
+```bash
+polepos add module customers --template crud
+polepos add module webhooks --api-only
+polepos add module assistant --template ai-prompt
+```
+
+See [Module Templates](module-templates.md) for the generated file layouts and
+tradeoffs.
+
 If you generated the wrong boundary, remove it before adding the replacement:
 
 ```bash
@@ -106,15 +117,19 @@ polepos db upgrade
 
 ```bash
 polepos check
+polepos check --json
+polepos check --fix
 ```
 
-The check command is read-only and file-based. It reports lifecycle drift
-without installing dependencies, running migrations, starting services, or
-contacting external systems.
+The default check command is read-only and file-based. It reports lifecycle
+drift without installing dependencies, running migrations, starting services, or
+contacting external systems. Use `--json` for CI or agent workflows. Use
+`--fix` when safe managed markers should be restored after a merge conflict.
 
 ## Create and Apply Migrations
 
 ```bash
+polepos db status
 polepos db revision -m "add customers table"
 polepos db upgrade
 ```

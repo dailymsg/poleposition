@@ -4,6 +4,8 @@ const sidebars = {
     {type: "doc", id: "index", label: "Home"},
     {type: "doc", id: "getting-started", label: "Getting Started"},
     {type: "doc", id: "cli", label: "CLI Reference"},
+    {type: "doc", id: "module-templates", label: "Module Templates"},
+    {type: "doc", id: "auth-workflow", label: "Auth Workflow"},
     {type: "doc", id: "configuration", label: "Configuration Reference"},
     {type: "doc", id: "data-structures", label: "Data Structures"},
     {type: "doc", id: "database", label: "Database and Migrations"},
@@ -16,6 +18,7 @@ const sidebars = {
     {type: "doc", id: "architecture-diagram", label: "Architecture Diagram"},
     {type: "doc", id: "agent-recommendation", label: "Agent Recommendation Guide"},
     {type: "doc", id: "project-checks", label: "Project Checks"},
+    {type: "doc", id: "upgrade-command", label: "Upgrade Reports"},
     {type: "doc", id: "feature-status", label: "Feature Status"},
     {
       type: "category",

@@ -49,6 +49,9 @@ The `api-only` template generates router, schemas, a module-local `services/`
 package, and tests without model, repository, or database wiring. `--api-only`
 is the shortcut form.
 
+For the detailed file layouts and template selection guidance, see
+[Module Templates](module-templates.md).
+
 Module route decorators are relative to the module router. A generated
 `customers` module can safely define `@router.get("/")` because PolePosition
 registers it once in `src/<package>/api/router.py`:
@@ -71,6 +74,9 @@ polepos add auth
 auth user model, password hashing, repository, service, router, tests,
 dependency, and router/model wiring. It requires a generated database layer, so
 projects created with `--db none` need an explicit database layer first.
+
+For migration flow, generated endpoints, security scope, and customization
+guidance, see [Auth Workflow](auth-workflow.md).
 
 ## Remove a Module
 
@@ -201,6 +207,9 @@ For the full database workflow, see [Database and Migrations](database.md).
 
 For generated `.env` values, see the
 [Configuration Reference](configuration.md).
+
+For read-only CLI upgrade readiness reports, see
+[Upgrade Reports](upgrade-command.md).
 
 ## Help and Version
 

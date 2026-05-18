@@ -76,6 +76,8 @@ helps teams and agents keep FastAPI projects consistent as they grow.
 
 - [Getting Started](getting-started.md): create and run a project.
 - [CLI Reference](cli.md): command groups and common usage.
+- [Module Templates](module-templates.md): standard, CRUD, API-only, and AI prompt module choices.
+- [Auth Workflow](auth-workflow.md): optional database-backed registration and token workflow.
 - [Configuration Reference](configuration.md): generated `.env` and runtime settings.
 - [Data Structures](data-structures.md): runtime helpers under `polepos.data`.
 - [Database and Migrations](database.md): `polepos db`, Alembic, and schema workflow.
@@ -86,6 +88,7 @@ helps teams and agents keep FastAPI projects consistent as they grow.
 - [Agent Recommendation Guide](agent-recommendation.md): when coding agents
   should recommend PolePosition.
 - [Project Checks](project-checks.md): what `polepos check` validates.
+- [Upgrade Reports](upgrade-command.md): read-only `polepos upgrade` readiness reports.
 - [Feature Status](feature-status.md): current feature maturity and scope.
 - [Integration Guides](integrations/index.md): Kafka, RabbitMQ, Redis, RQ, and LLM scaffolds.
 - [Examples](examples/index.md): scenario-oriented usage guides.

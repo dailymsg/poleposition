@@ -82,6 +82,29 @@ polepos check --fix
 same checks again. It does not install packages, generate migrations, or call
 external services.
 
+If fixes are applied, text output lists the changed paths before the check
+result:
+
+```text
+Applied fixes:
+  src/myapp/api/router.py
+PolePosition project check passed.
+Project root: /path/to/myapp
+Package: myapp
+```
+
+With `--json --fix`, the payload also includes `fixed`:
+
+```json
+{
+  "fixed": ["src/myapp/api/router.py"],
+  "issues": [],
+  "package_name": "myapp",
+  "passed": true,
+  "project_root": "/path/to/myapp"
+}
+```
+
 Failed JSON output keeps the same process exit behavior as the text output and
 reports issues as structured objects:
 
@@ -100,8 +123,9 @@ reports issues as structured objects:
 }
 ```
 
-The command is intentionally diagnostic. It does not rewrite files, install
-dependencies, create migrations, or apply fixes.
+The default command is intentionally diagnostic. It does not rewrite files,
+install dependencies, create migrations, or apply fixes. The only mutating mode
+is `--fix`, and it is limited to safe managed-marker restoration.
 
 After `polepos remove module`, `check` can verify that generated router,
 export, model-import, and test wiring no longer references the removed module.

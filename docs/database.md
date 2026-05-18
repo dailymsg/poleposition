@@ -324,6 +324,27 @@ If PostgreSQL is already using host port `5432`, change `POSTGRES_PORT` in
 
 ## Command Details
 
+### `polepos db status`
+
+Show the current Alembic revision and known heads without changing the
+database:
+
+```bash
+polepos db status
+```
+
+Use this before and after migration work:
+
+```bash
+polepos db status
+polepos db revision -m "add customers table"
+polepos db upgrade
+polepos db status
+```
+
+The command still uses the generated project's Alembic environment, so it reads
+the same settings and `DATABASE_URL` path as other `polepos db` commands.
+
 ### `polepos db upgrade`
 
 Apply migrations to a target revision. Without a target, PolePosition uses
