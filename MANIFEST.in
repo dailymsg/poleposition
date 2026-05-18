@@ -5,4 +5,5 @@ include pole_position/template/.dockerignore
 include pole_position/template/.env.example
 include pole_position/template/.gitignore
 include pole_position/template/.poleposition.toml
+prune pole_position/tests
 global-exclude __pycache__ *.py[cod]

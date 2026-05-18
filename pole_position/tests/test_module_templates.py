@@ -52,6 +52,8 @@ def test_standard_template_contract() -> None:
     assert template.update_db_models is contract.update_db_models
     assert template.ensure_llm_integrations is contract.ensure_llm_integrations
     assert template.ensure_llm_settings is contract.ensure_llm_settings
+    assert '"services"' in template.files["__init__.py"]
+    assert '"service"' not in template.files["__init__.py"]
     service_content = template.files["services/customers_service.py"]
     assert "from shop_api.bootstrap.logging import get_logger" in service_content
     assert 'extra={"item_name": payload.name}' in service_content
@@ -92,6 +94,8 @@ def test_ai_prompt_template_contract() -> None:
     assert template.update_db_models is contract.update_db_models
     assert template.ensure_llm_integrations is contract.ensure_llm_integrations
     assert template.ensure_llm_settings is contract.ensure_llm_settings
+    assert '"services"' in template.files["__init__.py"]
+    assert '"service"' not in template.files["__init__.py"]
     assert "get_llm_provider" in template.files["orchestrator.py"]
     assert '"/api/v1/assistant/respond"' in template.integration_test_content
 
@@ -110,6 +114,8 @@ def test_api_only_template_contract() -> None:
     assert template.update_db_models is False
     assert "model.py" not in template.files
     assert "repository.py" not in template.files
+    assert '"services"' in template.files["__init__.py"]
+    assert '"service"' not in template.files["__init__.py"]
     assert "Depends(db_session)" not in template.files["router.py"]
     service_content = template.files["services/webhooks_service.py"]
     assert 'extra={"payload_name": payload.name}' in service_content

@@ -3,5 +3,5 @@ __all__ = [
     "prompts",
     "router",
     "schemas",
-    "service",
+    "services",
 ]

@@ -3,5 +3,5 @@ __all__ = [
     "repository",
     "router",
     "schemas",
-    "service",
+    "services",
 ]
