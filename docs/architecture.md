@@ -277,6 +277,7 @@ The remover detects the generated module template, then removes:
 - the module export from `modules/__init__.py`
 - the API router import and include from `api/router.py`
 - the model import from `db/models.py` for database-backed generated modules
+- the module template entry from `.poleposition.toml` when present
 
 It is a project-file operation, not a database operation. It does not open a
 database connection, create a migration, drop tables, delete data, or rewrite

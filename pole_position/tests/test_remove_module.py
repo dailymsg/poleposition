@@ -174,6 +174,7 @@ def test_remove_module_trace_reports_plan_without_changing_files(tmp_path: Path)
     assert "tests/integration/test_garage.py" in result.stdout
     assert "Would update:" in result.stdout
     assert "src/myapp/api/router.py" in result.stdout
+    assert ".poleposition.toml" in result.stdout
 
     package_root = project_root / "src" / "myapp"
     assert (package_root / "modules" / "garage").exists()
@@ -181,6 +182,33 @@ def test_remove_module_trace_reports_plan_without_changing_files(tmp_path: Path)
     assert "garage_router" in (
         package_root / "api" / "router.py"
     ).read_text(encoding="utf-8")
+
+
+def test_remove_module_cleans_manifest_only_remnant(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8").replace(
+            "\n[integrations]",
+            '\nghost = "api-only"\n\n[integrations]',
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "remove", "module", "ghost")
+
+    assert result.returncode == 0
+    assert "Removed module: ghost" in result.stdout
+    assert "Template: api-only" in result.stdout
+    assert "Module does not exist" not in result.stdout
+    assert ".poleposition.toml" in result.stdout
+    assert 'ghost = "api-only"' not in manifest_path.read_text(encoding="utf-8")
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
 
 
 def test_remove_module_rejects_custom_module_files_without_force(tmp_path: Path):

@@ -90,10 +90,12 @@ polepos remove module customers --wiring-only
 
 `remove module` is the counterpart to `add module`. It removes the module
 directory, generated integration and unit tests, module exports, API router
-wiring, and database-backed module model imports.
+wiring, database-backed module model imports, and the `.poleposition.toml`
+module entry.
 
 If the module directory was already deleted manually, the command still cleans
-remaining generated tests and managed router, model, and export wiring.
+remaining generated tests, manifest metadata, and managed router, model, and
+export wiring.
 
 The remover is conservative about wiring. It removes generated imports and
 includes that still match the managed layout, but it will not silently delete

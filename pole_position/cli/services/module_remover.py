@@ -18,6 +18,7 @@ from pole_position.cli.services.module_templates import llm_settings_block
 from pole_position.cli.services.module_templates import module_template_detection_contracts
 from pole_position.cli.services.project_locator import find_package_root
 from pole_position.cli.services.project_locator import find_project_root
+from pole_position.cli.services.project_manifest import manifest_path
 from pole_position.cli.services.project_manifest import read_project_manifest
 from pole_position.cli.services.project_manifest import remove_manifest_integration
 from pole_position.cli.services.project_manifest import remove_manifest_module
@@ -155,6 +156,11 @@ def remove_module(
 
     updated_files: list[Path] = []
     removed_paths: list[Path] = []
+    manifest_would_change = _manifest_would_change(
+        project_root=project_root,
+        module_name=module_name,
+        remove_llm_shared=remove_llm_shared,
+    )
 
     modules_init_path = modules_root / "__init__.py"
     if _remove_line(modules_init_path, _module_export_line(module_name)):
@@ -183,6 +189,8 @@ def remove_module(
         remove_manifest_integration(project_root=project_root, integration_name="llm")
 
     remove_manifest_module(project_root=project_root, module_name=module_name)
+    if manifest_would_change:
+        updated_files.append(manifest_path(project_root))
 
     return RemovedModuleResult(
         module_name=module_name,
@@ -362,6 +370,13 @@ def _planned_updated_files(
 
     if remove_llm_shared:
         updated_files.extend(_planned_llm_settings_updates(project_root, package_root))
+
+    if _manifest_would_change(
+        project_root=project_root,
+        module_name=module_name,
+        remove_llm_shared=remove_llm_shared,
+    ):
+        updated_files.append(manifest_path(project_root))
 
     return updated_files
 
@@ -579,6 +594,10 @@ def _has_removable_module_remnants(
     if _has_router_remnant(router_path, package_name, module_name):
         return True
 
+    manifest = read_project_manifest(project_root)
+    if manifest.exists and module_name in manifest.module_templates:
+        return True
+
     if any(
         path.exists()
         for path in _generated_test_paths(project_root, module_name, template_contract)
@@ -588,6 +607,25 @@ def _has_removable_module_remnants(
     return (
         template_contract.update_db_models
         and _line_exists(models_path, _model_import_line(package_name, module_name))
+    )
+
+
+def _manifest_would_change(
+    *,
+    project_root: Path,
+    module_name: str,
+    remove_llm_shared: bool,
+) -> bool:
+    manifest = read_project_manifest(project_root)
+    if not manifest.exists:
+        return False
+
+    if module_name in manifest.module_templates:
+        return True
+
+    return remove_llm_shared and (
+        "llm" in manifest.enabled_integrations
+        or "llm" in manifest.invalid_integration_values
     )
 
 
