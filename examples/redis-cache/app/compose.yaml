@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_RELOAD: "false"
+    ports:
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"

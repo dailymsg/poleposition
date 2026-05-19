@@ -1,0 +1,10 @@
+[poleposition]
+package = "kafka_quick_start"
+db = "none"
+
+[modules]
+greetings = "api-only"
+status = "starter"
+
+[integrations]
+kafka = true

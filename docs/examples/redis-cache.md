@@ -12,6 +12,9 @@ GET /api/v1/quotes/{topic}
 The first request computes a quote and stores it in Redis. Repeated requests for
 the same topic return the cached value.
 
+Complete runnable source:
+[examples/redis-cache/app](https://github.com/erenertemden/poleposition/tree/main/examples/redis-cache/app)
+
 ## Create the Project
 
 ```bash

@@ -16,6 +16,27 @@ The PolePosition version uses:
   env values, dependency, and in-memory test helper
 - `polepos add module quotes --api-only` for the HTTP boundary
 
+## Complete Runnable Source
+
+This example includes a complete PolePosition-generated project:
+
+```text
+examples/redis-cache/app/
+```
+
+Run it directly:
+
+```bash
+cd examples/redis-cache/app
+cp .env.example .env
+uv sync --extra dev
+docker compose -f compose.redis.yaml up -d
+uv run python -m redis_cache.run
+```
+
+The rest of this guide explains how that `app/` project was built and why each
+file exists.
+
 ## Scenario Goal
 
 Build a tiny cached API:

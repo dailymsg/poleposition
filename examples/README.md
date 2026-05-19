@@ -51,6 +51,7 @@ examples/kafka-quick-start/README.md
 Focus:
 
 - adapting a Spring Kafka quick-start shape to PolePosition
+- complete runnable source under `examples/kafka-quick-start/app`
 - `polepos add integration kafka`
 - `polepos add module greetings --api-only`
 - publishing a JSON greeting event through FastAPI
@@ -69,6 +70,7 @@ examples/rabbitmq-quick-start/README.md
 
 Focus:
 
+- complete runnable source under `examples/rabbitmq-quick-start/app`
 - `polepos add integration rabbitmq`
 - queue-backed async work with exchange, routing key, and queue
 - `polepos add module greetings --api-only`
@@ -88,6 +90,7 @@ examples/redis-cache/README.md
 
 Focus:
 
+- complete runnable source under `examples/redis-cache/app`
 - `polepos add integration redis`
 - cache-aside flow with `get_text` and `set_text`
 - `polepos add module quotes --api-only`
@@ -107,6 +110,7 @@ examples/openai-prompt/README.md
 
 Focus:
 
+- complete runnable source under `examples/openai-prompt/app`
 - `polepos add module assistant --template ai-prompt`
 - implementing the generated OpenAI provider adapter
 - sending prompts with the OpenAI Responses API

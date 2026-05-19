@@ -13,6 +13,9 @@ The implementation uses the OpenAI Responses API pattern shown in the official
 [OpenAI developer quickstart](https://platform.openai.com/docs/quickstart?api-mode=responses&lang=python)
 and [Responses API reference](https://platform.openai.com/docs/api-reference/responses).
 
+Complete runnable source:
+[examples/openai-prompt/app](https://github.com/erenertemden/poleposition/tree/main/examples/openai-prompt/app)
+
 ## Create the Project
 
 ```bash

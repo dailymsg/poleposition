@@ -1,0 +1,10 @@
+[poleposition]
+package = "openai_prompt"
+db = "none"
+
+[modules]
+assistant = "ai-prompt"
+status = "starter"
+
+[integrations]
+llm = true

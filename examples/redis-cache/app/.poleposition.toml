@@ -1,0 +1,10 @@
+[poleposition]
+package = "redis_cache"
+db = "none"
+
+[modules]
+quotes = "api-only"
+status = "starter"
+
+[integrations]
+redis = true

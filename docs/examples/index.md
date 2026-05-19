@@ -64,6 +64,7 @@ module-local consumer worker.
 Focus:
 
 - `polepos start kafka-quick-start --db none`
+- complete runnable source under `examples/kafka-quick-start/app`
 - `polepos add integration kafka`
 - `polepos add module greetings --api-only`
 - `POST /api/v1/greetings/send`
@@ -82,6 +83,7 @@ model instead of Kafka topics.
 Focus:
 
 - `polepos start rabbitmq-quick-start --db none`
+- complete runnable source under `examples/rabbitmq-quick-start/app`
 - `polepos add integration rabbitmq`
 - `polepos add module greetings --api-only`
 - `POST /api/v1/greetings/send`
@@ -100,6 +102,7 @@ workflow.
 Focus:
 
 - `polepos start redis-cache --db none`
+- complete runnable source under `examples/redis-cache/app`
 - `polepos add integration redis`
 - `polepos add module quotes --api-only`
 - `GET /api/v1/quotes/{topic}`
@@ -118,6 +121,7 @@ OpenAI-backed endpoint.
 Focus:
 
 - `polepos start openai-prompt --db none`
+- complete runnable source under `examples/openai-prompt/app`
 - `polepos add module assistant --template ai-prompt`
 - implementing `integrations/llm/openai_client.py`
 - `POST /api/v1/assistant/respond`

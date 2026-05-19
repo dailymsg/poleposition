@@ -12,6 +12,26 @@ For OpenAI, this tutorial uses the Responses API shape from the official
 [OpenAI developer quickstart](https://platform.openai.com/docs/quickstart?api-mode=responses&lang=python)
 and [Responses API reference](https://platform.openai.com/docs/api-reference/responses).
 
+## Complete Runnable Source
+
+This example includes a complete PolePosition-generated project:
+
+```text
+examples/openai-prompt/app/
+```
+
+Run it directly after setting `LLM_API_KEY`:
+
+```bash
+cd examples/openai-prompt/app
+cp .env.example .env
+uv sync --extra dev
+uv run python -m openai_prompt.run
+```
+
+The rest of this guide explains how that `app/` project was built and why each
+file exists.
+
 ## Scenario Goal
 
 Build a prompt endpoint:

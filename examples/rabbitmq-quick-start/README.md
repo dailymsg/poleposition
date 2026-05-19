@@ -14,6 +14,27 @@ The PolePosition version uses:
 - `polepos add module greetings --api-only` for the HTTP boundary
 - a module-local worker for message consumption
 
+## Complete Runnable Source
+
+This example includes a complete PolePosition-generated project:
+
+```text
+examples/rabbitmq-quick-start/app/
+```
+
+Run it directly:
+
+```bash
+cd examples/rabbitmq-quick-start/app
+cp .env.example .env
+uv sync --extra dev
+docker compose -f compose.rabbitmq.yaml up -d
+uv run python -m rabbitmq_quick_start.run
+```
+
+The rest of this guide explains how that `app/` project was built and why each
+file exists.
+
 ## Scenario Goal
 
 Build a small queue-backed API:

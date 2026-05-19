@@ -13,6 +13,9 @@ POST /api/v1/greetings/send
 The endpoint publishes a greeting event to Kafka. A separate module-local
 consumer worker reads the event and prints the message.
 
+Complete runnable source:
+[examples/kafka-quick-start/app](https://github.com/erenertemden/poleposition/tree/main/examples/kafka-quick-start/app)
+
 ## Create the Project
 
 Kafka is the focus, so start without database wiring:

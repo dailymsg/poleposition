@@ -21,6 +21,27 @@ generated project structure:
 - a module-local worker consumes messages explicitly instead of starting a
   consumer inside the FastAPI request process
 
+## Complete Runnable Source
+
+This example includes a complete PolePosition-generated project:
+
+```text
+examples/kafka-quick-start/app/
+```
+
+Run it directly:
+
+```bash
+cd examples/kafka-quick-start/app
+cp .env.example .env
+uv sync --extra dev
+docker compose -f compose.kafka.yaml up -d
+uv run python -m kafka_quick_start.run
+```
+
+The rest of this guide explains how that `app/` project was built and why each
+file exists.
+
 ## Scenario Goal
 
 Build a tiny event-driven API:
