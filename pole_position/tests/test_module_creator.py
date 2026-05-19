@@ -123,7 +123,7 @@ def test_ai_preflight_allows_existing_llm_settings_without_markers(tmp_path: Pat
     package_root = project_root / "src" / "shop_api"
     _write_required_preflight_files(project_root, package_root)
     (package_root / "settings.py").write_text(
-        "\n".join(llm_settings_block()) + "\n",
+        "\n".join(["class Settings:", *llm_settings_block()]) + "\n",
         encoding="utf-8",
     )
     (project_root / ".env.example").write_text(
@@ -157,7 +157,7 @@ def test_ai_preflight_reports_partial_llm_settings_without_markers(
     package_root = project_root / "src" / "shop_api"
     _write_required_preflight_files(project_root, package_root)
     (package_root / "settings.py").write_text(
-        '    llm_provider: str = "openai"\n',
+        'class Settings:\n    llm_provider: str = "openai"\n',
         encoding="utf-8",
     )
     (project_root / ".env.example").write_text(

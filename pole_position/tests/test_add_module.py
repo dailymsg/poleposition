@@ -620,6 +620,7 @@ def test_add_module_creates_module_files_and_updates_router(tmp_path: Path):
     assert "Next steps:" in result.stdout
     assert "src/myapp/modules/garage/router.py" in result.stdout
     assert "tests/integration/test_garage.py" in result.stdout
+    assert ".poleposition.toml" in result.stdout
     assert "Run `polepos check`" in result.stdout
     assert 'polepos db revision -m "add garage table"' in result.stdout
 
@@ -930,6 +931,110 @@ def test_add_module_preflight_fails_before_writing_when_marker_is_missing(tmp_pa
     assert not (package_root / "modules" / "garage").exists()
     assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
     assert not (project_root / "tests" / "unit" / "test_garage_service.py").exists()
+
+
+def test_add_module_preflight_fails_before_writing_when_router_is_invalid(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "api" / "router.py"
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8") + "\ndef broken(:\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "module", "garage")
+
+    assert result.returncode != 0
+    assert "Cannot add module because the project layout is not ready" in result.stdout
+    assert "Could not parse managed Python file for module add" in result.stdout
+    assert "api/router.py" in result.stdout
+    assert not (package_root / "modules" / "garage").exists()
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+
+
+def test_add_module_preflight_fails_before_writing_when_modules_init_is_invalid(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    modules_init_path = package_root / "modules" / "__init__.py"
+    modules_init_path.write_text(
+        modules_init_path.read_text(encoding="utf-8") + "\ndef broken(:\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "module", "garage")
+
+    assert result.returncode != 0
+    assert "Cannot add module because the project layout is not ready" in result.stdout
+    assert "Could not parse managed Python file for module add" in result.stdout
+    assert "modules/__init__.py" in result.stdout
+    assert not (package_root / "modules" / "garage").exists()
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+
+
+def test_add_module_preflight_fails_before_writing_when_models_file_is_invalid(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    models_path = package_root / "db" / "models.py"
+    models_path.write_text(
+        models_path.read_text(encoding="utf-8") + "\ndef broken(:\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "add", "module", "garage")
+
+    assert result.returncode != 0
+    assert "Cannot add module because the project layout is not ready" in result.stdout
+    assert "Could not parse managed Python file for module add" in result.stdout
+    assert "db/models.py" in result.stdout
+    assert not (package_root / "modules" / "garage").exists()
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+
+
+def test_add_ai_prompt_module_preflight_fails_before_writing_when_settings_is_invalid(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    settings_path.write_text(
+        settings_path.read_text(encoding="utf-8") + "\ndef broken(:\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "assistant",
+        "--template",
+        "ai-prompt",
+    )
+
+    assert result.returncode != 0
+    assert "Cannot add module because the project layout is not ready" in result.stdout
+    assert "Could not parse managed Python file for module add" in result.stdout
+    assert "settings.py" in result.stdout
+    assert not (package_root / "modules" / "assistant").exists()
+    assert not (package_root / "integrations" / "llm").exists()
+    assert not (project_root / "tests" / "integration" / "test_assistant.py").exists()
 
 
 def test_add_module_rejects_stale_managed_wiring_before_readding(tmp_path: Path):

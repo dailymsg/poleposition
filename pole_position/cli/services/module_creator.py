@@ -2,9 +2,6 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
-from pole_position.cli.services.project_locator import find_package_root, find_project_root
-from pole_position.cli.services.project_manifest import record_manifest_integration
-from pole_position.cli.services.project_manifest import record_manifest_module
 from pole_position.cli.services.module_templates import (
     ModuleTemplate,
     SUPPORTED_MODULE_TEMPLATES,
@@ -13,6 +10,10 @@ from pole_position.cli.services.module_templates import (
     llm_integration_files,
     llm_settings_block,
 )
+from pole_position.cli.services.project_locator import find_package_root, find_project_root
+from pole_position.cli.services.project_manifest import manifest_path
+from pole_position.cli.services.project_manifest import record_manifest_integration
+from pole_position.cli.services.project_manifest import record_manifest_module
 
 ROUTER_IMPORTS_MARKER = "# polepos:router-imports"
 ROUTER_INCLUDES_MARKER = "# polepos:router-includes"
@@ -97,6 +98,9 @@ def add_module(
         module_name=module_name,
         template=template,
     )
+    project_manifest_path = manifest_path(project_root)
+    if project_manifest_path.is_file():
+        updated_files.append(project_manifest_path)
 
     return AddedModuleResult(
         module_name=module_name,
@@ -138,21 +142,25 @@ def _validate_add_module_preflight(
         tests_root / "unit" / template_spec.unit_test_name,
     )
 
+    modules_init_path = modules_root / "__init__.py"
+    router_path = package_root / "api" / "router.py"
     _collect_missing_marker(
         problems,
-        modules_root / "__init__.py",
+        modules_init_path,
         MODULE_EXPORTS_MARKER,
     )
+    _collect_python_parse_error(problems, modules_init_path)
     _collect_missing_marker(
         problems,
-        package_root / "api" / "router.py",
+        router_path,
         ROUTER_IMPORTS_MARKER,
     )
     _collect_missing_marker(
         problems,
-        package_root / "api" / "router.py",
+        router_path,
         ROUTER_INCLUDES_MARKER,
     )
+    _collect_python_parse_error(problems, router_path)
     _collect_existing_managed_module_references(
         problems=problems,
         package_root=package_root,
@@ -173,15 +181,18 @@ def _validate_add_module_preflight(
                 db_models_path,
                 MODEL_IMPORTS_MARKER,
             )
+            _collect_python_parse_error(problems, db_models_path)
 
     if template_spec.ensure_llm_settings:
+        settings_path = package_root / "settings.py"
         _collect_missing_marker_unless_entries_exist(
             problems,
-            package_root / "settings.py",
+            settings_path,
             marker=SETTINGS_LLM_MARKER,
             block=llm_settings_block(),
             entry_type="setting",
         )
+        _collect_python_parse_error(problems, settings_path)
         _collect_missing_marker_unless_entries_exist(
             problems,
             project_root / ".env.example",
@@ -210,6 +221,18 @@ def _collect_missing_marker(problems: list[str], path: Path, marker: str) -> Non
 
     if marker not in lines:
         problems.append(f"Required managed marker '{marker}' is missing in {path}")
+
+
+def _collect_python_parse_error(problems: list[str], path: Path) -> None:
+    if not path.is_file():
+        return
+
+    try:
+        ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except SyntaxError as exc:
+        problems.append(
+            f"Could not parse managed Python file for module add: {path}: {exc}"
+        )
 
 
 def _collect_existing_managed_module_references(

@@ -243,6 +243,7 @@ This file:
 - writes module files
 - writes generated tests
 - updates shared registration points
+- records the module template in `.poleposition.toml` when present
 - optionally adds LLM integration files
 - optionally patches settings and `.env.example`
 
