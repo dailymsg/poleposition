@@ -58,6 +58,9 @@ SDK calls should live without making the base scaffold depend on a provider SDK.
 Install the SDK you choose in the generated project, then implement the adapter
 method in the matching provider file.
 
+For a complete OpenAI adapter walkthrough, see the
+[OpenAI Prompt example](../examples/openai-prompt.md).
+
 ## Module Boundary
 
 Use the generated files this way:

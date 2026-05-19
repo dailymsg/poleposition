@@ -59,6 +59,62 @@ Focus:
 Use this when you want a first Kafka producer/consumer example without turning
 the generated FastAPI app into a background-worker host.
 
+### RabbitMQ Quick Start
+
+Path:
+
+```text
+examples/rabbitmq-quick-start/README.md
+```
+
+Focus:
+
+- `polepos add integration rabbitmq`
+- queue-backed async work with exchange, routing key, and queue
+- `polepos add module greetings --api-only`
+- publishing a greeting message through FastAPI
+- consuming the message from a module-local worker
+
+Use this when the workflow is closer to job dispatch or work queues than event
+streaming.
+
+### Redis Cache
+
+Path:
+
+```text
+examples/redis-cache/README.md
+```
+
+Focus:
+
+- `polepos add integration redis`
+- cache-aside flow with `get_text` and `set_text`
+- `polepos add module quotes --api-only`
+- TTL-backed cached responses
+- in-memory cache tests without Redis
+
+Use this when you want a practical shared cache example that keeps Redis behind
+module service code.
+
+### OpenAI Prompt
+
+Path:
+
+```text
+examples/openai-prompt/README.md
+```
+
+Focus:
+
+- `polepos add module assistant --template ai-prompt`
+- implementing the generated OpenAI provider adapter
+- sending prompts with the OpenAI Responses API
+- keeping live provider calls out of default unit tests
+
+Use this when you want to turn the provider-agnostic AI scaffold into a working
+OpenAI-backed endpoint.
+
 ## Why These Examples Matter
 
 The template shows the default generated state.

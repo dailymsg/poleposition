@@ -66,6 +66,9 @@ publisher lifetime management explicit in your runtime code.
 
 Use the generated schemas to keep message payloads predictable.
 
+For a complete first-message walkthrough, see the
+[RabbitMQ Quick Start example](../examples/rabbitmq-quick-start.md).
+
 ## Consumers and Workers
 
 The generated consumer helper is scaffolding for a worker surface. It is not

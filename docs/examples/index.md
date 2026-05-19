@@ -73,3 +73,57 @@ Read the site guide: [Kafka Quick Start](kafka-quick-start.md)
 
 Source scenario:
 [examples/kafka-quick-start](https://github.com/erenertemden/poleposition/blob/main/examples/kafka-quick-start/README.md)
+
+### RabbitMQ Quick Start
+
+Shows the same first-message workflow using RabbitMQ's exchange and queue
+model instead of Kafka topics.
+
+Focus:
+
+- `polepos start rabbitmq-quick-start --db none`
+- `polepos add integration rabbitmq`
+- `polepos add module greetings --api-only`
+- `POST /api/v1/greetings/send`
+- broker-free unit testing with `InMemoryRabbitMQEventPublisher`
+
+Read the site guide: [RabbitMQ Quick Start](rabbitmq-quick-start.md)
+
+Source scenario:
+[examples/rabbitmq-quick-start](https://github.com/erenertemden/poleposition/blob/main/examples/rabbitmq-quick-start/README.md)
+
+### Redis Cache
+
+Shows how to add Redis and reshape an API-only module into a cache-aside
+workflow.
+
+Focus:
+
+- `polepos start redis-cache --db none`
+- `polepos add integration redis`
+- `polepos add module quotes --api-only`
+- `GET /api/v1/quotes/{topic}`
+- in-memory cache testing with `build_in_memory_redis_cache`
+
+Read the site guide: [Redis Cache](redis-cache.md)
+
+Source scenario:
+[examples/redis-cache](https://github.com/erenertemden/poleposition/blob/main/examples/redis-cache/README.md)
+
+### OpenAI Prompt
+
+Shows how to turn the provider-agnostic AI prompt template into a working
+OpenAI-backed endpoint.
+
+Focus:
+
+- `polepos start openai-prompt --db none`
+- `polepos add module assistant --template ai-prompt`
+- implementing `integrations/llm/openai_client.py`
+- `POST /api/v1/assistant/respond`
+- stub-provider unit testing without live API calls
+
+Read the site guide: [OpenAI Prompt](openai-prompt.md)
+
+Source scenario:
+[examples/openai-prompt](https://github.com/erenertemden/poleposition/blob/main/examples/openai-prompt/README.md)

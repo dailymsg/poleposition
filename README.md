@@ -622,6 +622,9 @@ Concrete scenario guides live in [Examples](https://github.com/erenertemden/pole
 * auth foundation workflow
 * PostgreSQL-backed HTML swap workflow
 * Kafka quick-start producer/consumer workflow
+* RabbitMQ quick-start publisher/worker workflow
+* Redis cache-aside workflow
+* OpenAI prompt endpoint workflow
 
 ### Help and version
 

@@ -198,6 +198,14 @@ class GreetingResponse(BaseModel):
     status: str
 ```
 
+Why this file exists:
+
+- request and response models keep FastAPI validation at the edge of the module
+- the router should not parse arbitrary dictionaries by hand
+- `recipient` becomes the Kafka key so all events for the same recipient can be
+  ordered together when the topic has multiple partitions later
+- the response confirms publication intent, not downstream consumption
+
 ## Step 6: Publish a Greeting Event
 
 Replace
@@ -232,6 +240,15 @@ async def publish_greeting(
     await producer.publish(event)
     return event
 ```
+
+What this service does:
+
+- it accepts a producer through a small `Protocol`, so unit tests can pass an
+  in-memory producer instead of a real Kafka client
+- it builds one `KafkaEvent`, the generated integration's transport-neutral
+  message shape
+- it keeps use-case naming in the module (`publish_greeting`) and transport
+  encoding in `integrations/kafka`
 
 Replace `src/kafka_quick_start/modules/greetings/router.py`:
 
@@ -280,9 +297,18 @@ async def send_greeting(payload: GreetingRequest) -> GreetingResponse:
     )
 ```
 
-This keeps producer lifetime management explicit. For production traffic, move
-producer startup and shutdown into application lifespan wiring so requests do
-not create a producer per call.
+What this router does:
+
+- it owns the HTTP contract and returns `202 Accepted` because publishing an
+  event queues work for later consumption
+- it reads the topic from settings instead of hardcoding infrastructure details
+  in the route
+- it starts and stops the generated producer explicitly so the tutorial is easy
+  to follow
+
+For production traffic, move producer startup and shutdown into application
+lifespan wiring so requests do not create a producer per call. The route should
+then receive or resolve a long-lived producer instead.
 
 ## Step 7: Add a Consumer Worker
 
@@ -314,6 +340,14 @@ async def main() -> None:
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+Why this is a separate module:
+
+- a Kafka consumer is a worker process, not part of serving an HTTP request
+- a crashing worker should not take down the FastAPI app process
+- deployers can scale API instances and consumer instances independently
+- the module still owns the business behavior for greetings, while the generic
+  polling loop remains in `integrations/kafka`
 
 Run FastAPI in one terminal:
 
@@ -375,6 +409,13 @@ async def test_publish_greeting_records_event() -> None:
     }
     assert producer.events == [event]
 ```
+
+Why this test does not start Kafka:
+
+- it tests the business contract: a greeting request becomes the expected event
+- it stays fast enough for the default `uv run pytest` loop
+- broker lifecycle, ports, and Docker availability are left to a separate
+  integration test suite
 
 Run:
 

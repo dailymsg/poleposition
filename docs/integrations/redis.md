@@ -68,6 +68,9 @@ value = await cache.get_text("health")
 Use Redis for shared process-external cache state. For in-process-only state,
 `polepos.data` structures may be enough.
 
+For a complete cache-aside walkthrough, see the
+[Redis Cache example](../examples/redis-cache.md).
+
 ## Testing
 
 Use `build_in_memory_redis_cache()` from `testing.py` when unit tests should

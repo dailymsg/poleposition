@@ -20,6 +20,13 @@ Integration scaffolds are starting points. They do not start background
 consumer loops inside the FastAPI application process. Keep long-running
 workers explicit in your deployment or runtime code.
 
+For end-to-end examples, see:
+
+- [Kafka Quick Start](../examples/kafka-quick-start.md)
+- [RabbitMQ Quick Start](../examples/rabbitmq-quick-start.md)
+- [Redis Cache](../examples/redis-cache.md)
+- [OpenAI Prompt](../examples/openai-prompt.md)
+
 After adding an integration, run:
 
 ```bash
