@@ -66,6 +66,9 @@ management explicit in your route, service, or application wiring.
 
 Use the generated schemas to keep event payloads predictable.
 
+For a complete first-message walkthrough, see the
+[Kafka Quick Start example](../examples/kafka-quick-start.md).
+
 ## Consumers and Workers
 
 The generated consumer helper is scaffolding for a worker surface. It is not

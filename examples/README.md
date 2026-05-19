@@ -40,6 +40,25 @@ Focus:
 
 Use this when you want to see how a non-generic business use case can still fit the PolePosition structure.
 
+### Kafka Quick Start
+
+Path:
+
+```text
+examples/kafka-quick-start/README.md
+```
+
+Focus:
+
+- adapting a Spring Kafka quick-start shape to PolePosition
+- `polepos add integration kafka`
+- `polepos add module greetings --api-only`
+- publishing a JSON greeting event through FastAPI
+- consuming the event from a module-local worker
+
+Use this when you want a first Kafka producer/consumer example without turning
+the generated FastAPI app into a background-worker host.
+
 ## Why These Examples Matter
 
 The template shows the default generated state.

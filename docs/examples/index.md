@@ -54,3 +54,22 @@ Read the site guide: [HTML Swap](html-swap.md)
 
 Source scenario:
 [examples/html-swap](https://github.com/erenertemden/poleposition/blob/main/examples/html-swap/README.md)
+
+### Kafka Quick Start
+
+Shows how to adapt a minimal Spring Kafka producer/listener demo into a
+PolePosition FastAPI project with an explicit Kafka integration and a
+module-local consumer worker.
+
+Focus:
+
+- `polepos start kafka-quick-start --db none`
+- `polepos add integration kafka`
+- `polepos add module greetings --api-only`
+- `POST /api/v1/greetings/send`
+- broker-free unit testing with `InMemoryKafkaEventProducer`
+
+Read the site guide: [Kafka Quick Start](kafka-quick-start.md)
+
+Source scenario:
+[examples/kafka-quick-start](https://github.com/erenertemden/poleposition/blob/main/examples/kafka-quick-start/README.md)

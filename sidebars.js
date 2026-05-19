@@ -40,6 +40,7 @@ const sidebars = {
         {type: "doc", id: "examples/user-registration", label: "User Registration"},
         {type: "doc", id: "examples/auth-foundation", label: "Auth Foundation"},
         {type: "doc", id: "examples/html-swap", label: "HTML Swap"},
+        {type: "doc", id: "examples/kafka-quick-start", label: "Kafka Quick Start"},
       ],
     },
     {type: "doc", id: "troubleshooting", label: "Troubleshooting and FAQ"},

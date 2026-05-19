@@ -516,6 +516,7 @@ Current examples:
 
 - `examples/auth-foundation/`
 - `examples/html-swap/`
+- `examples/kafka-quick-start/`
 
 Use these when you want to understand how the generated project should be reshaped for a real use case instead of reading only the raw template files.
 
