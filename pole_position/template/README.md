@@ -16,11 +16,17 @@ supports the task.
 Recommended `uv` workflow:
 
 ```bash
-uv sync
+uv sync --extra dev
 cp .env.example .env
 {{database_development_step}}{{no_bytecode_command_prefix}}uv run python -m {{project_import_name}}.run
 ```
 {{no_bytecode_readme_note}}
+
+Run generated tests with:
+
+```bash
+{{no_bytecode_command_prefix}}uv run pytest
+```
 
 Equivalent `pip` workflow:
 

@@ -134,10 +134,17 @@ def test_e2e_start_project_and_run_generated_tests(tmp_path: Path) -> None:
     env_file.write_text(env_example.read_text(encoding="utf-8"), encoding="utf-8")
 
     uv_cache_dir = tmp_path / ".uv-cache"
-    sync_result = run_in_project(project_root, "uv", "sync", uv_cache_dir=uv_cache_dir)
+    sync_result = run_in_project(
+        project_root,
+        "uv",
+        "sync",
+        "--extra",
+        "dev",
+        uv_cache_dir=uv_cache_dir,
+    )
 
     assert sync_result.returncode == 0, (
-        f"uv sync failed\nstdout:\n{sync_result.stdout}\nstderr:\n{sync_result.stderr}"
+        f"uv sync --extra dev failed\nstdout:\n{sync_result.stdout}\nstderr:\n{sync_result.stderr}"
     )
     assert list(project_root.rglob("*.egg-info")) == []
 
@@ -178,10 +185,17 @@ def test_e2e_start_project_and_run_generated_app(tmp_path: Path) -> None:
     )
 
     uv_cache_dir = tmp_path / ".uv-cache"
-    sync_result = run_in_project(project_root, "uv", "sync", uv_cache_dir=uv_cache_dir)
+    sync_result = run_in_project(
+        project_root,
+        "uv",
+        "sync",
+        "--extra",
+        "dev",
+        uv_cache_dir=uv_cache_dir,
+    )
 
     assert sync_result.returncode == 0, (
-        f"uv sync failed\nstdout:\n{sync_result.stdout}\nstderr:\n{sync_result.stderr}"
+        f"uv sync --extra dev failed\nstdout:\n{sync_result.stdout}\nstderr:\n{sync_result.stderr}"
     )
 
     process = start_in_project(

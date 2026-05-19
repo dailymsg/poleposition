@@ -38,7 +38,7 @@ The report includes:
 polepos upgrade
 polepos check --fix
 polepos check
-uv sync
+uv sync --extra dev
 uv run pytest
 ```
 

@@ -15,7 +15,7 @@ def install_project_dependencies(project_path: Path) -> str:
 def _install_with_uv(project_path: Path) -> str:
     try:
         subprocess.run(
-            ["uv", "sync"],
+            ["uv", "sync", "--extra", "dev"],
             cwd=project_path,
             check=True,
         )

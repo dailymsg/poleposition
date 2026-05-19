@@ -207,9 +207,10 @@ The documentation site uses Docusaurus and requires Node.js `>=20`.
 polepos start myapp --install
 ```
 
-`--install` runs `uv sync` when `uv` is available. If `uv` is not available, it
-creates `.venv` and installs the generated project with `pip`. It does not run
-migrations; after copying `.env.example` to `.env`, run `polepos db upgrade`.
+`--install` runs `uv sync --extra dev` when `uv` is available. If `uv` is not
+available, it creates `.venv` and installs the generated project with `pip`. It
+does not run migrations; after copying `.env.example` to `.env`, run
+`polepos db upgrade`.
 `--no-bytecode` configures generated migration and runtime commands to start
 with `PYTHONDONTWRITEBYTECODE=1`, preventing bytecode cache writes from
 interpreter startup during common local workflows.
@@ -245,7 +246,7 @@ polepos start myapp
 cd myapp
 
 cp .env.example .env
-uv sync
+uv sync --extra dev
 polepos db upgrade
 
 uv run python -m myapp.run
@@ -735,7 +736,7 @@ uv tool install poleposition
 polepos start shop-api
 cd shop-api
 cp .env.example .env
-uv sync
+uv sync --extra dev
 ```
 
 Or use the generated Docker workflow:

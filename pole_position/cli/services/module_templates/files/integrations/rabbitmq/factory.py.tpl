@@ -11,7 +11,7 @@ def build_rabbitmq_event_publisher() -> RabbitMQEventPublisher:
         from aio_pika import connect_robust
     except ImportError as exc:
         raise RuntimeError(
-            "RabbitMQ integration requires aio-pika. Run `uv sync` after "
+            "RabbitMQ integration requires aio-pika. Run `uv sync --extra dev` after "
             "`polepos add integration rabbitmq`."
         ) from exc
 
@@ -40,7 +40,7 @@ async def build_rabbitmq_queue(
         from aio_pika import connect_robust
     except ImportError as exc:
         raise RuntimeError(
-            "RabbitMQ integration requires aio-pika. Run `uv sync` after "
+            "RabbitMQ integration requires aio-pika. Run `uv sync --extra dev` after "
             "`polepos add integration rabbitmq`."
         ) from exc
 

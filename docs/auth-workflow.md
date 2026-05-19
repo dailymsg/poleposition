@@ -62,7 +62,7 @@ dependency. `/me` validates the token and returns the authenticated user.
 After adding auth:
 
 ```bash
-uv sync
+uv sync --extra dev
 polepos db revision -m "add auth users table"
 polepos db upgrade
 polepos check

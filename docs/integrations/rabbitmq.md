@@ -35,7 +35,7 @@ aio-pika>=9.0.0
 Sync dependencies after adding the integration:
 
 ```bash
-uv sync
+uv sync --extra dev
 ```
 
 ## Settings

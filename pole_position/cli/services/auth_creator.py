@@ -74,7 +74,7 @@ def add_auth(cwd: Path | None = None) -> AddedAuthResult:
         test_files=tuple(written_test_files),
         updated_files=tuple(dict.fromkeys(updated_files)),
         next_steps=(
-            "Run `uv sync`",
+            "Run `uv sync --extra dev`",
             'Run `polepos db revision -m "add auth users table"`',
             "Run `polepos db upgrade`",
             "Run `polepos check`",

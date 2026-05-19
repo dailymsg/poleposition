@@ -9,7 +9,7 @@ def build_rq_queue(queue_name: str | None = None):
         from rq import Queue
     except ImportError as exc:
         raise RuntimeError(
-            "RQ integration requires rq. Run `uv sync` after "
+            "RQ integration requires rq. Run `uv sync --extra dev` after "
             "`polepos add integration rq`."
         ) from exc
 
@@ -25,7 +25,7 @@ def build_rq_worker(queue_names: list[str] | None = None):
         from rq import Queue, Worker
     except ImportError as exc:
         raise RuntimeError(
-            "RQ integration requires rq. Run `uv sync` after "
+            "RQ integration requires rq. Run `uv sync --extra dev` after "
             "`polepos add integration rq`."
         ) from exc
 

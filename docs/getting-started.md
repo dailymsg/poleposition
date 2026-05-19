@@ -23,7 +23,7 @@ pip install poleposition
 polepos start shop-api
 cd shop-api
 cp .env.example .env
-uv sync
+uv sync --extra dev
 polepos db upgrade
 uv run python -m shop_api.run
 ```

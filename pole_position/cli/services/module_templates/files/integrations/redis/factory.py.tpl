@@ -9,7 +9,7 @@ def build_redis_cache() -> RedisCache:
         from redis.asyncio import from_url
     except ImportError as exc:
         raise RuntimeError(
-            "Redis integration requires redis. Run `uv sync` after "
+            "Redis integration requires redis. Run `uv sync --extra dev` after "
             "`polepos add integration redis`."
         ) from exc
 

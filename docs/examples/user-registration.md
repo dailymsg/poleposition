@@ -18,7 +18,7 @@ a password hash and returns a public user representation.
 polepos start account-api
 cd account-api
 cp .env.example .env
-uv sync
+uv sync --extra dev
 polepos db upgrade
 uv run python -m account_api.run
 ```

@@ -9,7 +9,7 @@ def build_kafka_event_producer() -> KafkaEventProducer:
         from aiokafka import AIOKafkaProducer
     except ImportError as exc:
         raise RuntimeError(
-            "Kafka integration requires aiokafka. Run `uv sync` after "
+            "Kafka integration requires aiokafka. Run `uv sync --extra dev` after "
             "`polepos add integration kafka`."
         ) from exc
 
@@ -31,7 +31,7 @@ def build_kafka_consumer(*topics: str):
         from aiokafka import AIOKafkaConsumer
     except ImportError as exc:
         raise RuntimeError(
-            "Kafka integration requires aiokafka. Run `uv sync` after "
+            "Kafka integration requires aiokafka. Run `uv sync --extra dev` after "
             "`polepos add integration kafka`."
         ) from exc
 

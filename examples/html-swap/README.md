@@ -67,7 +67,7 @@ Start the project the usual PolePosition way:
 polepos start html-tools
 cd html-tools
 cp .env.example .env
-uv sync
+uv sync --extra dev
 polepos db upgrade
 ```
 

@@ -124,7 +124,7 @@ def run(args: list[str]) -> None:
         return
 
     if not install:
-        print("  uv sync")
+        print("  uv sync --extra dev")
 
     if database_option.uses_database:
         print(f"  {command_prefix}polepos db upgrade")

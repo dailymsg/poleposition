@@ -78,6 +78,7 @@ def test_create_project(tmp_path: Path):
     result = run_cli(tmp_path, "start", project_name)
 
     assert result.returncode == 0
+    assert "uv sync --extra dev" in result.stdout
     assert (tmp_path / project_name).exists()
     assert (tmp_path / project_name / "src").exists()
    
@@ -190,6 +191,7 @@ def test_start_with_no_database_option(tmp_path: Path):
     assert result.returncode == 0
     assert "Database: none" in result.stdout
     assert "polepos db upgrade" not in result.stdout
+    assert "uv sync --extra dev" in result.stdout
     assert "uv run python -m api_app.run" in result.stdout
 
     project_root = tmp_path / "api-app"
@@ -229,6 +231,7 @@ def test_start_with_no_database_option(tmp_path: Path):
     assert "COPY migrations" not in dockerfile
     assert "COPY pyproject.toml README.md ./" in dockerfile
     assert "This project was generated with `--db none`" in readme
+    assert "uv sync --extra dev" in readme
     assert "polepos db upgrade" not in readme
     assert "polepos add module garage --api-only" in readme
     assert "polepos add module garage\n" not in readme
@@ -387,6 +390,8 @@ def test_generated_project_renders_database_and_module_placeholders(tmp_path: Pa
     assert "`polepos check --json`" in agents_guide
     assert "{{project" not in agents_guide
     assert "src/demo_app/api/router.py" in readme
+    assert "uv sync --extra dev" in readme
+    assert "uv run pytest" in readme
     assert 'prefix="/garage"' in readme
     assert "GET /api/v1/garage/" in readme
     assert "polepos check --json" in readme

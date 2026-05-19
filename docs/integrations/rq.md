@@ -149,7 +149,7 @@ After adding RQ, run:
 
 ```bash
 polepos check
-uv sync
+uv sync --extra dev
 ```
 
 `polepos check` verifies generated RQ files, dependency, settings, and active

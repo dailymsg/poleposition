@@ -270,7 +270,7 @@ Kafka, RabbitMQ, Redis, and RQ scaffolds add their transport dependencies to
 `pyproject.toml`. Run:
 
 ```bash
-uv sync
+uv sync --extra dev
 ```
 
 LLM scaffolds are provider-agnostic stubs and do not add a provider SDK by

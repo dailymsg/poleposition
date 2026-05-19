@@ -108,7 +108,7 @@ cd shop-api
 polepos upgrade
 polepos check --fix
 polepos check
-uv sync
+uv sync --extra dev
 uv run pytest
 ```
 
@@ -137,7 +137,7 @@ Generated projects declare their own dependencies in the generated
 
 ```bash
 uv add "fastapi[standard]>=0.115.0"
-uv sync
+uv sync --extra dev
 uv run pytest
 polepos check
 ```

@@ -77,7 +77,7 @@ class RabbitMQEventPublisher:
             from aio_pika import DeliveryMode, Message
         except ImportError as exc:
             raise RuntimeError(
-                "RabbitMQ integration requires aio-pika. Run `uv sync` after "
+                "RabbitMQ integration requires aio-pika. Run `uv sync --extra dev` after "
                 "`polepos add integration rabbitmq`."
             ) from exc
 

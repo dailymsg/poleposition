@@ -11,7 +11,7 @@ def test_install_project_dependencies_prefers_uv(tmp_path: Path) -> None:
 
     assert installer == "uv"
     mock_run.assert_called_once_with(
-        ["uv", "sync"],
+        ["uv", "sync", "--extra", "dev"],
         cwd=tmp_path,
         check=True,
     )

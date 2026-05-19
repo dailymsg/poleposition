@@ -24,5 +24,5 @@ After adding an integration, run:
 
 ```bash
 polepos check
-uv sync
+uv sync --extra dev
 ```

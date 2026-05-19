@@ -35,7 +35,7 @@ Start the project the usual way:
 polepos start secure-api
 cd secure-api
 cp .env.example .env
-uv sync
+uv sync --extra dev
 polepos db upgrade
 ```
 

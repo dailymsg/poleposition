@@ -19,7 +19,7 @@ belong to the real module that needs them.
 polepos start secure-api
 cd secure-api
 cp .env.example .env
-uv sync
+uv sync --extra dev
 polepos db upgrade
 ```
 
