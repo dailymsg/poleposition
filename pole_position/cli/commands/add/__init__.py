@@ -3,6 +3,7 @@ from pole_position.cli.commands.add.auth import command as auth_cmd
 from pole_position.cli.commands.add.integration import command as integration_cmd
 from pole_position.cli.commands.add.module import command as module_cmd
 from pole_position.cli.registry import CommandRegistry
+from pole_position.cli.usage import print_command_help
 
 
 subcommands = CommandRegistry()
@@ -12,12 +13,7 @@ subcommands.register(module_cmd)
 
 
 def run(args: list[str]) -> None:
-    print("Usage: polepos add <subcommand>\n")
-    print("Subcommands:")
-
-    for command in subcommands.all():
-        aliases = f" ({', '.join(command.aliases)})" if command.aliases else ""
-        print(f"  {command.name:<12} {command.description}{aliases}")
+    print_command_help("add")
 
 
 command = Command(

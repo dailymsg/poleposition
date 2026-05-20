@@ -4,6 +4,7 @@ from pole_position.cli.commands.db.revision import command as revision_cmd
 from pole_position.cli.commands.db.status import command as status_cmd
 from pole_position.cli.commands.db.upgrade import command as upgrade_cmd
 from pole_position.cli.registry import CommandRegistry
+from pole_position.cli.usage import print_command_help
 
 
 subcommands = CommandRegistry()
@@ -14,12 +15,7 @@ subcommands.register(upgrade_cmd)
 
 
 def run(args: list[str]) -> None:
-    print("Usage: polepos db <subcommand>\n")
-    print("Subcommands:")
-
-    for command in subcommands.all():
-        aliases = f" ({', '.join(command.aliases)})" if command.aliases else ""
-        print(f"  {command.name:<12} {command.description}{aliases}")
+    print_command_help("db")
 
 
 command = Command(

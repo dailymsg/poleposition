@@ -5,6 +5,7 @@ from pole_position.cli.services.project_fixer import ProjectFixResult
 from pole_position.cli.services.project_fixer import fix_project
 from pole_position.cli.services.project_checker import ProjectCheckResult
 from pole_position.cli.services.project_checker import check_project
+from pole_position.cli.usage import print_command_help
 
 
 USAGE = "Usage: polepos check [--json] [--fix]"
@@ -15,10 +16,7 @@ FIX_OPTIONS = {"--fix"}
 
 def run(args: list[str]) -> None:
     if len(args) == 1 and args[0] in HELP_OPTIONS:
-        print(USAGE)
-        print("Options:")
-        print("  --json    Print a machine-readable JSON result.")
-        print("  --fix     Restore safe PolePosition-managed markers before checking.")
+        print_command_help("check")
         return
 
     json_output = False

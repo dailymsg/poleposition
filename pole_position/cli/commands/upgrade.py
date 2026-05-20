@@ -2,6 +2,7 @@ from pole_position import __version__
 from pole_position.cli.command import Command
 from pole_position.cli.services.project_checker import check_project
 from pole_position.cli.services.project_manifest import read_project_manifest
+from pole_position.cli.usage import print_command_help
 
 
 USAGE = "Usage: polepos upgrade"
@@ -14,7 +15,7 @@ def run(args: list[str]) -> None:
             print(f"Unexpected argument: {args[1]}")
             print(USAGE)
             raise SystemExit(1)
-        print(USAGE)
+        print_command_help("upgrade")
         return
 
     if args:

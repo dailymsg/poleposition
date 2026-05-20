@@ -5,23 +5,11 @@ from pole_position.cli.services.module_remover import RemovedModuleResult
 from pole_position.cli.services.module_remover import remove_module
 from pole_position.cli.services.project_name import normalize_package_name
 from pole_position.cli.services.project_name import validate_project_name
-
-
-USAGE = (
-    "Usage: polepos remove module <module_name> "
-    "[--force] [--trace] [--wiring-only]"
-)
+from pole_position.cli.usage import print_command_help
 
 
 def _print_usage() -> None:
-    print(USAGE)
-    print("Options:")
-    print("  --force    Remove module files even when custom changes are detected.")
-    print("  --trace    Show planned removals and updates without changing files.")
-    print("  --wiring-only")
-    print(
-        "             Remove managed wiring and generated tests, but keep module files."
-    )
+    print_command_help("remove", "module")
 
 
 def run(args: list[str]) -> None:

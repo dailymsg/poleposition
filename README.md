@@ -630,8 +630,15 @@ Concrete scenario guides live in [Examples](https://github.com/erenertemden/pole
 
 ```bash
 polepos help
+polepos help start
+polepos help add module
+polepos help db revision
 polepos version
 ```
+
+`polepos help` prints the full CLI usage and command reference. Pass a command
+path to get focused help for one command, similar to `polepos help remove
+module`.
 
 ---
 
@@ -639,10 +646,13 @@ polepos version
 
 ```bash
 polepos help
+polepos help <command> [subcommand]
 polepos start <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos startproject <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos add module <name>
 polepos add module <name> --template crud
+polepos add module <name> --template ai-prompt
+polepos add module <name> --api-only
 polepos add auth
 polepos remove module <name> [--force] [--trace] [--wiring-only]
 polepos add integration kafka
@@ -659,6 +669,9 @@ polepos db downgrade <target>
 polepos upgrade
 polepos version
 ```
+
+For option-by-option behavior, examples, and lifecycle notes, see the
+[CLI Reference](https://github.com/erenertemden/poleposition/blob/main/docs/cli.md).
 
 ---
 

@@ -35,9 +35,27 @@ def test_help_command():
     assert result.returncode == 0
     assert "project lifecycle CLI" in result.stdout
     assert "Usage" in result.stdout
+    assert "Usage and Commands" in result.stdout
     assert "check" in result.stdout
     assert "remove" in result.stdout
     assert "upgrade" in result.stdout
+
+
+def test_help_command_accepts_command_topic():
+    result = run_cli("help", "add", "module")
+
+    assert result.returncode == 0
+    assert "Usage: polepos add module <module_name>" in result.stdout
+    assert "--template <template_name>" in result.stdout
+    assert "polepos add module assistant --template ai-prompt" in result.stdout
+
+
+def test_help_command_rejects_unknown_topic():
+    result = run_cli("help", "missing")
+
+    assert result.returncode != 0
+    assert "Unknown help topic: missing" in result.stdout
+    assert "Run `polepos help` for available commands." in result.stdout
 
 
 def test_version_command():

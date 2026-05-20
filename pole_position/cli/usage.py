@@ -1,0 +1,491 @@
+from dataclasses import dataclass
+import textwrap
+
+from pole_position.cli.services.database_options import SUPPORTED_DATABASES
+from pole_position.cli.services.integration_creator import SUPPORTED_INTEGRATIONS
+from pole_position.cli.services.module_templates import SUPPORTED_MODULE_TEMPLATES
+
+
+@dataclass(frozen=True)
+class OptionHelp:
+    name: str
+    description: str
+
+
+@dataclass(frozen=True)
+class CommandHelp:
+    path: tuple[str, ...]
+    usage: str
+    summary: tuple[str, ...]
+    options: tuple[OptionHelp, ...] = ()
+    examples: tuple[str, ...] = ()
+    notes: tuple[str, ...] = ()
+    subcommands: tuple[OptionHelp, ...] = ()
+
+
+DATABASE_CHOICES = "|".join(SUPPORTED_DATABASES)
+MODULE_TEMPLATE_CHOICES = ", ".join(SUPPORTED_MODULE_TEMPLATES)
+INTEGRATION_CHOICES = ", ".join(SUPPORTED_INTEGRATIONS)
+
+
+COMMAND_HELP: dict[tuple[str, ...], CommandHelp] = {
+    ("start",): CommandHelp(
+        path=("start",),
+        usage=(
+            "Usage: polepos start <project_name> "
+            f"[--install] [--no-bytecode] [--db {DATABASE_CHOICES}]"
+        ),
+        summary=(
+            "Create a new FastAPI project with PolePosition's generated lifecycle files.",
+            "Project names may use hyphens and are normalized to Python package names.",
+        ),
+        options=(
+            OptionHelp("--install", "Install generated project dependencies after creation."),
+            OptionHelp(
+                "--no-bytecode",
+                "Configure generated local commands to start with PYTHONDONTWRITEBYTECODE=1.",
+            ),
+            OptionHelp(
+                f"--db {DATABASE_CHOICES}",
+                "Choose the generated database posture. Default: sqlite.",
+            ),
+        ),
+        examples=(
+            "polepos start shop-api",
+            "polepos start shop-api --install",
+            "polepos start shop-api --db postgres",
+            "polepos start kafka-worker --db none",
+        ),
+        notes=(
+            "`sqlite` creates the DB-ready starter with Alembic and SQLAlchemy.",
+            "`postgres` uses a PostgreSQL DATABASE_URL and matching Docker database name.",
+            "`none` omits SQLAlchemy, Alembic, migrations, DATABASE_URL, and db/ wiring.",
+        ),
+    ),
+    ("add",): CommandHelp(
+        path=("add",),
+        usage="Usage: polepos add <subcommand>",
+        summary=("Grow the current project with modules, auth, or integration scaffolds.",),
+        subcommands=(
+            OptionHelp("auth", "Add the optional database-backed auth workflow."),
+            OptionHelp("integration", "Add an external integration scaffold."),
+            OptionHelp("module", "Add a new module to the current project."),
+        ),
+        examples=(
+            "polepos add module customers",
+            "polepos add auth",
+            "polepos add integration kafka",
+        ),
+        notes=("Run `polepos help add <subcommand>` for subcommand-specific options.",),
+    ),
+    ("add", "module"): CommandHelp(
+        path=("add", "module"),
+        usage=(
+            "Usage: polepos add module <module_name> "
+            "[--template <template_name>] [--api-only]"
+        ),
+        summary=(
+            "Generate a module under src/<package>/modules/ and wire generated tests.",
+            "Database-backed templates also update API router and model discovery wiring.",
+        ),
+        options=(
+            OptionHelp(
+                "--template <template_name>",
+                f"Choose a module template. Templates: {MODULE_TEMPLATE_CHOICES}.",
+            ),
+            OptionHelp(
+                "--api-only",
+                "Shortcut for --template api-only; no model, repository, or db wiring.",
+            ),
+        ),
+        examples=(
+            "polepos add module customers",
+            "polepos add module customers --template crud",
+            "polepos add module webhooks --api-only",
+            "polepos add module assistant --template ai-prompt",
+        ),
+        notes=(
+            f"Templates: {MODULE_TEMPLATE_CHOICES}",
+            "Run `polepos check` after changing generated wiring or module files.",
+            "Create an Alembic revision after changing database-backed models.",
+        ),
+    ),
+    ("add", "auth"): CommandHelp(
+        path=("add", "auth"),
+        usage="Usage: polepos add auth",
+        summary=(
+            "Add optional database-backed registration and token scaffolding.",
+            (
+                "The command creates auth model, repository, service, router, "
+                "schemas, tests, and wiring."
+            ),
+        ),
+        examples=("polepos add auth",),
+        notes=(
+            (
+                "Requires a generated database layer; projects created with "
+                "--db none cannot add auth directly."
+            ),
+            "Review the generated auth workflow before treating it as a complete auth product.",
+        ),
+    ),
+    ("add", "integration"): CommandHelp(
+        path=("add", "integration"),
+        usage="Usage: polepos add integration <integration_name>",
+        summary=(
+            (
+                "Add opt-in adapter scaffolds, settings, .env.example values, "
+                "dependencies, and test doubles."
+            ),
+        ),
+        examples=(
+            "polepos add integration kafka",
+            "polepos add integration rabbitmq",
+            "polepos add integration redis",
+            "polepos add integration rq",
+        ),
+        notes=(
+            f"Integrations: {INTEGRATION_CHOICES}",
+            "Long-running consumers and workers remain explicit runtime processes.",
+        ),
+    ),
+    ("remove",): CommandHelp(
+        path=("remove",),
+        usage="Usage: polepos remove <subcommand>",
+        summary=("Remove generated resources from the current project.",),
+        subcommands=(
+            OptionHelp("module", "Remove a generated module and managed wiring."),
+        ),
+        examples=("polepos remove module customers",),
+        notes=("Run `polepos help remove module` for removal safety options.",),
+    ),
+    ("remove", "module"): CommandHelp(
+        path=("remove", "module"),
+        usage=(
+            "Usage: polepos remove module <module_name> "
+            "[--force] [--trace] [--wiring-only]"
+        ),
+        summary=(
+            (
+                "Delete generated module files, generated tests, manifest metadata, "
+                "and managed wiring."
+            ),
+            "The command is conservative when custom code or unmanaged references are detected.",
+        ),
+        options=(
+            OptionHelp(
+                "--force",
+                "Remove module files even when custom changes are detected.",
+            ),
+            OptionHelp(
+                "--trace",
+                "Show planned removals and updates without changing files.",
+            ),
+            OptionHelp(
+                "--wiring-only",
+                "Remove managed wiring and generated tests, but keep module files.",
+            ),
+        ),
+        examples=(
+            "polepos remove module customers",
+            "polepos remove module customers --trace",
+            "polepos remove module customers --wiring-only",
+            "polepos remove module customers --force",
+        ),
+        notes=(
+            "This command does not drop database tables or edit migration history.",
+            (
+                "Create and review a migration separately when a removed model's "
+                "table should be dropped."
+            ),
+        ),
+    ),
+    ("check",): CommandHelp(
+        path=("check",),
+        usage="Usage: polepos check [--json] [--fix]",
+        summary=(
+            "Validate the generated project contract from the project root or a nested directory.",
+            "Checks are read-only unless --fix is used.",
+        ),
+        options=(
+            OptionHelp(
+                "--json",
+                "Print a machine-readable JSON result and exit non-zero on failure.",
+            ),
+            OptionHelp(
+                "--fix",
+                "Restore safe PolePosition-managed markers before validation.",
+            ),
+        ),
+        examples=(
+            "polepos check",
+            "polepos check --json",
+            "polepos check --fix",
+        ),
+        notes=(
+            (
+                "The checker validates structure, managed markers, module wiring, "
+                "tests, and integrations."
+            ),
+            "It does not install dependencies, run migrations, or contact external services.",
+        ),
+    ),
+    ("db",): CommandHelp(
+        path=("db",),
+        usage="Usage: polepos db <subcommand>",
+        summary=("Run Alembic migration commands through the generated project environment.",),
+        subcommands=(
+            OptionHelp("status", "Show current and target migration revisions."),
+            OptionHelp("upgrade", "Apply migrations."),
+            OptionHelp("revision", "Create an autogenerated migration revision."),
+            OptionHelp("downgrade", "Revert migrations."),
+        ),
+        examples=(
+            "polepos db status",
+            "polepos db upgrade",
+            'polepos db revision -m "add customers table"',
+            "polepos db downgrade -1",
+        ),
+        notes=(
+            "Database commands prefer `uv run alembic ...` when uv is available.",
+            (
+                "Projects created with --db none do not include Alembic and should "
+                "not use `polepos db`."
+            ),
+        ),
+    ),
+    ("db", "status"): CommandHelp(
+        path=("db", "status"),
+        usage="Usage: polepos db status",
+        summary=("Print Alembic's current revision and heads for the generated project.",),
+        examples=("polepos db status",),
+    ),
+    ("db", "upgrade"): CommandHelp(
+        path=("db", "upgrade"),
+        usage="Usage: polepos db upgrade [target]",
+        summary=("Apply migrations up to the selected target. Default target: head.",),
+        examples=(
+            "polepos db upgrade",
+            "polepos db upgrade head",
+        ),
+    ),
+    ("db", "revision"): CommandHelp(
+        path=("db", "revision"),
+        usage='Usage: polepos db revision -m "<message>"',
+        summary=("Create an Alembic revision with autogenerate enabled.",),
+        options=(
+            OptionHelp(
+                "-m, --message <message>",
+                "Describe the schema change in the migration file name.",
+            ),
+        ),
+        examples=(
+            'polepos db revision -m "add customers table"',
+            'polepos db revision --message "remove garage table"',
+        ),
+        notes=("Review autogenerated migrations before applying them.",),
+    ),
+    ("db", "downgrade"): CommandHelp(
+        path=("db", "downgrade"),
+        usage="Usage: polepos db downgrade <target>",
+        summary=("Revert migrations to the selected target.",),
+        examples=(
+            "polepos db downgrade -1",
+            "polepos db downgrade base",
+        ),
+        notes=("Use downgrade commands carefully in shared environments.",),
+    ),
+    ("upgrade",): CommandHelp(
+        path=("upgrade",),
+        usage="Usage: polepos upgrade",
+        summary=(
+            "Print a read-only upgrade readiness report for the current project.",
+            (
+                "The report includes CLI version, package, database mode, modules, "
+                "integrations, and check status."
+            ),
+        ),
+        examples=("polepos upgrade",),
+        notes=(
+            (
+                "Run this after upgrading PolePosition or before changing generated "
+                "lifecycle surfaces."
+            ),
+        ),
+    ),
+    ("help",): CommandHelp(
+        path=("help",),
+        usage="Usage: polepos help [command] [subcommand]",
+        summary=(
+            "Print detailed CLI usage. Without a topic, it prints the full command reference.",
+        ),
+        examples=(
+            "polepos help",
+            "polepos help start",
+            "polepos help add module",
+            "polepos help db revision",
+        ),
+    ),
+    ("version",): CommandHelp(
+        path=("version",),
+        usage="Usage: polepos version",
+        summary=("Print the installed PolePosition CLI version.",),
+        examples=(
+            "polepos version",
+            "polepos --version",
+        ),
+    ),
+}
+
+
+TOP_LEVEL_SECTIONS: tuple[tuple[str, tuple[OptionHelp, ...]], ...] = (
+    (
+        "Project Lifecycle Commands",
+        (
+            OptionHelp("start", "Create a new FastAPI project lifecycle."),
+            OptionHelp("add", "Grow the current project with modules, auth, or integrations."),
+            OptionHelp("remove", "Remove generated resources from the current project."),
+            OptionHelp("check", "Validate the current PolePosition project."),
+            OptionHelp("db", "Run database and migration commands."),
+        ),
+    ),
+    (
+        "Utility Commands",
+        (
+            OptionHelp("help", "Show detailed CLI usage."),
+            OptionHelp("upgrade", "Report project upgrade readiness."),
+            OptionHelp("version", "Show the installed CLI version."),
+        ),
+    ),
+)
+
+
+COMMAND_TOPIC_ORDER: tuple[tuple[str, ...], ...] = (
+    ("start",),
+    ("add",),
+    ("add", "module"),
+    ("add", "auth"),
+    ("add", "integration"),
+    ("remove",),
+    ("remove", "module"),
+    ("check",),
+    ("db",),
+    ("db", "status"),
+    ("db", "upgrade"),
+    ("db", "revision"),
+    ("db", "downgrade"),
+    ("help",),
+    ("upgrade",),
+    ("version",),
+)
+
+
+def print_top_level_help() -> None:
+    print("PolePosition project lifecycle CLI for FastAPI projects.")
+    print()
+    print("Usage: polepos <command> [options]")
+    print("       polepos help <command> [subcommand]")
+    print()
+    print("Tip: use `polepos help <command>` for focused command help.")
+    print()
+
+    for title, entries in TOP_LEVEL_SECTIONS:
+        print(f"{title}:")
+        _print_entries(entries)
+        print()
+
+    print("Common Workflows:")
+    for example in (
+        "polepos start shop-api",
+        "polepos add module customers",
+        "polepos check",
+        'polepos db revision -m "add customers table"',
+        "polepos db upgrade",
+    ):
+        print(f"  {example}")
+    print()
+
+    print("Usage and Commands:")
+    for path in COMMAND_TOPIC_ORDER:
+        print()
+        print_command_help(*path, heading=True)
+
+
+def print_command_help(*path: str, heading: bool = False) -> bool:
+    topic = COMMAND_HELP.get(tuple(path))
+    if topic is None:
+        return False
+
+    if heading:
+        print(_title_for_path(topic.path))
+
+    print(topic.usage)
+    _print_paragraphs(topic.summary)
+
+    if topic.subcommands:
+        print("Subcommands:")
+        _print_entries(topic.subcommands)
+
+    if topic.options:
+        print("Options:")
+        _print_entries(topic.options)
+
+    if topic.examples:
+        print("Examples:")
+        for example in topic.examples:
+            print(f"  {example}")
+
+    if topic.notes:
+        print("Notes:")
+        for note in topic.notes:
+            _print_wrapped(note, initial="  - ", subsequent="    ")
+
+    return True
+
+
+def print_help_topic(args: list[str]) -> None:
+    if not args or args == ["-h"] or args == ["--help"]:
+        print_top_level_help()
+        return
+
+    topic = tuple(args)
+    if print_command_help(*topic):
+        return
+
+    print(f"Unknown help topic: {' '.join(args)}")
+    print("Run `polepos help` for available commands.")
+    raise SystemExit(1)
+
+
+def _print_entries(entries: tuple[OptionHelp, ...]) -> None:
+    width = max(len(entry.name) for entry in entries) if entries else 0
+    for entry in entries:
+        _print_wrapped(
+            entry.description,
+            initial=f"  {entry.name:<{width}}  ",
+            subsequent=f"  {'':<{width}}  ",
+        )
+
+
+def _print_paragraphs(paragraphs: tuple[str, ...]) -> None:
+    if not paragraphs:
+        return
+    for paragraph in paragraphs:
+        _print_wrapped(paragraph, initial="  ", subsequent="  ")
+
+
+def _print_wrapped(text: str, *, initial: str, subsequent: str) -> None:
+    print(
+        textwrap.fill(
+            text,
+            width=88,
+            initial_indent=initial,
+            subsequent_indent=subsequent,
+            break_long_words=False,
+            break_on_hyphens=False,
+        )
+    )
+
+
+def _title_for_path(path: tuple[str, ...]) -> str:
+    return f"polepos {' '.join(path)}"

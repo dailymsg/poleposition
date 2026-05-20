@@ -4,6 +4,7 @@ from pole_position.cli.commands import register_commands
 from pole_position.cli.command import Command
 from pole_position.cli.registry import CommandRegistry
 from pole_position.cli.registry import registry
+from pole_position.cli.usage import print_command_help
 
 
 HELP_OPTIONS = {"-h", "--help"}
@@ -52,6 +53,9 @@ def dispatch_command(command_registry: CommandRegistry, args: list[str]) -> None
 
 
 def print_command_usage(command: Command) -> None:
+    if print_command_help(command.name):
+        return
+
     print(f"Usage: polepos {command.name} <subcommand>\n")
     print("Subcommands:")
 

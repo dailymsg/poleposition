@@ -1,5 +1,6 @@
 from pole_position.cli.command import Command
 from pole_position.cli.services.db_runner import run_alembic_command
+from pole_position.cli.usage import print_command_help
 
 
 USAGE = 'Usage: polepos db revision -m "<message>"'
@@ -11,7 +12,7 @@ def run(args: list[str]) -> None:
             print(f"Unexpected argument: {args[1]}")
             print(USAGE)
             raise SystemExit(1)
-        print(USAGE)
+        print_command_help("db", "revision")
         return
 
     if len(args) != 2 or args[0] not in {"-m", "--message"}:

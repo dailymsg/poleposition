@@ -3,6 +3,7 @@ from pathlib import Path
 from pole_position.cli.command import Command
 from pole_position.cli.services.auth_creator import AddedAuthResult
 from pole_position.cli.services.auth_creator import add_auth
+from pole_position.cli.usage import print_command_help
 
 
 USAGE = "Usage: polepos add auth"
@@ -11,7 +12,7 @@ HELP_OPTIONS = {"-h", "--help"}
 
 def run(args: list[str]) -> None:
     if len(args) == 1 and args[0] in HELP_OPTIONS:
-        print(USAGE)
+        print_command_help("add", "auth")
         return
 
     if args:

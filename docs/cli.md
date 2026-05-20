@@ -1,143 +1,195 @@
-# CLI Reference
+# CLI Usage and Options
 
-PolePosition keeps the top-level command surface intentionally small. Namespace
-commands grow under `add`, `remove`, and `db` as the lifecycle expands.
+PolePosition keeps the top-level command surface small, but each command is
+part of a project lifecycle. Use this page like a command-line reference:
+start with the synopsis, then jump to the command group you need.
 
-## Create a Project
+```text
+polepos <command> [options]
+polepos help [command] [subcommand]
+```
+
+Use focused help when you are in the terminal:
+
+```bash
+polepos help
+polepos help start
+polepos help add module
+polepos help remove module
+polepos help db revision
+```
+
+## Common Workflows
+
+Create and run a database-backed project:
+
+```bash
+polepos start shop-api
+cd shop-api
+cp .env.example .env
+uv sync --extra dev
+polepos db upgrade
+uv run python -m shop_api.run
+```
+
+Add a new domain module and migrate its model changes:
+
+```bash
+polepos add module customers
+polepos check
+polepos db revision -m "add customers table"
+polepos db upgrade
+```
+
+Create an API-only project for integration or worker examples:
+
+```bash
+polepos start kafka-quick-start --db none
+cd kafka-quick-start
+cp .env.example .env
+uv sync --extra dev
+polepos add integration kafka
+polepos add module greetings --api-only
+polepos check
+```
+
+## Command Overview
+
+| Command | Purpose |
+| --- | --- |
+| `polepos start` | Create a new generated FastAPI project. |
+| `polepos add module` | Add a module under `src/<package>/modules/`. |
+| `polepos add auth` | Add optional database-backed auth scaffolding. |
+| `polepos add integration` | Add Kafka, RabbitMQ, Redis, or RQ scaffolding. |
+| `polepos remove module` | Remove generated module files and managed wiring. |
+| `polepos check` | Validate the generated project contract. |
+| `polepos db` | Run Alembic migration commands through the generated project. |
+| `polepos upgrade` | Print a read-only project upgrade readiness report. |
+| `polepos version` | Print the installed CLI version. |
+| `polepos help` | Print detailed CLI usage. |
+
+## Project Creation
+
+```bash
+polepos start <project_name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
+polepos startproject <project_name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
+```
+
+`startproject` is an alias for `start`.
+
+| Option | Behavior |
+| --- | --- |
+| `--install` | Install generated project dependencies after creation. It uses `uv sync --extra dev` when `uv` is available; otherwise it creates `.venv` and installs with `pip`. |
+| `--no-bytecode` | Configure generated local runtime and migration commands to start with `PYTHONDONTWRITEBYTECODE=1`. |
+| `--db sqlite` | Generate the default DB-ready starter with SQLAlchemy, Alembic, migrations, and SQLite `DATABASE_URL`. |
+| `--db postgres` | Generate the DB-ready starter with PostgreSQL-oriented `DATABASE_URL` and Docker database naming. |
+| `--db none` | Omit SQLAlchemy, Alembic, migrations, `DATABASE_URL`, and generated `db/` wiring. |
+
+Project names must not be empty, contain whitespace, contain path separators,
+or use characters outside letters, digits, hyphen, and underscore. Hyphenated
+project names are normalized to Python package names:
+
+```text
+shop-api -> shop_api
+```
+
+Examples:
 
 ```bash
 polepos start shop-api
 polepos start shop-api --install
-polepos start shop-api --no-bytecode
 polepos start shop-api --db postgres
-polepos start shop-api --db none
-polepos start --help
+polepos start webhook-gateway --db none
 ```
 
-`--install` syncs generated project dependencies after creation. It does not
-run migrations; after copying `.env.example` to `.env`, run
-`polepos db upgrade`. `--no-bytecode` configures generated runtime and migration
-commands to avoid Python bytecode cache writes during common local workflows.
-
-`--db` is non-interactive and accepts `sqlite`, `postgres`, or `none`. The
-default is `sqlite`. Use `postgres` when the generated project should start with
-a PostgreSQL `DATABASE_URL`; use `none` for a database-free [FastAPI](https://fastapi.tiangolo.com/tutorial/first-steps/) starter with
-no SQLAlchemy, Alembic, migrations, or generated `db/` wiring.
-
-## Add a Module
+## Add Commands
 
 ```bash
-polepos add --help
+polepos add <subcommand>
+```
+
+Subcommands:
+
+| Subcommand | Purpose |
+| --- | --- |
+| `auth` | Add optional database-backed registration and token scaffolding. |
+| `integration` | Add an external-system integration scaffold. |
+| `module` | Add a generated module to the current project. |
+
+### `polepos add module`
+
+```bash
+polepos add module <module_name> [--template <template_name>] [--api-only]
+```
+
+The command creates module files, generated tests, module exports, API router
+wiring, and database model discovery wiring when the selected template has a
+model.
+
+| Option | Behavior |
+| --- | --- |
+| `--template standard` | Default REST-friendly module with model, repository, schemas, service, router, and tests. |
+| `--template crud` | Fuller CRUD module with collection, detail, create, update, delete, repository, service, and tests. |
+| `--template api-only` | Router, schemas, service, and tests without model, repository, or database wiring. |
+| `--template ai-prompt` | LLM-oriented module skeleton plus shared provider-agnostic `integrations/llm` files when missing. |
+| `--api-only` | Shortcut for `--template api-only`. |
+
+Examples:
+
+```bash
 polepos add module customers
 polepos add module customers --template crud
+polepos add module webhooks --api-only
 polepos add module assistant --template ai-prompt
-polepos add module webhook --api-only
-polepos add module webhook --template api-only
 ```
 
-The standard module template generates a REST-friendly starting point with
-model, repository, schemas, a module-local `services/` package, router, and
-tests.
+After adding a database-backed module, edit the generated model for the real
+domain and create a reviewed migration:
 
-The `crud` template generates a fuller REST CRUD module with collection,
-detail, update, delete, repository, service, and generated tests.
-
-The `ai-prompt` template generates a provider-agnostic LLM-oriented module
-skeleton and shared `integrations/llm` files when they are missing.
-
-The `api-only` template generates router, schemas, a module-local `services/`
-package, and tests without model, repository, or database wiring. `--api-only`
-is the shortcut form.
-
-For the detailed file layouts and template selection guidance, see
-[Module Templates](module-templates.md).
-
-Module route decorators are relative to the module router. A generated
-`customers` module can safely define `@router.get("/")` because PolePosition
-registers it once in `src/<package>/api/router.py`:
-
-```python
-api_router.include_router(customers_router, prefix="/customers", tags=["customers"])
+```bash
+polepos db revision -m "add customers table"
+polepos db upgrade
+polepos check
 ```
 
-With the generated app-level API prefix, that route is served as
-`GET /api/v1/customers/`. Other modules can also define `/` handlers because
-each module gets its own router prefix.
+For detailed template layouts, see [Module Templates](module-templates.md).
 
-## Add Auth
+### `polepos add auth`
 
 ```bash
 polepos add auth
 ```
 
-`add auth` adds the optional database-backed registration and token workflow:
-auth user model, password hashing, repository, service, router, tests,
-dependency, and router/model wiring. It requires a generated database layer, so
-projects created with `--db none` need an explicit database layer first.
+`add auth` creates the optional database-backed auth workflow:
 
-For migration flow, generated endpoints, security scope, and customization
-guidance, see [Auth Workflow](auth-workflow.md).
+- auth user model
+- password hashing helper
+- repository and service
+- registration and token router
+- schemas and tests
+- dependency, router, and model wiring
 
-## Remove a Module
+It requires a generated database layer. Projects created with `--db none` need
+an explicit database layer before this command can apply cleanly.
 
-```bash
-polepos remove --help
-polepos remove module customers
-polepos remove module customers --trace
-polepos remove module customers --force
-polepos remove module customers --wiring-only
-```
+For scope and migration guidance, see [Auth Workflow](auth-workflow.md).
 
-`remove module` is the counterpart to `add module`. It removes the module
-directory, generated integration and unit tests, module exports, API router
-wiring, database-backed module model imports, and the `.poleposition.toml`
-module entry.
-
-If the module directory was already deleted manually, the command still cleans
-remaining generated tests, manifest metadata, and managed router, model, and
-export wiring.
-
-The remover is conservative about wiring. It removes generated imports and
-includes that still match the managed layout, but it will not silently delete
-custom references to the same module. For example, an extra router include with
-a custom prefix or a custom model import must be removed or rewritten by the
-user before the module directory is deleted.
-
-By default, the command stops before deleting the module directory when the
-module files or generated tests appear to contain custom changes. Use `--trace`
-to preview the planned removals and updates without changing files. Use
-`--force` only when you intentionally want to remove a customized module
-directory.
-
-Use `--wiring-only` when a module directory contains custom code you want to
-keep, but the PolePosition-managed references should be removed. This mode
-cleans module exports, API router wiring, database-backed module model imports, and
-generated tests. It does not delete the module directory or shared integration
-scaffold.
-
-After `--wiring-only`, either move/delete the preserved module directory or
-restore explicit wiring before expecting `polepos check` to pass.
-
-The command is intentionally file-based. It does not connect to the database,
-create a migration, drop tables, or edit migration history. If the removed
-module had a SQLAlchemy model and you want to remove its table, create and
-review an Alembic revision after removal:
+### `polepos add integration`
 
 ```bash
-polepos remove module customers
-polepos db revision -m "remove customers table"
-polepos db upgrade
+polepos add integration <integration_name>
 ```
 
-For `ai-prompt` modules, removing the last AI prompt module also removes the
-shared LLM settings, `.env.example` values, and `integrations/llm` scaffold.
-If another AI prompt module remains, the shared LLM scaffold is kept.
+Supported integration names:
 
-The command also stops before deleting files when managed wiring has drifted
-into a layout it cannot clean safely. Fix the reported layout, restore the
-generated wiring shape, or remove the custom wiring manually, then retry.
+| Integration | Adds |
+| --- | --- |
+| `kafka` | `aiokafka` dependency, Kafka producer/consumer helpers, settings, env examples, and in-memory test double. |
+| `rabbitmq` | `aio-pika` dependency, publisher/consumer helpers, settings, env examples, and in-memory test double. |
+| `redis` | `redis` dependency, async cache helper, settings, env examples, and in-memory test double. |
+| `rq` | `rq` dependency, Redis-backed queue helper, worker entrypoint, settings, env examples, and test double. |
 
-## Add Integrations
+Examples:
 
 ```bash
 polepos add integration kafka
@@ -146,13 +198,70 @@ polepos add integration redis
 polepos add integration rq
 ```
 
-Integration commands add opt-in adapter scaffolds, settings, environment
-examples, transport dependencies, and lightweight test doubles.
+Long-running consumers and workers are intentionally explicit runtime
+processes. PolePosition does not start Kafka consumers, RabbitMQ workers, Redis
+workers, or RQ workers inside the API process by default.
 
-See the [Integration Guides](integrations/index.md) for Kafka, RabbitMQ, Redis,
-RQ, and LLM scaffold details.
+See the [Integration Guides](integrations/index.md) for per-integration details.
 
-## Check a Project
+## Remove Commands
+
+```bash
+polepos remove <subcommand>
+polepos remove module <module_name> [--force] [--trace] [--wiring-only]
+```
+
+`remove module` removes generated module files, generated tests, manifest
+metadata, module exports, API router wiring, and database-backed module model
+imports.
+
+| Option | Behavior |
+| --- | --- |
+| `--trace` | Show planned removals and updates without changing files. |
+| `--force` | Remove module files even when custom changes are detected. |
+| `--wiring-only` | Remove managed wiring and generated tests, but keep the module directory. |
+
+Examples:
+
+```bash
+polepos remove module customers
+polepos remove module customers --trace
+polepos remove module customers --wiring-only
+polepos remove module customers --force
+```
+
+The remover is file-based and conservative. It stops before deleting module
+files when custom changes or unmanaged references are detected. If you manually
+deleted the module directory, rerun `polepos remove module <name>` to clean
+remaining generated tests, manifest metadata, and managed wiring.
+
+The command does not mutate the live database. If a removed module had a model
+and you want to remove its table, create and review an Alembic migration
+separately:
+
+```bash
+polepos remove module customers
+polepos db revision -m "remove customers table"
+polepos db upgrade
+```
+
+## Project Checks
+
+```bash
+polepos check [--json] [--fix]
+```
+
+`check` validates generated structure, managed markers, Alembic configuration,
+starter routing, added module wiring, generated tests, orphan generated
+references, and supported integration scaffolds. It works from the project root
+or nested directories inside a PolePosition project.
+
+| Option | Behavior |
+| --- | --- |
+| `--json` | Print a machine-readable result and exit non-zero when validation fails. |
+| `--fix` | Restore safe PolePosition-managed markers before validation. |
+
+Examples:
 
 ```bash
 polepos check
@@ -160,64 +269,96 @@ polepos check --json
 polepos check --fix
 ```
 
-`check` validates generated structure, managed markers, Alembic configuration,
-starter module routing, added module wiring, orphan generated remnants,
-generated tests, and supported integration scaffolds. It works from nested
-directories inside a PolePosition project.
+Failed checks include `PPCHK` issue codes and `Fix:` hints. The command does
+not install dependencies, run migrations, contact brokers, call LLM providers,
+or mutate files unless `--fix` is supplied.
 
-For orphan module checks, `check` parses Python files rather than looking only
-at generated marker blocks. A custom import below `# polepos:router-imports` or
-`# polepos:model-imports` is still reported when it points at a missing module.
-
-For integration checks, required settings and `.env.example` values must be
-active keys. Commented required values are treated as missing; optional
-generated examples such as `# KAFKA_COMPRESSION_TYPE=` and
-`# LLM_MAX_TOKENS=` may remain commented.
-
-When it fails, each issue includes a `PPCHK` code and a `Fix:` hint so humans,
-coding agents, and CI logs can point to the same remediation.
-
-Use `--json` for CI and agent workflows that need a machine-readable result.
-The JSON payload contains `passed`, `project_root`, `package_name`, and
-`issues`. Each issue includes `code`, `message`, and `remediation`.
-
-Use `--fix` to restore safe PolePosition-managed markers before validation.
-It does not install dependencies, run migrations, or call external services.
-
-New generated projects include `.poleposition.toml`, which records package,
-database mode, module templates, and generated integrations. If that file is
-missing in an older project, `check` falls back to structural inference.
-
-PolePosition does not currently provide a separate `polepos validate` command.
-Project contract validation is handled by `polepos check`.
+For check layers and issue behavior, see [Project Checks](project-checks.md).
 
 ## Database Commands
 
 ```bash
-polepos db --help
+polepos db <subcommand>
+```
+
+Subcommands:
+
+| Command | Behavior |
+| --- | --- |
+| `polepos db status` | Print Alembic current revision and heads. |
+| `polepos db upgrade [target]` | Apply migrations. Default target: `head`. |
+| `polepos db revision -m "<message>"` | Create an autogenerated Alembic revision. |
+| `polepos db downgrade <target>` | Revert migrations to the selected target. |
+
+Examples:
+
+```bash
 polepos db status
 polepos db upgrade
+polepos db upgrade head
 polepos db revision -m "add customers table"
 polepos db downgrade -1
+polepos db downgrade base
 ```
 
 Database commands prefer `uv run alembic ...` when `uv` is available. Without
-`uv`, they fall back to the active virtualenv, the project `.venv`, or the
-first `python` on `PATH`.
+`uv`, they fall back to the active virtualenv, the generated project `.venv`,
+or the first `python` on `PATH`.
 
-For the full database workflow, see [Database and Migrations](database.md).
+Review autogenerated migrations before applying them. For advanced Alembic
+flags not exposed by PolePosition, run `uv run alembic ...` directly inside the
+generated project.
 
-For generated `.env` values, see the
-[Configuration Reference](configuration.md).
+For full schema workflow guidance, see [Database and Migrations](database.md).
 
-For read-only CLI upgrade readiness reports, see
-[Upgrade Reports](upgrade-command.md).
-
-## Help and Version
+## Upgrade and Version
 
 ```bash
-polepos help
 polepos upgrade
 polepos version
-polepos version --help
+polepos --version
+```
+
+`upgrade` is read-only. It reports the CLI version, project root, package,
+database mode, recorded modules, enabled integrations, current check status,
+and next-step commands.
+
+`version` prints the installed PolePosition package version.
+
+See [Upgrade Reports](upgrade-command.md) and
+[Release and Upgrade Notes](release-upgrade-notes.md) for upgrade guidance.
+
+## Option Conventions
+
+- Commands fail fast on unexpected arguments or unknown options.
+- Long options with values generally accept the space-separated form, such as
+  `--db postgres` or `--template crud`.
+- `polepos start` also accepts `--db=postgres`.
+- `polepos add module` also accepts `--template=crud`.
+- Commands that operate on an existing project use project-root discovery from
+  nested directories.
+- `polepos check` is the lifecycle validator; there is no separate
+  `polepos validate` command.
+
+## Safe Customization Boundary
+
+PolePosition generates normal FastAPI application code. Customize module
+models, schemas, repositories, services, routers, tests, and migrations for the
+real domain. Keep managed marker comments and generated wiring shapes intact if
+you want lifecycle commands to keep working:
+
+```text
+# polepos:router-imports
+# polepos:router-includes
+# polepos:model-imports
+# polepos:module-exports
+# polepos:integration-settings
+# polepos:integration-env
+```
+
+After structural edits, merge-conflict resolution, module removal, integration
+scaffolding, or migration work, run:
+
+```bash
+polepos check
 ```

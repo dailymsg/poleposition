@@ -1,19 +1,14 @@
 from pole_position.cli.command import Command
-from pole_position.cli.services.integration_creator import (
-    SUPPORTED_INTEGRATIONS,
-    add_integration,
-)
+from pole_position.cli.services.integration_creator import add_integration
 from pole_position.cli.services.project_name import normalize_package_name, validate_project_name
+from pole_position.cli.usage import print_command_help
 
 
-USAGE = "Usage: polepos add integration <integration_name>"
 HELP_OPTIONS = {"-h", "--help"}
 
 
 def _print_usage() -> None:
-    integrations = ", ".join(SUPPORTED_INTEGRATIONS)
-    print(USAGE)
-    print(f"Integrations: {integrations}")
+    print_command_help("add", "integration")
 
 
 def run(args: list[str]) -> None:

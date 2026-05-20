@@ -1,5 +1,6 @@
 from pole_position import __version__
 from pole_position.cli.command import Command
+from pole_position.cli.usage import print_command_help
 
 
 USAGE = "Usage: polepos version"
@@ -8,7 +9,7 @@ HELP_OPTIONS = {"-h", "--help"}
 
 def run(args: list[str]) -> None:
     if args and args[0] in HELP_OPTIONS:
-        print(USAGE)
+        print_command_help("version")
         return
 
     if args:

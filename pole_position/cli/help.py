@@ -1,15 +1,9 @@
 from pole_position.cli.command import Command
-from pole_position.cli.registry import registry
+from pole_position.cli.usage import print_help_topic
 
 
 def run(args: list[str]) -> None:
-    print("PolePosition project lifecycle CLI for FastAPI projects.\n")
-    print("Usage: polepos <command> [options]\n")
-    print("Commands:")
-
-    for cmd in registry.all():
-        aliases = f" ({', '.join(cmd.aliases)})" if cmd.aliases else ""
-        print(f"  {cmd.name:<12} {cmd.description}{aliases}")
+    print_help_topic(args)
 
 
 command = Command(

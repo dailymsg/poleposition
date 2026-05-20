@@ -12,6 +12,7 @@ from pole_position.cli.services.project_name import (
     normalize_package_name,
     validate_project_name,
 )
+from pole_position.cli.usage import print_command_help
 
 
 DATABASE_CHOICES = "|".join(SUPPORTED_DATABASES)
@@ -33,7 +34,7 @@ def run(args: list[str]) -> None:
     while index < len(args):
         arg = args[index]
         if arg in HELP_OPTIONS:
-            print(USAGE)
+            print_command_help("start")
             return
         if arg == "--install":
             install = True

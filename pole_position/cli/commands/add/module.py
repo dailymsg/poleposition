@@ -3,23 +3,15 @@ from pathlib import Path
 from pole_position.cli.command import Command
 from pole_position.cli.services.module_creator import AddedModuleResult
 from pole_position.cli.services.module_creator import add_module
-from pole_position.cli.services.module_templates import SUPPORTED_MODULE_TEMPLATES
 from pole_position.cli.services.project_name import normalize_package_name, validate_project_name
+from pole_position.cli.usage import print_command_help
 
 
-USAGE = (
-    "Usage: polepos add module <module_name> "
-    "[--template <template_name>] [--api-only]"
-)
 HELP_OPTIONS = {"-h", "--help"}
 
 
 def _print_usage() -> None:
-    templates = ", ".join(SUPPORTED_MODULE_TEMPLATES)
-    print(USAGE)
-    print(f"Templates: {templates}")
-    print("Options:")
-    print("  --api-only    Generate router, schemas, service, and tests without DB files.")
+    print_command_help("add", "module")
 
 
 def run(args: list[str]) -> None:

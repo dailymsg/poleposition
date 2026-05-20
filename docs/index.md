@@ -75,7 +75,7 @@ helps teams and agents keep FastAPI projects consistent as they grow.
 ## Documentation Map
 
 - [Getting Started](getting-started.md): create and run a project.
-- [CLI Reference](cli.md): command groups and common usage.
+- [CLI Reference](cli.md): command usage, options, examples, and help topics.
 - [Module Templates](module-templates.md): standard, CRUD, API-only, and AI prompt module choices.
 - [Auth Workflow](auth-workflow.md): optional database-backed registration and token workflow.
 - [Configuration Reference](configuration.md): generated `.env` and runtime settings.
