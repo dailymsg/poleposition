@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 from pole_position.cli.services.integration_specs import (
@@ -11,6 +12,7 @@ from pole_position.cli.services.integration_specs import (
 )
 from pole_position.cli.services.module_templates.renderer import render_template
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
+from pole_position.cli.services.project_manifest import manifest_path
 from pole_position.cli.services.project_manifest import record_manifest_integration
 from pole_position.cli.services.pyproject_editor import (
     ensure_project_dependency,
@@ -24,7 +26,24 @@ ENV_INTEGRATION_MARKER = "# polepos:integration-env"
 ENV_LLM_MARKER = "# polepos:llm-env"
 
 
-def add_integration(integration_name: str, cwd: Path | None = None) -> None:
+@dataclass(frozen=True)
+class AddedIntegrationResult:
+    integration_name: str
+    project_root: Path
+    package_root: Path
+    integration_files: tuple[Path, ...]
+    updated_files: tuple[Path, ...]
+    next_steps: tuple[str, ...]
+
+    @property
+    def package_name(self) -> str:
+        return self.package_root.name
+
+
+def add_integration(
+    integration_name: str,
+    cwd: Path | None = None,
+) -> AddedIntegrationResult:
     contract = get_creatable_integration_contract(integration_name)
 
     project_root = find_project_root(cwd)
@@ -39,61 +58,62 @@ def add_integration(integration_name: str, cwd: Path | None = None) -> None:
         contract=contract,
     )
 
+    integration_files: dict[str, str]
+    update_settings = None
+    update_env = None
     if contract.name == "kafka":
-        _ensure_integration_files(
-            package_root,
-            _kafka_integration_files(package_name),
-        )
-        _ensure_kafka_settings(package_root / "settings.py", package_name)
-        _ensure_kafka_env(project_root / ".env.example", package_name)
-        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
-        record_manifest_integration(
-            project_root=project_root,
-            integration_name=contract.name,
-        )
-        return
+        integration_files = _kafka_integration_files(package_name)
+        update_settings = _ensure_kafka_settings
+        update_env = _ensure_kafka_env
+    elif contract.name == "rabbitmq":
+        integration_files = _rabbitmq_integration_files(package_name)
+        update_settings = _ensure_rabbitmq_settings
+        update_env = _ensure_rabbitmq_env
+    elif contract.name == "redis":
+        integration_files = _redis_integration_files(package_name)
+        update_settings = _ensure_redis_settings
+        update_env = _ensure_redis_env
+    elif contract.name == "rq":
+        integration_files = _rq_integration_files(package_name)
+        update_settings = _ensure_rq_settings
+        update_env = _ensure_rq_env
+    else:  # pragma: no cover - guarded by get_creatable_integration_contract
+        raise AssertionError(f"Unhandled integration: {contract.name}")
 
-    if contract.name == "rabbitmq":
-        _ensure_integration_files(
-            package_root,
-            _rabbitmq_integration_files(package_name),
-        )
-        _ensure_rabbitmq_settings(package_root / "settings.py", package_name)
-        _ensure_rabbitmq_env(project_root / ".env.example", package_name)
-        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
-        record_manifest_integration(
-            project_root=project_root,
-            integration_name=contract.name,
-        )
-        return
+    written_files = _ensure_integration_files(package_root, integration_files)
+    updated_files: list[Path] = []
 
-    if contract.name == "redis":
-        _ensure_integration_files(
-            package_root,
-            _redis_integration_files(package_name),
-        )
-        _ensure_redis_settings(package_root / "settings.py", package_name)
-        _ensure_redis_env(project_root / ".env.example", package_name)
-        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
-        record_manifest_integration(
-            project_root=project_root,
-            integration_name=contract.name,
-        )
-        return
+    settings_path = package_root / "settings.py"
+    if update_settings(settings_path, package_name):
+        updated_files.append(settings_path)
 
-    if contract.name == "rq":
-        _ensure_integration_files(
-            package_root,
-            _rq_integration_files(package_name),
-        )
-        _ensure_rq_settings(package_root / "settings.py", package_name)
-        _ensure_rq_env(project_root / ".env.example", package_name)
-        ensure_project_dependency(project_root / "pyproject.toml", contract.dependency)
-        record_manifest_integration(
-            project_root=project_root,
+    env_path = project_root / ".env.example"
+    if update_env(env_path, package_name):
+        updated_files.append(env_path)
+
+    pyproject_path = project_root / "pyproject.toml"
+    if _ensure_project_dependency(pyproject_path, contract.dependency):
+        updated_files.append(pyproject_path)
+
+    record_manifest_integration(
+        project_root=project_root,
+        integration_name=contract.name,
+    )
+    project_manifest_path = manifest_path(project_root)
+    if project_manifest_path.is_file():
+        updated_files.append(project_manifest_path)
+
+    return AddedIntegrationResult(
+        integration_name=contract.name,
+        project_root=project_root,
+        package_root=package_root,
+        integration_files=tuple(written_files),
+        updated_files=tuple(dict.fromkeys(updated_files)),
+        next_steps=_integration_next_steps(
+            package_name=package_name,
             integration_name=contract.name,
-        )
-        return
+        ),
+    )
 
 
 def _validate_add_integration_preflight(
@@ -200,12 +220,25 @@ def _entry_exists(content: str, entry: str, *, entry_type: str) -> bool:
     )
 
 
-def _ensure_integration_files(package_root: Path, files: dict[str, str]) -> None:
+def _ensure_integration_files(package_root: Path, files: dict[str, str]) -> list[Path]:
+    written: list[Path] = []
     for relative_path, content in files.items():
         path = package_root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
             path.write_text(content, encoding="utf-8")
+            written.append(path)
+
+    return written
+
+
+def _ensure_project_dependency(path: Path, dependency: str | None) -> bool:
+    if dependency is None:
+        return False
+
+    original = path.read_text(encoding="utf-8")
+    ensure_project_dependency(path, dependency)
+    return path.read_text(encoding="utf-8") != original
 
 
 def _files_for_contract(
@@ -347,8 +380,8 @@ def _rq_integration_files(package_name: str) -> dict[str, str]:
     return _files_for_contract(RQ_INTEGRATION_CONTRACT, files)
 
 
-def _ensure_kafka_settings(path: Path, package_name: str) -> None:
-    _ensure_settings_entries_before_marker_or_anchor(
+def _ensure_kafka_settings(path: Path, package_name: str) -> bool:
+    return _ensure_settings_entries_before_marker_or_anchor(
         path=path,
         block=_kafka_settings_block(package_name),
         markers=[SETTINGS_INTEGRATION_MARKER, SETTINGS_LLM_MARKER],
@@ -370,8 +403,8 @@ def _kafka_settings_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_kafka_env(path: Path, package_name: str) -> None:
-    _ensure_env_entries_before_marker_or_anchor(
+def _ensure_kafka_env(path: Path, package_name: str) -> bool:
+    return _ensure_env_entries_before_marker_or_anchor(
         path=path,
         block=_kafka_env_block(package_name),
         markers=[ENV_INTEGRATION_MARKER, ENV_LLM_MARKER],
@@ -393,8 +426,8 @@ def _kafka_env_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_rabbitmq_settings(path: Path, package_name: str) -> None:
-    _ensure_settings_entries_before_marker_or_anchor(
+def _ensure_rabbitmq_settings(path: Path, package_name: str) -> bool:
+    return _ensure_settings_entries_before_marker_or_anchor(
         path=path,
         block=_rabbitmq_settings_block(package_name),
         markers=[SETTINGS_INTEGRATION_MARKER, SETTINGS_LLM_MARKER],
@@ -417,8 +450,8 @@ def _rabbitmq_settings_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_rabbitmq_env(path: Path, package_name: str) -> None:
-    _ensure_env_entries_before_marker_or_anchor(
+def _ensure_rabbitmq_env(path: Path, package_name: str) -> bool:
+    return _ensure_env_entries_before_marker_or_anchor(
         path=path,
         block=_rabbitmq_env_block(package_name),
         markers=[ENV_INTEGRATION_MARKER, ENV_LLM_MARKER],
@@ -441,8 +474,8 @@ def _rabbitmq_env_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_redis_settings(path: Path, package_name: str) -> None:
-    _ensure_settings_entries_before_marker_or_anchor(
+def _ensure_redis_settings(path: Path, package_name: str) -> bool:
+    return _ensure_settings_entries_before_marker_or_anchor(
         path=path,
         block=_redis_settings_block(package_name),
         markers=[SETTINGS_INTEGRATION_MARKER, SETTINGS_LLM_MARKER],
@@ -460,8 +493,8 @@ def _redis_settings_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_redis_env(path: Path, package_name: str) -> None:
-    _ensure_env_entries_before_marker_or_anchor(
+def _ensure_redis_env(path: Path, package_name: str) -> bool:
+    return _ensure_env_entries_before_marker_or_anchor(
         path=path,
         block=_redis_env_block(package_name),
         markers=[ENV_INTEGRATION_MARKER, ENV_LLM_MARKER],
@@ -479,8 +512,8 @@ def _redis_env_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_rq_settings(path: Path, package_name: str) -> None:
-    _ensure_settings_entries_before_marker_or_anchor(
+def _ensure_rq_settings(path: Path, package_name: str) -> bool:
+    return _ensure_settings_entries_before_marker_or_anchor(
         path=path,
         block=_rq_settings_block(package_name),
         markers=[SETTINGS_INTEGRATION_MARKER, SETTINGS_LLM_MARKER],
@@ -499,8 +532,8 @@ def _rq_settings_block(package_name: str) -> list[str]:
     ]
 
 
-def _ensure_rq_env(path: Path, package_name: str) -> None:
-    _ensure_env_entries_before_marker_or_anchor(
+def _ensure_rq_env(path: Path, package_name: str) -> bool:
+    return _ensure_env_entries_before_marker_or_anchor(
         path=path,
         block=_rq_env_block(package_name),
         markers=[ENV_INTEGRATION_MARKER, ENV_LLM_MARKER],
@@ -525,8 +558,8 @@ def _ensure_settings_entries_before_marker_or_anchor(
     block: list[str],
     markers: list[str],
     anchor: str | None,
-) -> None:
-    _ensure_block_entries_before_marker_or_anchor(
+) -> bool:
+    return _ensure_block_entries_before_marker_or_anchor(
         path=path,
         block=block,
         markers=markers,
@@ -541,8 +574,8 @@ def _ensure_env_entries_before_marker_or_anchor(
     block: list[str],
     markers: list[str],
     anchor: str | None,
-) -> None:
-    _ensure_block_entries_before_marker_or_anchor(
+) -> bool:
+    return _ensure_block_entries_before_marker_or_anchor(
         path=path,
         block=block,
         markers=markers,
@@ -558,7 +591,7 @@ def _ensure_block_entries_before_marker_or_anchor(
     markers: list[str],
     anchor: str | None,
     key_for_line,
-) -> None:
+) -> bool:
     lines = path.read_text(encoding="utf-8").splitlines()
     missing_lines = _missing_block_lines(
         lines=lines,
@@ -567,11 +600,12 @@ def _ensure_block_entries_before_marker_or_anchor(
     )
 
     if not missing_lines:
-        return
+        return False
 
     insert_at = _find_insert_index(lines, markers, anchor)
     lines[insert_at:insert_at] = missing_lines + [""]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return True
 
 
 def _settings_line_key(line: str) -> str | None:
@@ -687,3 +721,19 @@ def _find_insert_index(
         insert_at = len(lines)
 
     return insert_at
+
+
+def _integration_next_steps(
+    *,
+    package_name: str,
+    integration_name: str,
+) -> tuple[str, ...]:
+    return (
+        "Run `uv sync --extra dev`",
+        (
+            "Copy new integration env values from `.env.example` into `.env` "
+            "if `.env` already exists"
+        ),
+        f"Review src/{package_name}/integrations/{integration_name}/",
+        "Run `polepos check`",
+    )

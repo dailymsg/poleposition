@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from pole_position.cli.command import Command
+from pole_position.cli.services.integration_creator import AddedIntegrationResult
 from pole_position.cli.services.integration_creator import add_integration
 from pole_position.cli.services.project_name import normalize_package_name, validate_project_name
 from pole_position.cli.usage import print_command_help
@@ -38,7 +41,7 @@ def run(args: list[str]) -> None:
     try:
         validate_project_name(raw_name)
         integration_name = normalize_package_name(raw_name)
-        add_integration(integration_name)
+        result = add_integration(integration_name)
     except RuntimeError as exc:
         print(str(exc))
         raise SystemExit(1)
@@ -47,7 +50,27 @@ def run(args: list[str]) -> None:
         _print_usage()
         raise SystemExit(1)
 
-    print(f"Added integration: {integration_name}")
+    _print_success(result)
+
+
+def _print_success(result: AddedIntegrationResult) -> None:
+    print(f"Added integration: {result.integration_name}")
+
+    print("Created:")
+    for path in result.integration_files:
+        print(f"  {_relative_path(result, path)}")
+
+    print("Updated:")
+    for path in result.updated_files:
+        print(f"  {_relative_path(result, path)}")
+
+    print("Next steps:")
+    for step in result.next_steps:
+        print(f"  {step}")
+
+
+def _relative_path(result: AddedIntegrationResult, path: Path) -> str:
+    return path.relative_to(result.project_root).as_posix()
 
 
 command = Command(

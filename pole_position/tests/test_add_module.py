@@ -116,6 +116,15 @@ def test_add_kafka_integration_creates_files_and_updates_project(tmp_path: Path)
 
     assert result.returncode == 0
     assert "Added integration: kafka" in result.stdout
+    assert "Created:" in result.stdout
+    assert "src/myapp/integrations/kafka/producer.py" in result.stdout
+    assert "Updated:" in result.stdout
+    assert "src/myapp/settings.py" in result.stdout
+    assert ".env.example" in result.stdout
+    assert "pyproject.toml" in result.stdout
+    assert ".poleposition.toml" in result.stdout
+    assert "Next steps:" in result.stdout
+    assert "Run `uv sync --extra dev`" in result.stdout
 
     package_root = project_root / "src" / "myapp"
     kafka_root = package_root / "integrations" / "kafka"

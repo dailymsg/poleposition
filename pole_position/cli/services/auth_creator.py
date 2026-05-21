@@ -8,6 +8,7 @@ from pole_position.cli.services.module_creator import (
 )
 from pole_position.cli.services.module_templates.renderer import render_template
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
+from pole_position.cli.services.project_manifest import manifest_path
 from pole_position.cli.services.project_manifest import record_manifest_integration
 from pole_position.cli.services.pyproject_editor import (
     ensure_project_dependency,
@@ -66,6 +67,9 @@ def add_auth(cwd: Path | None = None) -> AddedAuthResult:
     updated_files.append(pyproject_path)
 
     record_manifest_integration(project_root=project_root, integration_name="auth")
+    project_manifest_path = manifest_path(project_root)
+    if project_manifest_path.is_file():
+        updated_files.append(project_manifest_path)
 
     return AddedAuthResult(
         project_root=project_root,

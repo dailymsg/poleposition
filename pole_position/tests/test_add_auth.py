@@ -40,6 +40,9 @@ def test_add_auth_creates_auth_workflow_and_wiring(tmp_path: Path) -> None:
 
     assert result.returncode == 0
     assert "Added auth workflow" in result.stdout
+    assert "Updated:" in result.stdout
+    assert "pyproject.toml" in result.stdout
+    assert ".poleposition.toml" in result.stdout
 
     package_root = project_root / "src" / "myapp"
     auth_root = package_root / "auth"
