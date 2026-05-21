@@ -11,17 +11,12 @@ except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
     except ModuleNotFoundError:
         tomllib = None  # type: ignore[assignment]
 
-try:
-    from packaging.version import InvalidVersion, Version
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    InvalidVersion = ValueError  # type: ignore[assignment]
-    Version = None  # type: ignore[assignment]
-
 from pole_position.cli.services.integration_specs import (
     CHECKED_INTEGRATION_CONTRACTS,
     IntegrationContract,
 )
 from pole_position.cli.services.auth_creator import AUTH_DEPENDENCY
+from pole_position.cli.services.dependency_contract import dependency_contract_satisfied
 from pole_position.cli.services.module_templates import (
     DEFAULT_MODULE_TEMPLATE,
     ModuleTemplateContract,
@@ -31,6 +26,15 @@ from pole_position.cli.services.module_templates import (
 )
 from pole_position.cli.services.project_manifest import ProjectManifest
 from pole_position.cli.services.project_manifest import read_project_manifest
+from pole_position.cli.services.project_wiring import has_router_import
+from pole_position.cli.services.project_wiring import has_router_include
+from pole_position.cli.services.project_wiring import is_api_router_include_call
+from pole_position.cli.services.project_wiring import is_name
+from pole_position.cli.services.project_wiring import literal_keyword_value
+from pole_position.cli.services.project_wiring import module_name_from_model_reference
+from pole_position.cli.services.project_wiring import module_name_from_router_import
+from pole_position.cli.services.project_wiring import module_name_from_router_include
+from pole_position.cli.services.project_wiring import router_aliases_by_module_name
 
 
 MANAGED_MARKERS = {
@@ -178,15 +182,6 @@ ALEMBIC_PATHS = [
     "migrations/script.py.mako",
     "migrations/versions",
 ]
-
-DEPENDENCY_NAME_PATTERN = re.compile(r"^\s*(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)")
-DEPENDENCY_EXTRAS_PATTERN = re.compile(
-    r"^\s*[A-Za-z0-9][A-Za-z0-9._-]*(?:\[(?P<extras>[^\]]*)\])?"
-)
-DEPENDENCY_SPECIFIER_PATTERN = re.compile(
-    r"(?P<operator>~=|===|==|!=|<=|>=|<|>)\s*(?P<version>[^,;\s]+)"
-)
-
 
 @dataclass(frozen=True)
 class ProjectCheckIssue:
@@ -856,7 +851,7 @@ def _check_status_router_wiring(
     )
     include_line = 'api_router.include_router(status_router, tags=["status"])'
 
-    if not _has_router_import(tree, router_module, "status_router"):
+    if not has_router_import(tree, router_module, "status_router"):
         problems.append(
             "Starter module 'status' is missing router import in "
             f"{router_path}: {import_line}"
@@ -873,13 +868,13 @@ def _has_status_router_include(tree: ast.Module) -> bool:
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        if not _is_api_router_include_call(node):
+        if not is_api_router_include_call(node):
             continue
-        if not node.args or not _is_name(node.args[0], "status_router"):
+        if not node.args or not is_name(node.args[0], "status_router"):
             continue
         if any(keyword.arg == "prefix" for keyword in node.keywords):
             continue
-        if _literal_keyword_value(node, "tags") in (["status"], ("status",)):
+        if literal_keyword_value(node, "tags") in (["status"], ("status",)):
             return True
 
     return False
@@ -1007,13 +1002,13 @@ def _check_module_router_wiring(
     if tree is None:
         return
 
-    if not _has_router_import(tree, router_module, router_alias):
+    if not has_router_import(tree, router_module, router_alias):
         problems.append(
             f"Lifecycle module '{module_name}' is missing router import in "
             f"{router_path}: {import_line}"
         )
 
-    if not _has_router_include(tree, router_alias, module_name):
+    if not has_router_include(tree, router_alias, module_name):
         problems.append(
             f"Lifecycle module '{module_name}' is missing API router include in "
             f"{router_path}: {include_line}"
@@ -1029,72 +1024,6 @@ def _parse_python_source(
         return ast.parse(content, filename=str(path))
     except SyntaxError as exc:
         problems.append(f"Could not parse Python file for lifecycle checks: {path}: {exc}")
-        return None
-
-
-def _has_router_import(tree: ast.Module, router_module: str, router_alias: str) -> bool:
-    for node in tree.body:
-        if not isinstance(node, ast.ImportFrom):
-            continue
-        if node.module != router_module:
-            continue
-        for alias in node.names:
-            if alias.name == "router" and alias.asname == router_alias:
-                return True
-
-    return False
-
-
-def _has_router_include(
-    tree: ast.Module,
-    router_alias: str,
-    module_name: str,
-) -> bool:
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        if not _is_api_router_include_call(node):
-            continue
-        if not node.args or not _is_name(node.args[0], router_alias):
-            continue
-        if _include_router_keywords_match(node, module_name):
-            return True
-
-    return False
-
-
-def _is_api_router_include_call(node: ast.Call) -> bool:
-    return (
-        isinstance(node.func, ast.Attribute)
-        and node.func.attr == "include_router"
-        and isinstance(node.func.value, ast.Name)
-        and node.func.value.id == "api_router"
-    )
-
-
-def _is_name(node: ast.AST, expected_name: str) -> bool:
-    return isinstance(node, ast.Name) and node.id == expected_name
-
-
-def _include_router_keywords_match(node: ast.Call, module_name: str) -> bool:
-    prefix = _literal_keyword_value(node, "prefix")
-    tags = _literal_keyword_value(node, "tags")
-
-    return prefix == f"/{module_name}" and tags in ([module_name], (module_name,))
-
-
-def _literal_keyword_value(node: ast.Call, keyword_name: str) -> object:
-    for keyword in node.keywords:
-        if keyword.arg == keyword_name:
-            return _literal_value(keyword.value)
-
-    return None
-
-
-def _literal_value(node: ast.AST) -> object:
-    try:
-        return ast.literal_eval(node)
-    except (ValueError, TypeError):
         return None
 
 
@@ -1248,80 +1177,21 @@ def _collect_orphan_router_references(
 
     package_name = package_root.name
     references: list[tuple[str, Path, str]] = []
-    router_aliases = _router_aliases_by_module_name(tree, package_name)
+    router_aliases = router_aliases_by_module_name(tree, package_name)
 
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
-            module_name = _module_name_from_router_import(node, package_name)
+            module_name = module_name_from_router_import(node, package_name)
             if module_name is not None and module_name not in ignored_modules:
                 references.append((module_name, path, "router import"))
             continue
 
         if isinstance(node, ast.Call):
-            module_name = _module_name_from_router_include(node, router_aliases)
+            module_name = module_name_from_router_include(node, router_aliases)
             if module_name is not None and module_name not in ignored_modules:
                 references.append((module_name, path, "router include"))
 
     return references
-
-
-def _router_aliases_by_module_name(
-    tree: ast.Module,
-    package_name: str,
-) -> dict[str, str]:
-    aliases: dict[str, str] = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ImportFrom):
-            continue
-        module_name = _module_name_from_router_import(node, package_name)
-        if module_name is None:
-            continue
-        for alias in node.names:
-            if alias.name == "router":
-                aliases[alias.asname or alias.name] = module_name
-
-    return aliases
-
-
-def _module_name_from_router_import(
-    node: ast.ImportFrom,
-    package_name: str,
-) -> str | None:
-    prefix = f"{package_name}.modules."
-    suffix = ".router"
-    if node.module is None:
-        return None
-    if not node.module.startswith(prefix) or not node.module.endswith(suffix):
-        return None
-
-    module_name = node.module[len(prefix) : -len(suffix)]
-    return module_name if module_name.isidentifier() else None
-
-
-def _module_name_from_router_include(
-    node: ast.Call,
-    router_aliases: dict[str, str],
-) -> str | None:
-    if not _is_api_router_include_call(node):
-        return None
-
-    if node.args and isinstance(node.args[0], ast.Name):
-        alias = node.args[0].id
-        if alias in router_aliases:
-            return router_aliases[alias]
-        if alias.endswith("_router"):
-            module_name = alias[: -len("_router")]
-            if module_name.isidentifier():
-                return module_name
-
-    prefix = _literal_keyword_value(node, "prefix")
-    tags = _literal_keyword_value(node, "tags")
-    if isinstance(prefix, str) and prefix.startswith("/"):
-        module_name = prefix.strip("/")
-        if module_name.isidentifier() and tags in ([module_name], (module_name,)):
-            return module_name
-
-    return None
 
 
 def _collect_orphan_model_references(
@@ -1342,42 +1212,11 @@ def _collect_orphan_model_references(
         return []
 
     for node in ast.walk(tree):
-        module_name = _module_name_from_model_reference(node, package_name)
+        module_name = module_name_from_model_reference(node, package_name)
         if module_name is not None and module_name not in ignored_modules:
             references.append((module_name, path, "model import"))
 
     return references
-
-
-def _module_name_from_model_reference(
-    node: ast.AST,
-    package_name: str,
-) -> str | None:
-    if isinstance(node, ast.ImportFrom):
-        return _module_name_from_import_module(node.module, package_name)
-
-    if isinstance(node, ast.Import):
-        for alias in node.names:
-            module_name = _module_name_from_import_module(alias.name, package_name)
-            if module_name is not None:
-                return module_name
-
-    return None
-
-
-def _module_name_from_import_module(
-    module: str | None,
-    package_name: str,
-) -> str | None:
-    prefix = f"{package_name}.modules."
-    if module is None or not module.startswith(prefix):
-        return None
-
-    module_name = module[len(prefix) :].split(".", 1)[0]
-    if not module_name.isidentifier():
-        return None
-
-    return module_name
 
 
 def _collect_orphan_generated_tests(
@@ -1557,12 +1396,12 @@ def _check_auth_router_wiring(problems: list[str], package_root: Path) -> None:
     import_line = f"from {package_name}.auth.router import router as auth_router"
     include_line = 'api_router.include_router(auth_router, prefix="/auth", tags=["auth"])'
 
-    if not _has_router_import(tree, router_module, "auth_router"):
+    if not has_router_import(tree, router_module, "auth_router"):
         problems.append(
             f"Auth workflow is missing router import in {router_path}: {import_line}"
         )
 
-    if not _has_router_include(tree, "auth_router", "auth"):
+    if not has_router_include(tree, "auth_router", "auth"):
         problems.append(
             f"Auth workflow is missing API router include in "
             f"{router_path}: {include_line}"
@@ -1766,9 +1605,9 @@ def _check_integration_dependency(
 
 
 def _pyproject_has_dependency(pyproject_content: str, required_dependency: str) -> bool:
-    return _dependency_contract_satisfied(
-        dependencies=_project_dependency_specs(pyproject_content),
-        required_dependency=required_dependency,
+    return dependency_contract_satisfied(
+        _project_dependency_specs(pyproject_content),
+        required_dependency,
     )
 
 
@@ -1820,91 +1659,6 @@ def _fallback_project_dependency_specs(pyproject_content: str) -> tuple[str, ...
             dependencies_match.group("dependencies"),
         )
     )
-
-
-def _dependency_contract_satisfied(
-    *,
-    dependencies: tuple[str, ...],
-    required_dependency: str,
-) -> bool:
-    required_name = _dependency_name(required_dependency)
-    required_extras = _dependency_extras(required_dependency)
-    required_min_version = _dependency_min_version(required_dependency)
-    if required_name is None:
-        return False
-
-    for dependency in dependencies:
-        if _dependency_name(dependency) != required_name:
-            continue
-        if not required_extras.issubset(_dependency_extras(dependency)):
-            continue
-        if required_min_version is None:
-            return True
-
-        dependency_min_version = _dependency_min_version(dependency)
-        if dependency_min_version is None:
-            continue
-        if _version_at_least(dependency_min_version, required_min_version):
-            return True
-
-    return False
-
-
-def _dependency_name(dependency: str) -> str | None:
-    match = DEPENDENCY_NAME_PATTERN.match(dependency.split(";", 1)[0])
-    if match is None:
-        return None
-    return _normalize_dependency_name(match.group("name"))
-
-
-def _dependency_extras(dependency: str) -> frozenset[str]:
-    match = DEPENDENCY_EXTRAS_PATTERN.match(dependency.split(";", 1)[0])
-    if match is None:
-        return frozenset()
-
-    extras = match.group("extras")
-    if not extras:
-        return frozenset()
-
-    return frozenset(
-        _normalize_dependency_name(extra.strip())
-        for extra in extras.split(",")
-        if extra.strip()
-    )
-
-
-def _normalize_dependency_name(name: str) -> str:
-    return re.sub(r"[-_.]+", "-", name).lower()
-
-
-def _dependency_min_version(dependency: str) -> str | None:
-    lower_bounds: list[str] = []
-    dependency_spec = dependency.split(";", 1)[0]
-    for match in DEPENDENCY_SPECIFIER_PATTERN.finditer(dependency_spec):
-        operator = match.group("operator")
-        if operator not in {">=", ">", "==", "===", "~="}:
-            continue
-        lower_bounds.append(match.group("version"))
-
-    if not lower_bounds:
-        return None
-
-    return max(lower_bounds, key=_version_sort_key)
-
-
-def _version_at_least(version: str, required_version: str) -> bool:
-    if Version is not None:
-        try:
-            return Version(version) >= Version(required_version)
-        except InvalidVersion:
-            pass
-
-    return _version_sort_key(version) >= _version_sort_key(required_version)
-
-
-def _version_sort_key(version: str) -> tuple[int, ...]:
-    parts = [int(part) for part in re.findall(r"\d+", version)]
-    return tuple(parts)
 
 
 def _check_integration_settings(
