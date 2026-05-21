@@ -9,6 +9,10 @@ from unittest.mock import patch
 import pytest
 
 from pole_position.cli.services.project_creator import (
+    _remove_lifespan_model_imports,
+    _remove_pyproject_database_dependencies,
+    _remove_run_database_summary,
+    _remove_settings_database_url,
     create_project as create_project_from_template,
 )
 
@@ -270,6 +274,114 @@ def test_create_project_normalizes_database_option_for_database_free_scaffold(
     assert not (project_root / "migrations").exists()
     assert "db_session" not in api_deps
     assert "sqlalchemy" not in api_deps
+
+
+def test_database_free_cleanup_removes_database_dependencies_by_name(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        "\n".join(
+            [
+                "[project]",
+                "dependencies = [",
+                '  "fastapi[standard]>=0.115.0",',
+                '  "SQLAlchemy ~= 2.0",',
+                '  "psycopg[binary] == 3.2.1",  # postgres driver',
+                '  "alembic>=1.14.0",',
+                "]",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    _remove_pyproject_database_dependencies(pyproject_path)
+
+    pyproject = pyproject_path.read_text(encoding="utf-8")
+    assert "fastapi[standard]" in pyproject
+    assert "SQLAlchemy" not in pyproject
+    assert "psycopg[binary]" not in pyproject
+    assert "alembic" not in pyproject
+
+
+def test_database_free_python_cleanup_uses_python_structure(
+    tmp_path: Path,
+) -> None:
+    settings_path = tmp_path / "settings.py"
+    settings_path.write_text(
+        """from pydantic import field_validator, Field
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    app_name: str = "api"
+    database_url: str = Field(
+        default="sqlite:///./poleposition.db",
+        description="Database URL",
+    )
+    log_format: str = "text"
+
+    @field_validator("log_format")
+    @classmethod
+    def validate_log_format(cls, value: str) -> str:
+        return value
+""",
+        encoding="utf-8",
+    )
+    lifespan_path = tmp_path / "lifespan.py"
+    lifespan_path.write_text(
+        """from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from api.bootstrap.logging import get_logger
+from api.db.models import import_models
+
+
+logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import_models()
+    yield
+""",
+        encoding="utf-8",
+    )
+    run_path = tmp_path / "run.py"
+    run_path.write_text(
+        """from api.bootstrap.logging import print_startup_table
+from api.settings import get_settings
+
+
+def main() -> None:
+    settings = get_settings()
+    print_startup_table(
+        app_name=settings.app_name,
+        database_url=settings.database_url,
+        app_env=settings.app_env,
+    )
+""",
+        encoding="utf-8",
+    )
+
+    _remove_settings_database_url(settings_path)
+    _remove_lifespan_model_imports(lifespan_path)
+    _remove_run_database_summary(run_path)
+
+    settings = settings_path.read_text(encoding="utf-8")
+    lifespan = lifespan_path.read_text(encoding="utf-8")
+    run = run_path.read_text(encoding="utf-8")
+
+    assert "from pydantic import field_validator" in settings
+    assert "Field" not in settings
+    assert "database_url" not in settings
+    assert "import_models" not in lifespan
+    assert "database_url" not in run
+    ast.parse(settings)
+    ast.parse(lifespan)
+    ast.parse(run)
 
 
 def test_generated_project_uses_enterprise_template_layout(tmp_path: Path):

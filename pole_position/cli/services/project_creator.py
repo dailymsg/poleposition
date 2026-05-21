@@ -1,3 +1,5 @@
+import ast
+import re
 import shutil
 from pathlib import Path
 
@@ -5,9 +7,20 @@ from pole_position.cli.services.database_options import (
     DEFAULT_DATABASE,
     get_database_option,
 )
+from pole_position.cli.services.dependency_contract import dependency_names_match
 from pole_position.cli.services.template_renderer import (
     build_context,
     render_project_files,
+)
+
+
+DEPENDENCY_ENTRY_PATTERN = re.compile(
+    r"^\s*[\"'](?P<dependency>[^\"']+)[\"']\s*,?\s*(?:#.*)?$"
+)
+DATABASE_DEPENDENCIES = (
+    "alembic",
+    "psycopg",
+    "sqlalchemy",
 )
 
 
@@ -98,13 +111,20 @@ def _remove_database_scaffold(
 
 def _remove_pyproject_database_dependencies(path: Path) -> None:
     lines = path.read_text(encoding="utf-8").splitlines()
-    removed_dependencies = {
-        '    "alembic>=1.13.0",',
-        '    "psycopg[binary]>=3.2.0",',
-        '    "sqlalchemy>=2.0.0",',
-    }
-    lines = [line for line in lines if line not in removed_dependencies]
+    lines = [line for line in lines if not _is_database_dependency_entry(line)]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _is_database_dependency_entry(line: str) -> bool:
+    match = DEPENDENCY_ENTRY_PATTERN.match(line)
+    if match is None:
+        return False
+
+    dependency = match.group("dependency")
+    return any(
+        dependency_names_match(dependency, database_dependency)
+        for database_dependency in DATABASE_DEPENDENCIES
+    )
 
 
 def _remove_env_database_values(path: Path) -> None:
@@ -157,38 +177,240 @@ __all__ = [
 
 
 def _remove_settings_database_url(path: Path) -> None:
-    lines = path.read_text(encoding="utf-8").splitlines()
-    updated: list[str] = []
-    index = 0
-    while index < len(lines):
-        line = lines[index]
-        if line == "from pydantic import Field, field_validator":
-            updated.append("from pydantic import field_validator")
-            index += 1
-            continue
-        if line == "    database_url: str = Field(":
-            index += 3
-            continue
-        updated.append(line)
-        index += 1
-
-    path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+    content = path.read_text(encoding="utf-8")
+    content = _remove_class_attribute(
+        content,
+        class_name="Settings",
+        attribute_name="database_url",
+        path_label=str(path),
+    )
+    content = _remove_import_name_if_unused(
+        content,
+        module_name="pydantic",
+        imported_name="Field",
+        path_label=str(path),
+    )
+    path.write_text(content, encoding="utf-8")
 
 
 def _remove_lifespan_model_imports(path: Path) -> None:
-    lines = path.read_text(encoding="utf-8").splitlines()
-    lines = [
-        line for line in lines if ".db.models import import_models" not in line
-    ]
-    content = "\n".join(lines) + "\n"
-    content = content.replace("\n    import_models()\n", "")
+    content = path.read_text(encoding="utf-8")
+    content = _remove_import_from_suffix(
+        content,
+        module_suffix=".db.models",
+        imported_name="import_models",
+        path_label=str(path),
+    )
+    content = _remove_named_call_statement(
+        content,
+        call_name="import_models",
+        path_label=str(path),
+    )
     path.write_text(content, encoding="utf-8")
 
 
 def _remove_run_database_summary(path: Path) -> None:
     content = path.read_text(encoding="utf-8")
-    content = content.replace("        database_url=settings.database_url,\n", "")
+    content = _remove_call_keyword(
+        content,
+        call_name="print_startup_table",
+        keyword_name="database_url",
+        path_label=str(path),
+    )
     path.write_text(content, encoding="utf-8")
+
+
+def _remove_class_attribute(
+    content: str,
+    *,
+    class_name: str,
+    attribute_name: str,
+    path_label: str,
+) -> str:
+    tree = _parse_python_content(content, path_label=path_label)
+    ranges: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef) or node.name != class_name:
+            continue
+        for statement in node.body:
+            if not isinstance(statement, ast.AnnAssign):
+                continue
+            if (
+                isinstance(statement.target, ast.Name)
+                and statement.target.id == attribute_name
+            ):
+                ranges.append(_node_line_range(statement, path_label=path_label))
+
+    return _remove_line_ranges(content, ranges)
+
+
+def _remove_import_name_if_unused(
+    content: str,
+    *,
+    module_name: str,
+    imported_name: str,
+    path_label: str,
+) -> str:
+    tree = _parse_python_content(content, path_label=path_label)
+    if any(
+        isinstance(node, ast.Name) and node.id == imported_name
+        for node in ast.walk(tree)
+    ):
+        return content
+
+    return _remove_import_from_module(
+        content,
+        module_name=module_name,
+        imported_name=imported_name,
+        path_label=path_label,
+    )
+
+
+def _remove_import_from_suffix(
+    content: str,
+    *,
+    module_suffix: str,
+    imported_name: str,
+    path_label: str,
+) -> str:
+    tree = _parse_python_content(content, path_label=path_label)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module is None or not node.module.endswith(module_suffix):
+            continue
+        if all(alias.name != imported_name for alias in node.names):
+            continue
+        return _remove_import_alias(
+            content,
+            node=node,
+            imported_name=imported_name,
+            path_label=path_label,
+        )
+
+    return content
+
+
+def _remove_import_from_module(
+    content: str,
+    *,
+    module_name: str,
+    imported_name: str,
+    path_label: str,
+) -> str:
+    tree = _parse_python_content(content, path_label=path_label)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.module != module_name:
+            continue
+        if all(alias.name != imported_name for alias in node.names):
+            continue
+        return _remove_import_alias(
+            content,
+            node=node,
+            imported_name=imported_name,
+            path_label=path_label,
+        )
+
+    return content
+
+
+def _remove_import_alias(
+    content: str,
+    *,
+    node: ast.ImportFrom,
+    imported_name: str,
+    path_label: str,
+) -> str:
+    if all(alias.name != imported_name for alias in node.names):
+        return content
+
+    kept_names = [
+        alias.name if alias.asname is None else f"{alias.name} as {alias.asname}"
+        for alias in node.names
+        if alias.name != imported_name
+    ]
+    start, end = _node_line_range(node, path_label=path_label)
+    if not kept_names:
+        return _remove_line_ranges(content, [(start, end)])
+
+    lines = content.splitlines()
+    indent = " " * node.col_offset
+    relative_level = "." * node.level
+    lines[start:end] = [
+        f"{indent}from {relative_level}{node.module or ''} import {', '.join(kept_names)}"
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _remove_named_call_statement(
+    content: str,
+    *,
+    call_name: str,
+    path_label: str,
+) -> str:
+    tree = _parse_python_content(content, path_label=path_label)
+    ranges: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Expr):
+            continue
+        if _call_name(node.value) == call_name:
+            ranges.append(_node_line_range(node, path_label=path_label))
+
+    return _remove_line_ranges(content, ranges)
+
+
+def _remove_call_keyword(
+    content: str,
+    *,
+    call_name: str,
+    keyword_name: str,
+    path_label: str,
+) -> str:
+    tree = _parse_python_content(content, path_label=path_label)
+    ranges: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or _call_name(node) != call_name:
+            continue
+        for keyword in node.keywords:
+            if keyword.arg == keyword_name:
+                ranges.append(_node_line_range(keyword, path_label=path_label))
+
+    return _remove_line_ranges(content, ranges)
+
+
+def _call_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Call):
+        return _call_name(node.func)
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def _parse_python_content(content: str, *, path_label: str) -> ast.Module:
+    try:
+        return ast.parse(content)
+    except SyntaxError as exc:
+        raise RuntimeError(f"Cannot update generated Python file: {path_label}") from exc
+
+
+def _node_line_range(node: ast.AST, *, path_label: str) -> tuple[int, int]:
+    if not hasattr(node, "lineno") or not hasattr(node, "end_lineno"):
+        raise RuntimeError(f"Cannot update generated Python file: {path_label}")
+
+    return node.lineno - 1, node.end_lineno
+
+
+def _remove_line_ranges(content: str, ranges: list[tuple[int, int]]) -> str:
+    if not ranges:
+        return content if content.endswith("\n") else f"{content}\n"
+
+    lines = content.splitlines()
+    for start, end in sorted(set(ranges), reverse=True):
+        del lines[start:end]
+
+    return "\n".join(lines) + "\n"
 
 
 def _write_database_free_test_conftest(
