@@ -3,15 +3,12 @@ from pathlib import Path
 
 from pole_position.cli.services.dependency_contract import dependency_contract_satisfied
 from pole_position.cli.services.dependency_contract import dependency_names_match
+from pole_position.cli.services.dependency_contract import parse_dependency_entry
 
 
 SECTION_HEADER_PATTERN = re.compile(r"^\s*\[([^\]]+)\]\s*(?:#.*)?$")
 DEPENDENCIES_ARRAY_PATTERN = re.compile(
     r"^(?P<indent>\s*)dependencies\s*=\s*\[(?P<rest>.*)$"
-)
-DEPENDENCY_ENTRY_PATTERN = re.compile(
-    r"^(?P<indent>\s*)(?P<quote>[\"'])(?P<value>.+?)(?P=quote)"
-    r"(?P<trailing>\s*,?\s*(?:#.*)?)$"
 )
 ARRAY_END_PATTERN = re.compile(r"^\s*\]\s*(?:#.*)?$")
 
@@ -98,6 +95,7 @@ def _find_project_section(lines: list[str], path_label: str) -> tuple[int, int]:
         return index + 1, len(lines)
 
     raise RuntimeError(f"Unsupported dependency layout: {path_label}")
+
 
 def _find_project_dependencies(
     lines: list[str],
@@ -208,10 +206,10 @@ def _dependency_values(
 
 
 def _dependency_value_from_line(line: str) -> str | None:
-    match = DEPENDENCY_ENTRY_PATTERN.match(line)
-    if match is None:
+    entry = parse_dependency_entry(line)
+    if entry is None:
         return None
-    return match.group("value")
+    return entry.value
 
 
 def _replace_or_append_dependency(
@@ -235,16 +233,16 @@ def _replace_dependency_line(
     dependency: str,
 ) -> bool:
     for index in range(start_index + 1, end_index):
-        match = DEPENDENCY_ENTRY_PATTERN.match(lines[index])
-        if match is None:
+        entry = parse_dependency_entry(lines[index])
+        if entry is None:
             continue
 
-        if not dependency_names_match(match.group("value"), dependency):
+        if not dependency_names_match(entry.value, dependency):
             continue
 
         lines[index] = (
-            f"{match.group('indent')}{match.group('quote')}{dependency}"
-            f"{match.group('quote')}{match.group('trailing')}"
+            f"{entry.indent}{entry.quote}{dependency}"
+            f"{entry.quote}{entry.trailing}"
         )
         return True
 
@@ -301,9 +299,9 @@ def _dependency_entry_indent(
     array_indent: str,
 ) -> str:
     for line in lines[start_index + 1 : end_index]:
-        match = DEPENDENCY_ENTRY_PATTERN.match(line)
-        if match is not None:
-            return match.group("indent")
+        entry = parse_dependency_entry(line)
+        if entry is not None:
+            return entry.indent
 
     return f"{array_indent}    "
 

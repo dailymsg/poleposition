@@ -17,6 +17,7 @@ from pole_position.cli.services.integration_specs import (
 )
 from pole_position.cli.services.auth_creator import AUTH_DEPENDENCY
 from pole_position.cli.services.dependency_contract import dependency_contract_satisfied
+from pole_position.cli.services.dependency_contract import quoted_dependency_values
 from pole_position.cli.services.module_templates import (
     DEFAULT_MODULE_TEMPLATE,
     ModuleTemplateContract,
@@ -1652,13 +1653,7 @@ def _fallback_project_dependency_specs(pyproject_content: str) -> tuple[str, ...
     if dependencies_match is None:
         return ()
 
-    return tuple(
-        match.group("dependency")
-        for match in re.finditer(
-            r"""(?P<quote>["'])(?P<dependency>.+?)(?P=quote)""",
-            dependencies_match.group("dependencies"),
-        )
-    )
+    return quoted_dependency_values(dependencies_match.group("dependencies"))
 
 
 def _check_integration_settings(

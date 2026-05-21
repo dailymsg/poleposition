@@ -1,5 +1,4 @@
 import ast
-import re
 import shutil
 from pathlib import Path
 
@@ -8,15 +7,13 @@ from pole_position.cli.services.database_options import (
     get_database_option,
 )
 from pole_position.cli.services.dependency_contract import dependency_names_match
+from pole_position.cli.services.dependency_contract import parse_dependency_entry
 from pole_position.cli.services.template_renderer import (
     build_context,
     render_project_files,
 )
 
 
-DEPENDENCY_ENTRY_PATTERN = re.compile(
-    r"^\s*[\"'](?P<dependency>[^\"']+)[\"']\s*,?\s*(?:#.*)?$"
-)
 DATABASE_DEPENDENCIES = (
     "alembic",
     "psycopg",
@@ -116,13 +113,12 @@ def _remove_pyproject_database_dependencies(path: Path) -> None:
 
 
 def _is_database_dependency_entry(line: str) -> bool:
-    match = DEPENDENCY_ENTRY_PATTERN.match(line)
-    if match is None:
+    entry = parse_dependency_entry(line)
+    if entry is None:
         return False
 
-    dependency = match.group("dependency")
     return any(
-        dependency_names_match(dependency, database_dependency)
+        dependency_names_match(entry.value, database_dependency)
         for database_dependency in DATABASE_DEPENDENCIES
     )
 

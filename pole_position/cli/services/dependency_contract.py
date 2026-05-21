@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from dataclasses import dataclass
 import re
 
 try:
@@ -15,6 +16,21 @@ DEPENDENCY_EXTRAS_PATTERN = re.compile(
 DEPENDENCY_SPECIFIER_PATTERN = re.compile(
     r"(?P<operator>~=|===|==|!=|<=|>=|<|>)\s*(?P<version>[^,;\s]+)"
 )
+DEPENDENCY_ENTRY_PATTERN = re.compile(
+    r"^(?P<indent>\s*)(?P<quote>[\"'])(?P<value>.+?)(?P=quote)"
+    r"(?P<trailing>\s*,?\s*(?:#.*)?)$"
+)
+QUOTED_DEPENDENCY_PATTERN = re.compile(
+    r"""(?P<quote>["'])(?P<dependency>.+?)(?P=quote)"""
+)
+
+
+@dataclass(frozen=True)
+class DependencyEntry:
+    indent: str
+    quote: str
+    value: str
+    trailing: str
 
 
 def dependency_contract_satisfied(
@@ -48,6 +64,26 @@ def dependency_names_match(dependency: str, other_dependency: str) -> bool:
     dependency_name = _dependency_name(dependency)
     return dependency_name is not None and dependency_name == _dependency_name(
         other_dependency
+    )
+
+
+def parse_dependency_entry(line: str) -> DependencyEntry | None:
+    match = DEPENDENCY_ENTRY_PATTERN.match(line)
+    if match is None:
+        return None
+
+    return DependencyEntry(
+        indent=match.group("indent"),
+        quote=match.group("quote"),
+        value=match.group("value"),
+        trailing=match.group("trailing"),
+    )
+
+
+def quoted_dependency_values(text: str) -> tuple[str, ...]:
+    return tuple(
+        match.group("dependency")
+        for match in QUOTED_DEPENDENCY_PATTERN.finditer(text)
     )
 
 
