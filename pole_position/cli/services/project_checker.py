@@ -180,6 +180,9 @@ ALEMBIC_PATHS = [
 ]
 
 DEPENDENCY_NAME_PATTERN = re.compile(r"^\s*(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)")
+DEPENDENCY_EXTRAS_PATTERN = re.compile(
+    r"^\s*[A-Za-z0-9][A-Za-z0-9._-]*(?:\[(?P<extras>[^\]]*)\])?"
+)
 DEPENDENCY_SPECIFIER_PATTERN = re.compile(
     r"(?P<operator>~=|===|==|!=|<=|>=|<|>)\s*(?P<version>[^,;\s]+)"
 )
@@ -1825,12 +1828,15 @@ def _dependency_contract_satisfied(
     required_dependency: str,
 ) -> bool:
     required_name = _dependency_name(required_dependency)
+    required_extras = _dependency_extras(required_dependency)
     required_min_version = _dependency_min_version(required_dependency)
     if required_name is None:
         return False
 
     for dependency in dependencies:
         if _dependency_name(dependency) != required_name:
+            continue
+        if not required_extras.issubset(_dependency_extras(dependency)):
             continue
         if required_min_version is None:
             return True
@@ -1849,6 +1855,22 @@ def _dependency_name(dependency: str) -> str | None:
     if match is None:
         return None
     return _normalize_dependency_name(match.group("name"))
+
+
+def _dependency_extras(dependency: str) -> frozenset[str]:
+    match = DEPENDENCY_EXTRAS_PATTERN.match(dependency.split(";", 1)[0])
+    if match is None:
+        return frozenset()
+
+    extras = match.group("extras")
+    if not extras:
+        return frozenset()
+
+    return frozenset(
+        _normalize_dependency_name(extra.strip())
+        for extra in extras.split(",")
+        if extra.strip()
+    )
 
 
 def _normalize_dependency_name(name: str) -> str:

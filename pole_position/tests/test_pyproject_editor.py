@@ -145,6 +145,47 @@ dependencies = ["fastapi>=0.115.0", "Aiokafka>=0.11.0"]
     assert content.count("aiokafka") == 1
 
 
+def test_ensure_project_dependency_replaces_dependency_missing_required_extra(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        """[project]
+name = "shop-api"
+dependencies = [
+    "pwdlib>=0.2.0",
+]
+""",
+        encoding="utf-8",
+    )
+
+    ensure_project_dependency(pyproject_path, "pwdlib[argon2]>=0.2.0")
+
+    content = pyproject_path.read_text(encoding="utf-8")
+    assert '"pwdlib[argon2]>=0.2.0",' in content
+    assert '"pwdlib>=0.2.0",' not in content
+
+
+def test_ensure_project_dependency_accepts_dependency_with_required_extra(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        """[project]
+name = "shop-api"
+dependencies = [
+    "PwdLib[argon2]>=0.3.0",
+]
+""",
+        encoding="utf-8",
+    )
+    original_content = pyproject_path.read_text(encoding="utf-8")
+
+    ensure_project_dependency(pyproject_path, "pwdlib[argon2]>=0.2.0")
+
+    assert pyproject_path.read_text(encoding="utf-8") == original_content
+
+
 def test_ensure_project_dependency_requires_project_dependencies(
     tmp_path: Path,
 ) -> None:

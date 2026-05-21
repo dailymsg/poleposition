@@ -240,6 +240,33 @@ def test_check_reports_missing_auth_dependency_and_router_wiring(
     assert "Auth workflow is missing API router include" in result.stdout
 
 
+def test_check_reports_auth_dependency_without_required_extra(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "auth")
+    assert add_result.returncode == 0
+
+    pyproject_path = project_root / "pyproject.toml"
+    pyproject_path.write_text(
+        pyproject_path.read_text(encoding="utf-8").replace(
+            '    "pwdlib[argon2]>=0.2.0",\n',
+            '    "pwdlib>=0.2.0",\n',
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK048]" in result.stdout
+    assert "Auth workflow is missing dependency" in result.stdout
+    assert "pwdlib[argon2]>=0.2.0" in result.stdout
+
+
 def test_check_reports_auth_workflow_on_database_free_project(
     tmp_path: Path,
 ) -> None:
