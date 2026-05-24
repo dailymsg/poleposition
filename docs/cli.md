@@ -247,6 +247,12 @@ files when custom changes or unmanaged references are detected. If you manually
 deleted the module directory, rerun `polepos remove module <name>` to clean
 remaining generated tests, manifest metadata, and managed wiring.
 
+For CRUD modules generated with options such as `--pagination` or
+`--tenant-scoped`, the manifest records the selected options as part of the
+module template value, for example `crud[pagination,tenant-scoped]`. The
+remover uses that metadata when comparing generated files against the expected
+template variant.
+
 The command does not mutate the live database. If a removed module had a model
 and you want to remove its table, create and review an Alembic migration
 separately:

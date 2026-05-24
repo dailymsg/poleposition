@@ -26,6 +26,7 @@ from pole_position.cli.services.module_templates import (
     module_template_detection_contracts,
 )
 from pole_position.cli.services.project_manifest import ProjectManifest
+from pole_position.cli.services.project_manifest import parse_manifest_module_template
 from pole_position.cli.services.project_manifest import read_project_manifest
 from pole_position.cli.services.project_wiring import has_router_import
 from pole_position.cli.services.project_wiring import has_router_include
@@ -338,7 +339,10 @@ def _project_check_remediation(problem: str) -> str:
         return "Use db = \"sqlite\", \"postgres\", \"none\", or \"custom\"."
     if problem.startswith("Project manifest has unsupported module template"):
         supported = ", ".join((*SUPPORTED_MODULE_TEMPLATES, "starter"))
-        return f"Use one of these module template values: {supported}."
+        return (
+            f"Use one of these module template values: {supported}; CRUD options "
+            "may be recorded as crud[pagination,timestamps,...]."
+        )
     if problem.startswith("Project manifest has unsupported integration value"):
         return "Use unquoted true or false for generated integration values."
     if problem.startswith("Managed file is missing"):
@@ -678,7 +682,15 @@ def _check_project_manifest(
 
     supported_module_templates = {*SUPPORTED_MODULE_TEMPLATES, "starter"}
     for module_name, template in manifest.module_templates.items():
-        if template in supported_module_templates:
+        try:
+            parsed_template = parse_manifest_module_template(template)
+        except ValueError:
+            parsed_template = None
+
+        if (
+            parsed_template is not None
+            and parsed_template.name in supported_module_templates
+        ):
             continue
         problems.append(
             "Project manifest has unsupported module template in "
@@ -938,7 +950,9 @@ def _detect_module_kind(
     module_name = module_root.name
     manifest = manifest or read_project_manifest(project_root)
     if manifest.exists:
-        module_kind = manifest.module_templates.get(module_name)
+        module_kind = _supported_manifest_module_template_name(
+            manifest.module_templates.get(module_name)
+        )
         if (
             module_kind
             and module_kind != "starter"
@@ -958,6 +972,18 @@ def _detect_module_kind(
             return contract.name
 
     return DEFAULT_MODULE_TEMPLATE
+
+
+def _supported_manifest_module_template_name(value: str | None) -> str | None:
+    if not value:
+        return None
+
+    try:
+        parsed_template = parse_manifest_module_template(value)
+    except ValueError:
+        return None
+
+    return parsed_template.name
 
 
 def _check_module_export(

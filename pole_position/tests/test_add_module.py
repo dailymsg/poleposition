@@ -784,7 +784,10 @@ def test_add_module_with_crud_feature_options(tmp_path: Path):
     assert "APIRouter(dependencies=[Depends(get_current_user)])" in router_content
     assert "tenant_id: str = Query(..., min_length=1)" in router_content
     assert "headers=_auth_headers()" in integration_test_content
-    assert "customers = \"crud\"" in manifest
+    assert (
+        "customers = \"crud[pagination,timestamps,soft-delete,tenant-scoped,"
+        "auth-required]\""
+    ) in manifest
 
     _assert_python_files_compile(project_root)
 

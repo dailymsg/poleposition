@@ -23,7 +23,7 @@ Instead, it clarifies whether a feature is:
 | `polepos start` | Stable foundation | Core product entrypoint; generated project shape is now a major part of the product contract. |
 | Template rendering | Stable foundation | Supporting mechanism for lifecycle workflows; placeholder replacement and template packaging are in good shape. |
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
-| Lifecycle manifest | Growing | New projects include `.poleposition.toml` so package, database mode, module templates, and generated integrations do not depend only on inference. |
+| Lifecycle manifest | Growing | New projects include `.poleposition.toml` so package, database mode, module templates, CRUD feature options, and generated integrations do not depend only on inference. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
 | `polepos add module` with `crud` | Growing | Database-backed CRUD skeleton with list/create/get/update/delete routes, repository/service layers, generated tests, and opt-in pagination, timestamps, soft delete, tenant scoping, and auth-required route protection. |
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level boundaries for real provider integration. |

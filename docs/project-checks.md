@@ -253,7 +253,10 @@ integrations. Older projects without the file still work through structural
 inference. Integration values must use TOML booleans such as `kafka = true` or
 `kafka = false`; quoted strings such as `kafka = "false"` are reported as
 invalid manifest values instead of being treated as generated integration
-signals. If a project intentionally uses a user-managed database workflow
+signals. CRUD module options are recorded on the module template value, such as
+`customers = "crud[pagination,timestamps,soft-delete]"`, so lifecycle commands
+can compare generated files against the right template variant. If a project
+intentionally uses a user-managed database workflow
 outside PolePosition's SQLAlchemy/Alembic lifecycle, set:
 
 ```toml
@@ -336,6 +339,11 @@ For a `crud` module, `check` expects the standard database-backed wiring plus:
 - module service file: `services/<module>_crud_service.py`
 - integration test under `tests/integration/test_<module>_crud.py`
 - unit test under `tests/unit/test_<module>_crud_service.py`
+
+CRUD feature options such as pagination, timestamps, soft delete, tenant scope,
+and auth-required routes do not change the required file names, but the
+manifest keeps the selected option list so other lifecycle commands can
+recognize the generated content.
 
 For an `ai-prompt` module, `check` expects:
 

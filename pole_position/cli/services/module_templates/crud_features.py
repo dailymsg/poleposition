@@ -16,6 +16,9 @@ CRUD_FEATURE_LABELS = {
     "tenant_scoped": "tenant-scoped",
     "auth_required": "auth-required",
 }
+CRUD_FEATURE_NAMES_BY_LABEL = {
+    label: name for name, label in CRUD_FEATURE_LABELS.items()
+}
 CRUD_FEATURE_NAMES = tuple(CRUD_FEATURE_LABELS)
 
 
@@ -35,6 +38,16 @@ class CrudFeatureSet:
             raise ValueError(f"Unsupported CRUD feature option: {formatted}")
 
         return cls(**{name: name in names for name in CRUD_FEATURE_NAMES})
+
+    @classmethod
+    def from_labels(cls, labels: set[str]) -> Self:
+        unsupported = sorted(labels.difference(CRUD_FEATURE_NAMES_BY_LABEL))
+        if unsupported:
+            formatted = ", ".join(unsupported)
+            raise ValueError(f"Unsupported CRUD feature option: {formatted}")
+
+        names = {CRUD_FEATURE_NAMES_BY_LABEL[label] for label in labels}
+        return cls.from_names(names)
 
     @property
     def enabled_names(self) -> tuple[str, ...]:

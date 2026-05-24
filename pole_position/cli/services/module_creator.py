@@ -102,6 +102,7 @@ def add_module(
         project_root=project_root,
         module_name=module_name,
         template=template,
+        features=template_spec.features,
     )
     project_manifest_path = manifest_path(project_root)
     if project_manifest_path.is_file():

@@ -2,6 +2,7 @@ from pole_position.cli.services.module_templates.crud_features import (
     CRUD_FEATURE_FLAGS,
     CRUD_FEATURE_LABELS,
     CRUD_FEATURE_NAMES,
+    CRUD_FEATURE_NAMES_BY_LABEL,
     DEFAULT_CRUD_FEATURES,
     CrudFeatureSet,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "CRUD_FEATURE_FLAGS",
     "CRUD_FEATURE_LABELS",
     "CRUD_FEATURE_NAMES",
+    "CRUD_FEATURE_NAMES_BY_LABEL",
     "CRUD_MODULE_TEMPLATE_CONTRACT",
     "CrudFeatureSet",
     "DEFAULT_CRUD_FEATURES",

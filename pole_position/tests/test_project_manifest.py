@@ -1,6 +1,8 @@
 from pathlib import Path
 
 from pole_position.cli.services.project_manifest import ProjectManifest
+from pole_position.cli.services.project_manifest import format_manifest_module_template
+from pole_position.cli.services.project_manifest import parse_manifest_module_template
 from pole_position.cli.services.project_manifest import read_project_manifest
 from pole_position.cli.services.project_manifest import record_manifest_integration
 from pole_position.cli.services.project_manifest import record_manifest_module
@@ -80,3 +82,56 @@ def test_record_manifest_integration_replaces_invalid_integration_value(
     manifest = read_project_manifest(tmp_path)
     assert manifest.enabled_integrations == {"kafka": True}
     assert manifest.invalid_integration_values == {}
+
+
+def test_record_manifest_module_preserves_crud_feature_options(
+    tmp_path: Path,
+) -> None:
+    write_project_manifest(
+        tmp_path,
+        ProjectManifest(
+            package_name="myapp",
+            database="sqlite",
+            modules={"status": "starter"},
+            exists=True,
+        ),
+    )
+
+    record_manifest_module(
+        project_root=tmp_path,
+        module_name="customers",
+        template="crud",
+        features=("tenant-scoped", "pagination", "auth-required"),
+    )
+
+    manifest = read_project_manifest(tmp_path)
+    assert manifest.module_templates == {
+        "customers": "crud[pagination,tenant-scoped,auth-required]",
+        "status": "starter",
+    }
+
+
+def test_manifest_module_template_parser_reads_crud_features() -> None:
+    parsed = parse_manifest_module_template(
+        "crud[pagination,timestamps,soft-delete,tenant-scoped,auth-required]"
+    )
+
+    assert parsed.name == "crud"
+    assert parsed.crud_features.enabled_labels == (
+        "pagination",
+        "timestamps",
+        "soft-delete",
+        "tenant-scoped",
+        "auth-required",
+    )
+
+
+def test_manifest_module_template_formatter_skips_non_crud_features() -> None:
+    assert (
+        format_manifest_module_template(
+            "crud",
+            features=("timestamps", "soft-delete"),
+        )
+        == "crud[timestamps,soft-delete]"
+    )
+    assert format_manifest_module_template("standard") == "standard"

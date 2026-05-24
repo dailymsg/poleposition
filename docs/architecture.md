@@ -388,6 +388,11 @@ When the manifest is present, package detection, module template detection, and
 integration checks prefer it over inference. Older generated projects without
 the manifest continue to use structural inference.
 
+CRUD feature options are encoded with the module template value, for example
+`customers = "crud[pagination,timestamps,tenant-scoped]"`. That keeps lifecycle
+commands able to re-render the same generated variant when checking or removing
+a module.
+
 For the detailed user guide and agent-facing contract, see:
 
 ```text

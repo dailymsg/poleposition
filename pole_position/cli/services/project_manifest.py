@@ -2,10 +2,18 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 
+from pole_position.cli.services.module_templates.crud_features import (
+    DEFAULT_CRUD_FEATURES,
+    CrudFeatureSet,
+)
+
 
 MANIFEST_FILE_NAME = ".poleposition.toml"
 SECTION_PATTERN = re.compile(r"^\s*\[([^\]]+)\]\s*$")
 ASSIGNMENT_PATTERN = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_-]*)\s*=\s*(.+?)\s*$")
+MODULE_TEMPLATE_VALUE_PATTERN = re.compile(
+    r"^(?P<template>[A-Za-z0-9_-]+)(?:\[(?P<features>[A-Za-z0-9_, -]*)\])?$"
+)
 
 
 @dataclass(frozen=True)
@@ -30,8 +38,53 @@ class ProjectManifest:
         return dict(self.invalid_integrations or {})
 
 
+@dataclass(frozen=True)
+class ManifestModuleTemplate:
+    name: str
+    crud_features: CrudFeatureSet = DEFAULT_CRUD_FEATURES
+
+
 def manifest_path(project_root: Path) -> Path:
     return project_root / MANIFEST_FILE_NAME
+
+
+def format_manifest_module_template(
+    template: str,
+    *,
+    features: tuple[str, ...] = (),
+) -> str:
+    if template != "crud" or not features:
+        return template
+
+    crud_features = CrudFeatureSet.from_labels(set(features))
+    return f"{template}[{','.join(crud_features.enabled_labels)}]"
+
+
+def parse_manifest_module_template(value: str) -> ManifestModuleTemplate:
+    raw_value = value.strip()
+    match = MODULE_TEMPLATE_VALUE_PATTERN.match(raw_value)
+    if match is None:
+        raise ValueError(f"Unsupported module template value: {value}")
+
+    template = match.group("template")
+    raw_features = match.group("features")
+    if raw_features is None:
+        return ManifestModuleTemplate(name=template)
+
+    feature_labels = {
+        label.strip()
+        for label in raw_features.split(",")
+        if label.strip()
+    }
+    if template != "crud":
+        raise ValueError(
+            f"Only the crud module template supports feature options: {value}"
+        )
+
+    return ManifestModuleTemplate(
+        name=template,
+        crud_features=CrudFeatureSet.from_labels(feature_labels),
+    )
 
 
 def read_project_manifest(project_root: Path) -> ProjectManifest:
@@ -123,13 +176,17 @@ def record_manifest_module(
     project_root: Path,
     module_name: str,
     template: str,
+    features: tuple[str, ...] = (),
 ) -> None:
     manifest = read_project_manifest(project_root)
     if not manifest.exists:
         return
 
     modules = manifest.module_templates
-    modules[module_name] = template
+    modules[module_name] = format_manifest_module_template(
+        template,
+        features=features,
+    )
     write_project_manifest(
         project_root,
         ProjectManifest(

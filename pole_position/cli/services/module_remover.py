@@ -8,6 +8,8 @@ from pole_position.cli.services.module_creator import MODULE_EXPORTS_MARKER
 from pole_position.cli.services.module_creator import ROUTER_IMPORTS_MARKER
 from pole_position.cli.services.module_creator import ROUTER_INCLUDES_MARKER
 from pole_position.cli.services.module_templates import DEFAULT_MODULE_TEMPLATE
+from pole_position.cli.services.module_templates import DEFAULT_CRUD_FEATURES
+from pole_position.cli.services.module_templates import CrudFeatureSet
 from pole_position.cli.services.module_templates import ModuleTemplateContract
 from pole_position.cli.services.module_templates import SUPPORTED_MODULE_TEMPLATES
 from pole_position.cli.services.module_templates import build_module_template
@@ -18,7 +20,9 @@ from pole_position.cli.services.module_templates import llm_settings_block
 from pole_position.cli.services.module_templates import module_template_detection_contracts
 from pole_position.cli.services.project_locator import find_package_root
 from pole_position.cli.services.project_locator import find_project_root
+from pole_position.cli.services.project_manifest import ManifestModuleTemplate
 from pole_position.cli.services.project_manifest import manifest_path
+from pole_position.cli.services.project_manifest import parse_manifest_module_template
 from pole_position.cli.services.project_manifest import read_project_manifest
 from pole_position.cli.services.project_manifest import remove_manifest_integration
 from pole_position.cli.services.project_manifest import remove_manifest_module
@@ -49,6 +53,12 @@ class RemovedModuleResult:
         return self.package_root.name
 
 
+@dataclass(frozen=True)
+class DetectedModuleTemplate:
+    contract: ModuleTemplateContract
+    crud_features: CrudFeatureSet = DEFAULT_CRUD_FEATURES
+
+
 def remove_module(
     module_name: str,
     cwd: Path | None = None,
@@ -63,7 +73,8 @@ def remove_module(
     modules_root = package_root / "modules"
     module_root = modules_root / module_name
 
-    template_contract = _detect_module_contract(project_root, module_root, module_name)
+    detected_template = _detect_module_template(project_root, module_root, module_name)
+    template_contract = detected_template.contract
     _validate_remove_module_preflight(
         project_root=project_root,
         package_root=package_root,
@@ -78,6 +89,7 @@ def remove_module(
             package_root=package_root,
             module_name=module_name,
             template_contract=template_contract,
+            crud_features=detected_template.crud_features,
         )
         if wiring_only
         else _detect_custom_changes(
@@ -86,6 +98,7 @@ def remove_module(
             module_root=module_root,
             module_name=module_name,
             template_contract=template_contract,
+            crud_features=detected_template.crud_features,
         )
     )
     remove_llm_shared = (
@@ -217,11 +230,13 @@ def _detect_custom_changes(
     module_root: Path,
     module_name: str,
     template_contract: ModuleTemplateContract,
+    crud_features: CrudFeatureSet = DEFAULT_CRUD_FEATURES,
 ) -> list[str]:
     template = build_module_template(
         template=template_contract.name,
         package_name=package_root.name,
         module_name=module_name,
+        crud_features=crud_features,
     )
     changes: list[str] = []
 
@@ -264,11 +279,13 @@ def _detect_custom_test_changes(
     package_root: Path,
     module_name: str,
     template_contract: ModuleTemplateContract,
+    crud_features: CrudFeatureSet = DEFAULT_CRUD_FEATURES,
 ) -> list[str]:
     template = build_module_template(
         template=template_contract.name,
         package_name=package_root.name,
         module_name=module_name,
+        crud_features=crud_features,
     )
     changes: list[str] = []
     integration_test_path = (
@@ -482,33 +499,60 @@ def _remove_next_steps(
     return tuple(steps)
 
 
-def _detect_module_contract(
+def _detect_module_template(
     project_root: Path,
     module_root: Path,
     module_name: str,
-) -> ModuleTemplateContract:
+) -> DetectedModuleTemplate:
     manifest = read_project_manifest(project_root)
     if manifest.exists:
         template = manifest.module_templates.get(module_name)
-        if (
-            template
-            and template != "starter"
-            and template in SUPPORTED_MODULE_TEMPLATES
-        ):
-            return get_module_template_contract(template)
+        parsed_template = _supported_manifest_module_template(template)
+        if parsed_template is not None and parsed_template.name != "starter":
+            return DetectedModuleTemplate(
+                contract=get_module_template_contract(parsed_template.name),
+                crud_features=parsed_template.crud_features,
+            )
 
     for contract in module_template_detection_contracts():
         unit_test = project_root / "tests" / "unit" / contract.unit_test_name(module_name)
         if unit_test.exists():
-            return contract
+            return DetectedModuleTemplate(contract=contract)
 
         if any(
             (module_root / file_name).exists()
             for file_name in contract.detection_file_names_for(module_name)
         ):
-            return contract
+            return DetectedModuleTemplate(contract=contract)
 
-    return get_module_template_contract(DEFAULT_MODULE_TEMPLATE)
+    return DetectedModuleTemplate(
+        contract=get_module_template_contract(DEFAULT_MODULE_TEMPLATE),
+    )
+
+
+def _detect_module_contract(
+    project_root: Path,
+    module_root: Path,
+    module_name: str,
+) -> ModuleTemplateContract:
+    return _detect_module_template(project_root, module_root, module_name).contract
+
+
+def _supported_manifest_module_template(
+    template: str | None,
+) -> ManifestModuleTemplate | None:
+    if not template:
+        return None
+
+    try:
+        parsed_template = parse_manifest_module_template(template)
+    except ValueError:
+        return None
+
+    if parsed_template.name not in SUPPORTED_MODULE_TEMPLATES:
+        return None
+
+    return parsed_template
 
 
 def _validate_remove_module_preflight(

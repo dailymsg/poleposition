@@ -84,6 +84,56 @@ def test_remove_standard_module_cleans_generated_wiring(tmp_path: Path):
     assert check_result.returncode == 0
 
 
+def test_remove_featured_crud_module_cleans_generated_wiring(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "customers",
+        "--template",
+        "crud",
+        "--pagination",
+        "--timestamps",
+        "--soft-delete",
+        "--tenant-scoped",
+        "--auth-required",
+    )
+    assert add_result.returncode == 0
+
+    result = run_cli(project_root, "remove", "module", "customers")
+
+    assert result.returncode == 0
+    assert "Removed module: customers" in result.stdout
+    assert "Template: crud" in result.stdout
+    assert "custom changes" not in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    assert not (package_root / "modules" / "customers").exists()
+    assert not (
+        project_root / "tests" / "integration" / "test_customers_crud.py"
+    ).exists()
+    assert not (
+        project_root / "tests" / "unit" / "test_customers_crud_service.py"
+    ).exists()
+
+    assert "customers_router" not in (
+        package_root / "api" / "router.py"
+    ).read_text(encoding="utf-8")
+    assert "modules.customers" not in (
+        package_root / "db" / "models.py"
+    ).read_text(encoding="utf-8")
+    assert "customers =" not in (
+        project_root / ".poleposition.toml"
+    ).read_text(encoding="utf-8")
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
 def test_remove_standard_module_cleans_remnants_when_module_directory_is_missing(
     tmp_path: Path,
 ):

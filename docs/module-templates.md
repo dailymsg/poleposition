@@ -207,6 +207,19 @@ These flags intentionally require `--template crud`. They are not accepted for
 `standard`, `api-only`, or `ai-prompt` modules because the generated code
 touches CRUD-specific router, repository, service, schema, and test contracts.
 
+When a CRUD option is used, `.poleposition.toml` records the selected feature
+set with the module template, for example:
+
+```toml
+[modules]
+customers = "crud[pagination,timestamps,soft-delete,tenant-scoped,auth-required]"
+```
+
+`polepos check`, `polepos upgrade`, and `polepos remove module` use that value
+to distinguish a pristine generated CRUD variant from hand-written changes. If
+you hand-edit the manifest, keep the feature list aligned with the generated
+files or `remove module` may conservatively report custom changes.
+
 | Option | Generated behavior |
 |---|---|
 | `--pagination` | Adds `limit` and `offset` query parameters to the list route, adds `<ClassName>Page`, and returns `{items, total, limit, offset}` instead of a bare list. |

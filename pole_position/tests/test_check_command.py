@@ -156,6 +156,33 @@ def test_check_passes_after_added_standard_crud_and_ai_prompt_modules(
     assert "PolePosition project check passed." in result.stdout
 
 
+def test_check_passes_after_added_featured_crud_module(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "customers",
+        "--template",
+        "crud",
+        "--pagination",
+        "--timestamps",
+        "--soft-delete",
+        "--tenant-scoped",
+        "--auth-required",
+    )
+
+    assert add_result.returncode == 0
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode == 0
+    assert "PolePosition project check passed." in result.stdout
+
+
 def test_check_passes_after_added_api_only_module(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -1288,6 +1315,32 @@ def test_check_reports_invalid_manifest_module_template_without_traceback(
     assert "[PPCHK014]" in result.stdout
     assert "Project manifest has unsupported module template" in result.stdout
     assert "garage = bogus" in result.stdout
+    assert "Traceback" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_check_reports_invalid_manifest_crud_feature_without_traceback(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8").replace(
+            'status = "starter"',
+            'status = "starter"\ncustomers = "crud[unknown]"',
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_cli(project_root, "check")
+
+    assert result.returncode != 0
+    assert "[PPCHK014]" in result.stdout
+    assert "Project manifest has unsupported module template" in result.stdout
+    assert "customers = crud[unknown]" in result.stdout
     assert "Traceback" not in result.stdout
     assert "Traceback" not in result.stderr
 

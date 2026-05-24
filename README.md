@@ -340,6 +340,10 @@ the module export, router include, database-backed module model import, and
 deleting files if the module wiring has drifted away from a managed layout, or
 if the module directory or generated tests appear to contain custom changes.
 
+CRUD modules generated with options record those options in the manifest, for
+example `crud[pagination,timestamps,tenant-scoped]`. `remove module` uses that
+metadata when deciding whether the generated CRUD files are still pristine.
+
 Only the PolePosition-generated wiring is removed automatically. If
 `api/router.py`, `db/models.py`, or `modules/__init__.py` also contains custom
 references to the same module, the command reports the unmanaged reference and
