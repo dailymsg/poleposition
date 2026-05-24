@@ -23,6 +23,88 @@ All templates update:
 Database-backed templates also update `src/<package>/db/models.py` so Alembic
 can discover generated SQLAlchemy models.
 
+## Generated Schema Contracts
+
+Each template creates a `schemas.py` file with a small Pydantic contract. These
+schemas are not meant to be the final domain model. They are the first working
+API contract that lets the generated router, service, repository, and tests run
+immediately after `polepos add module`.
+
+Schema class names are derived from the module name. For example,
+`polepos add module order_items` creates class names beginning with
+`OrderItems`. PolePosition currently normalizes snake_case to PascalCase; it
+does not singularize or pluralize module names.
+
+| Template | Generated schema classes | Why these names are used |
+|---|---|---|
+| Starter `status` module | `StatusResponse` | The endpoint is read-only and does not accept a request body. |
+| `standard` | `<ClassName>Create`, `<ClassName>Read` | The generated API supports collection list and create. `Create` is the incoming payload; `Read` is the response model returned from SQLAlchemy objects. |
+| `crud` | `<ClassName>Create`, `<ClassName>Update`, `<ClassName>Read` | Full CRUD needs separate create and patch payloads plus a read response. |
+| `api-only` | `<ClassName>Request`, `<ClassName>Response` | There is no database entity, so generic request and response names fit the lightweight route/service boundary. |
+| `ai-prompt` | `<ClassName>PromptRequest`, `<ClassName>PromptResponse` | The module is prompt-oriented, so the schema names describe the LLM use case instead of a persisted resource. |
+
+The generated fields are intentionally small examples, not domain assumptions.
+Database-backed templates start with `id` and `name` because that produces a
+working model, request body, response body, repository, service, and pytest
+flow. API-only templates use `name` and `message` for the same reason. AI prompt
+templates use `prompt`, `topic`, `response`, `provider`, and `model` to show
+the orchestration boundary.
+
+After generation, replace those fields with the real domain contract. For
+example, a `customers` module might keep `CustomerCreate` and `CustomerRead`,
+but change the fields to:
+
+```python
+class CustomerCreate(BaseModel):
+    email: EmailStr
+    display_name: str = Field(min_length=1, max_length=120)
+
+
+class CustomerRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: EmailStr
+    display_name: str
+```
+
+If your team prefers explicit API suffixes, you can rename the generated
+classes, but treat that as a normal code refactor. For example,
+`CustomerCreate` can become `CustomerCreateRequest` or
+`CreateCustomerRequest`, and `CustomerRead` can become `CustomerResponse`.
+Update every import and type reference in `router.py`, `services/`, generated
+tests, and any custom code that imports the old class name.
+
+Do not delete generated schema classes in isolation. In the `standard`
+template, `router.py` imports `<ClassName>Create` and `<ClassName>Read`, and the
+service imports `<ClassName>Create`. If only the schema classes are removed,
+the app usually fails during import and pytest reports an `ImportError`. If the
+class remains but a generated field such as `name` is removed, the app may
+import but the generated service or tests can fail when they access
+`payload.name` or assert `response["name"]`.
+
+Safe schema customization means updating the whole module contract together:
+
+- `schemas.py`
+- `model.py` for database-backed modules
+- `repository.py` for database-backed modules
+- `services/<module>_service.py` or `services/<module>_crud_service.py`
+- `router.py`
+- generated unit and integration tests
+- Alembic migrations when database fields change
+
+`polepos check` and `pytest` validate different parts of this work.
+`polepos check` validates the PolePosition lifecycle contract: files, manifest
+metadata, managed markers, router wiring, model wiring, generated tests, and
+integration wiring. It does not prove that a renamed schema class is still
+imported everywhere or that a removed field is still compatible with service
+logic. Run pytest after schema, router, service, or model edits:
+
+```bash
+polepos check
+uv run pytest
+```
+
 ## Standard Template
 
 ```bash

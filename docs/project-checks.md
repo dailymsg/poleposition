@@ -181,6 +181,20 @@ lifecycle management for that file:
   them as present
 - editing `.env.example` as a secret store; put local secrets in `.env`
 
+Generated module schema classes and fields are normal application code. You can
+rename or replace them, but update the router, service, repository, generated
+tests, and any custom imports at the same time. `polepos check` does not try to
+enforce every generated Pydantic class name or every generated field because
+those are expected to become domain-specific quickly. For example, if a
+`customers` module changes `CustomerCreate` to `CreateCustomerRequest`, update
+all imports and type annotations that reference `CustomerCreate`.
+
+Do not delete generated schema classes or generated fields in isolation while
+leaving generated router, service, or tests unchanged. In that case pytest is
+the right validation layer: import errors, FastAPI `response_model` errors,
+`payload.name` attribute errors, and response shape assertion failures are
+runtime/test-contract issues rather than lifecycle wiring issues.
+
 If a module was already deleted manually, run
 `polepos remove module <name>` before making more structural edits. The command
 can clean generated wiring and tests that still reference the missing module.
@@ -189,6 +203,13 @@ After any structural customization, run:
 
 ```bash
 polepos check
+```
+
+After schema, service, router, repository, or model customization, also run the
+generated pytest suite:
+
+```bash
+uv run pytest
 ```
 
 ## What It Checks

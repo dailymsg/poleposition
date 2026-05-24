@@ -117,6 +117,49 @@ polepos check
 
 Fix the reported structure issue, then retry the module command.
 
+## Pytest Fails After Editing Module Schemas
+
+Generated module schemas are connected to the generated router, service,
+repository, and tests. If you delete or rename a generated class such as
+`CustomerCreate`, `CustomerRead`, `CustomerRequest`, or `CustomerResponse`
+without updating the rest of the module, pytest can fail during import:
+
+```text
+ImportError: cannot import name 'CustomerCreate'
+```
+
+If the class still exists but a generated field was removed, pytest can fail
+later when the generated service or tests still expect that field:
+
+```text
+AttributeError: 'CustomerCreate' object has no attribute 'name'
+```
+
+This is expected. PolePosition cannot know the final domain schema for a module.
+The generated fields are working examples, not a requirement that every module
+must keep `name`, `message`, `prompt`, or `topic` forever.
+
+Fix the module as one contract:
+
+- update `schemas.py`
+- update `router.py` imports, request types, and response models
+- update `services/` code that reads payload fields
+- update `repository.py` and `model.py` for database-backed modules
+- update generated unit and integration tests
+- create and apply an Alembic migration when database fields change
+
+Then run:
+
+```bash
+polepos check
+uv run pytest
+```
+
+`polepos check` validates generated lifecycle wiring. It does not guarantee
+that every renamed schema class or changed payload field is still compatible
+with application code. Pytest is the validation layer for those runtime
+contracts.
+
 ## `polepos remove module` Fails Before Deleting Files
 
 The command removes only wiring it can recognize as PolePosition-managed. If a

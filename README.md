@@ -295,6 +295,18 @@ With the generated API prefix, that route becomes `GET /api/v1/customers/`.
 Another module can also define `@router.get("/")` because it is registered with
 its own prefix.
 
+Generated module schemas are starting contracts, not final domain design.
+Database-backed templates generate names such as `CustomerCreate`,
+`CustomerUpdate`, and `CustomerRead`; API-only templates generate
+`CustomerRequest` and `CustomerResponse`; AI prompt modules generate
+`CustomerPromptRequest` and `CustomerPromptResponse`. You can rename or replace
+those schemas after generation, but update the module router, service,
+repository, generated tests, and migrations together. `polepos check` validates
+generated lifecycle wiring, while `pytest` validates schema imports, request
+fields, service behavior, and response shapes. See
+[Module Templates](docs/module-templates.md#generated-schema-contracts) for the
+full schema contract guidance.
+
 ### Remove modules
 
 ```bash
@@ -423,6 +435,11 @@ agent-facing check contract.
 Generated projects are normal FastAPI projects. Edit module internals for the
 real domain: models, schemas, repositories, services, routers, migrations, and
 tests.
+
+When changing generated module schemas, treat the schema, router, service,
+repository, and generated tests as one contract. Deleting or renaming
+`<ClassName>Create`, `<ClassName>Read`, `<ClassName>Request`, or similar schema
+classes without updating their imports usually breaks pytest or app startup.
 
 Avoid changing the lifecycle contract unless the team intentionally owns that
 surface manually:

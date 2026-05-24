@@ -152,7 +152,9 @@ polepos db upgrade
 polepos check
 ```
 
-For detailed template layouts, see [Module Templates](module-templates.md).
+For detailed template layouts, generated schema names, and safe customization
+guidance for renaming or deleting generated schema classes, see
+[Module Templates](module-templates.md#generated-schema-contracts).
 
 ### `polepos add auth`
 
