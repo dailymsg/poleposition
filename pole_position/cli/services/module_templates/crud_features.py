@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Self
 
 
 CRUD_FEATURE_FLAGS = {
@@ -31,7 +30,7 @@ class CrudFeatureSet:
     auth_required: bool = False
 
     @classmethod
-    def from_names(cls, names: set[str]) -> Self:
+    def from_names(cls, names: set[str]) -> "CrudFeatureSet":
         unsupported = sorted(names.difference(CRUD_FEATURE_NAMES))
         if unsupported:
             formatted = ", ".join(unsupported)
@@ -40,7 +39,7 @@ class CrudFeatureSet:
         return cls(**{name: name in names for name in CRUD_FEATURE_NAMES})
 
     @classmethod
-    def from_labels(cls, labels: set[str]) -> Self:
+    def from_labels(cls, labels: set[str]) -> "CrudFeatureSet":
         unsupported = sorted(labels.difference(CRUD_FEATURE_NAMES_BY_LABEL))
         if unsupported:
             formatted = ", ".join(unsupported)
