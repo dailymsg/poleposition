@@ -1,6 +1,8 @@
 from pathlib import Path
 
 from pole_position.cli.command import Command
+from pole_position.cli.services.module_templates import CRUD_FEATURE_FLAGS
+from pole_position.cli.services.module_templates import CrudFeatureSet
 from pole_position.cli.services.module_creator import AddedModuleResult
 from pole_position.cli.services.module_creator import add_module
 from pole_position.cli.services.project_name import normalize_package_name, validate_project_name
@@ -27,6 +29,7 @@ def run(args: list[str]) -> None:
     template = "standard"
     template_was_set = False
     api_only = False
+    crud_feature_names: set[str] = set()
     index = 0
 
     while index < len(args):
@@ -57,6 +60,11 @@ def run(args: list[str]) -> None:
             index += 1
             continue
 
+        if argument in CRUD_FEATURE_FLAGS:
+            crud_feature_names.add(CRUD_FEATURE_FLAGS[argument])
+            index += 1
+            continue
+
         if argument.startswith("--"):
             print(f"Unexpected option: {argument}")
             _print_usage()
@@ -82,10 +90,23 @@ def run(args: list[str]) -> None:
             raise SystemExit(1)
         template = "api-only"
 
+    if crud_feature_names and template != "crud":
+        flags = ", ".join(sorted(CRUD_FEATURE_FLAGS))
+        print(
+            "CRUD feature options require `--template crud`. "
+            f"Available options: {flags}."
+        )
+        _print_usage()
+        raise SystemExit(1)
+
     try:
         validate_project_name(raw_name)
         module_name = normalize_package_name(raw_name)
-        result = add_module(module_name, template=template)
+        result = add_module(
+            module_name,
+            template=template,
+            crud_features=CrudFeatureSet.from_names(crud_feature_names),
+        )
     except RuntimeError as exc:
         print(str(exc))
         raise SystemExit(1)
@@ -100,6 +121,8 @@ def run(args: list[str]) -> None:
 def _print_success(result: AddedModuleResult) -> None:
     print(f"Added module: {result.module_name}")
     print(f"Template: {result.template}")
+    if result.features:
+        print(f"Features: {', '.join(result.features)}")
 
     print("Created:")
     for path in (*result.module_files, *result.test_files):

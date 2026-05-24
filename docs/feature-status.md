@@ -25,7 +25,7 @@ Instead, it clarifies whether a feature is:
 | Generated FastAPI structure | Stable foundation | `auth`, `bootstrap`, `api`, `db`, `domain`, `integrations`, `modules` layout is now part of the product identity. |
 | Lifecycle manifest | Growing | New projects include `.poleposition.toml` so package, database mode, module templates, and generated integrations do not depend only on inference. |
 | `polepos add module` with `standard` | Growing | Strong differentiator; works well, but still depends on managed marker blocks. |
-| `polepos add module` with `crud` | Growing | Database-backed CRUD skeleton with list/create/get/update/delete routes, repository/service layers, and generated tests. |
+| `polepos add module` with `crud` | Growing | Database-backed CRUD skeleton with list/create/get/update/delete routes, repository/service layers, generated tests, and opt-in pagination, timestamps, soft delete, tenant scoping, and auth-required route protection. |
 | `polepos add module` with `ai-prompt` | Growing | Good provider-agnostic foundation; adapters are scaffold-level boundaries for real provider integration. |
 | `polepos add module` with `api-only` | Growing | Useful lightweight module archetype for routes that do not need model, repository, or database wiring. |
 | `polepos add auth` | Growing | Optional database-backed registration and token workflow with generated model, router, service, tests, and check coverage. |

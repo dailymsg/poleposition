@@ -1,6 +1,10 @@
+from itertools import combinations
+
 import pytest
 
 from pole_position.cli.services.module_templates import (
+    CrudFeatureSet,
+    CRUD_FEATURE_NAMES,
     SUPPORTED_MODULE_TEMPLATES,
     build_module_template,
     get_module_template_contract,
@@ -78,6 +82,72 @@ def test_crud_template_contract() -> None:
     assert "def update(self" in template.files["repository.py"]
     assert "@router.delete" in template.files["router.py"]
     assert 'client.patch(' in template.integration_test_content
+
+
+def test_crud_template_supports_enterprise_feature_options() -> None:
+    template = build_module_template(
+        template="crud",
+        package_name="shop_api",
+        module_name="customers",
+        crud_features=CrudFeatureSet(
+            pagination=True,
+            timestamps=True,
+            soft_delete=True,
+            tenant_scoped=True,
+            auth_required=True,
+        ),
+    )
+
+    model_content = template.files["model.py"]
+    router_content = template.files["router.py"]
+    repository_content = template.files["repository.py"]
+    schemas_content = template.files["schemas.py"]
+
+    assert template.features == (
+        "pagination",
+        "timestamps",
+        "soft-delete",
+        "tenant-scoped",
+        "auth-required",
+    )
+    assert "created_at: Mapped[datetime]" in model_content
+    assert "deleted_at: Mapped[datetime | None]" in model_content
+    assert "tenant_id: Mapped[str]" in model_content
+    assert "CustomersPage" in schemas_content
+    assert "limit: int = Query(default=100, ge=1, le=500)" in router_content
+    assert "APIRouter(dependencies=[Depends(get_current_user)])" in router_content
+    assert "statement = statement.offset(offset).limit(limit)" in repository_content
+    assert "item.deleted_at = utc_now()" in repository_content
+    assert "headers=_auth_headers()" in template.integration_test_content
+
+
+def test_crud_feature_combinations_render_compileable_python() -> None:
+    feature_names = list(CRUD_FEATURE_NAMES)
+    feature_sets = [
+        set(combination)
+        for size in range(len(feature_names) + 1)
+        for combination in combinations(feature_names, size)
+    ]
+
+    for feature_set in feature_sets:
+        template = build_module_template(
+            template="crud",
+            package_name="shop_api",
+            module_name="customers",
+            crud_features=CrudFeatureSet.from_names(feature_set),
+        )
+        rendered_content = [
+            *template.files.values(),
+            template.integration_test_content,
+            template.unit_test_content,
+        ]
+
+        assert all("{{" not in content for content in rendered_content)
+        assert all("}}" not in content for content in rendered_content)
+        for file_name, content in template.files.items():
+            compile(content, file_name, "exec")
+        compile(template.integration_test_content, template.integration_test_name, "exec")
+        compile(template.unit_test_content, template.unit_test_name, "exec")
 
 
 def test_ai_prompt_template_contract() -> None:

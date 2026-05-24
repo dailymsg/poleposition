@@ -1,3 +1,10 @@
+from pole_position.cli.services.module_templates.crud_features import (
+    CRUD_FEATURE_FLAGS,
+    CRUD_FEATURE_LABELS,
+    CRUD_FEATURE_NAMES,
+    DEFAULT_CRUD_FEATURES,
+    CrudFeatureSet,
+)
 from pole_position.cli.services.module_templates.llm import (
     llm_env_block,
     llm_integration_files,
@@ -27,7 +34,12 @@ __all__ = [
     "ModuleTemplateContract",
     "API_ONLY_MODULE_TEMPLATE_CONTRACT",
     "AI_PROMPT_MODULE_TEMPLATE_CONTRACT",
+    "CRUD_FEATURE_FLAGS",
+    "CRUD_FEATURE_LABELS",
+    "CRUD_FEATURE_NAMES",
     "CRUD_MODULE_TEMPLATE_CONTRACT",
+    "CrudFeatureSet",
+    "DEFAULT_CRUD_FEATURES",
     "DEFAULT_MODULE_TEMPLATE",
     "MODULE_TEMPLATE_CONTRACTS",
     "MODULE_TEMPLATE_DETECTION_ORDER",

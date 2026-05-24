@@ -180,6 +180,89 @@ Use `crud` when a team wants a more complete REST skeleton immediately. The
 generated fields are intentionally simple (`id` and `name`) so you can reshape
 the model, schemas, repository, and service for the real aggregate.
 
+### CRUD Feature Options
+
+CRUD modules can opt into common enterprise API concerns at generation time:
+
+```bash
+polepos add module customers --template crud --pagination
+polepos add module customers --template crud --timestamps
+polepos add module customers --template crud --soft-delete
+polepos add module customers --template crud --tenant-scoped
+polepos add module customers --template crud --auth-required
+```
+
+The options can also be combined:
+
+```bash
+polepos add module customers --template crud \
+  --pagination \
+  --timestamps \
+  --soft-delete \
+  --tenant-scoped \
+  --auth-required
+```
+
+These flags intentionally require `--template crud`. They are not accepted for
+`standard`, `api-only`, or `ai-prompt` modules because the generated code
+touches CRUD-specific router, repository, service, schema, and test contracts.
+
+| Option | Generated behavior |
+|---|---|
+| `--pagination` | Adds `limit` and `offset` query parameters to the list route, adds `<ClassName>Page`, and returns `{items, total, limit, offset}` instead of a bare list. |
+| `--timestamps` | Adds `created_at` and `updated_at` SQLAlchemy columns and response fields. The generated model uses a UTC timestamp helper and `onupdate` for updates. |
+| `--soft-delete` | Adds a nullable `deleted_at` column. Delete routes mark the row as deleted instead of removing it, and generated list/get queries exclude deleted rows. |
+| `--tenant-scoped` | Adds `tenant_id` to create/read schemas and the model. List/get/update/delete routes require a `tenant_id` query parameter and repository queries filter by tenant. |
+| `--auth-required` | Protects all generated CRUD routes with `Depends(get_current_user)` at router level. Generated integration tests create a bearer token with the starter auth token helper. |
+
+With all options enabled, the list route shape becomes:
+
+```text
+GET /api/v1/customers/?tenant_id=tenant-a&limit=100&offset=0
+```
+
+and the response shape is:
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "tenant_id": "tenant-a",
+      "name": "Main Customer",
+      "created_at": "2026-05-24T12:00:00Z",
+      "updated_at": "2026-05-24T12:00:00Z",
+      "deleted_at": null
+    }
+  ],
+  "total": 1,
+  "limit": 100,
+  "offset": 0
+}
+```
+
+The generated tenant scope is deliberately explicit: clients pass `tenant_id`
+as an API parameter. Many enterprise systems later replace that with tenant
+resolution from authenticated user claims, subdomains, API keys, or gateway
+headers. When you make that change, update `router.py`, `services/`,
+`repository.py`, and tests together.
+
+`--auth-required` uses the starter token authentication helpers that already
+exist in generated projects. It protects routes, but it does not generate
+resource-level authorization rules, role policies, tenant membership checks, or
+permission matrices. Add those rules in the service layer when the domain
+requires them.
+
+All database-affecting options require a reviewed migration before they exist in
+the real database:
+
+```bash
+polepos db revision -m "add customers crud fields"
+polepos db upgrade
+polepos check
+uv run pytest
+```
+
 ## API-Only Template
 
 ```bash

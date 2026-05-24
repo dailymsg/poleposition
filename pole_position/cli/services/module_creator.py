@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from pole_position.cli.services.module_templates import (
+    CrudFeatureSet,
+    DEFAULT_CRUD_FEATURES,
     ModuleTemplate,
     SUPPORTED_MODULE_TEMPLATES,
     build_module_template,
@@ -33,6 +35,7 @@ class AddedModuleResult:
     test_files: tuple[Path, ...]
     updated_files: tuple[Path, ...]
     next_steps: tuple[str, ...]
+    features: tuple[str, ...] = ()
 
     @property
     def package_name(self) -> str:
@@ -43,6 +46,7 @@ def add_module(
     module_name: str,
     template: str = "standard",
     cwd: Path | None = None,
+    crud_features: CrudFeatureSet = DEFAULT_CRUD_FEATURES,
 ) -> AddedModuleResult:
     if template not in SUPPORTED_MODULE_TEMPLATES:
         supported = ", ".join(SUPPORTED_MODULE_TEMPLATES)
@@ -59,6 +63,7 @@ def add_module(
         template=template,
         package_name=package_name,
         module_name=module_name,
+        crud_features=crud_features,
     )
 
     _validate_add_module_preflight(
@@ -115,6 +120,7 @@ def add_module(
             module_name=module_name,
             template_spec=template_spec,
         ),
+        features=template_spec.features,
     )
 
 
@@ -726,6 +732,10 @@ def _module_next_steps(
         f"Review src/{package_name}/modules/{module_name}/",
         "Run `polepos check`",
     ]
+
+    if template_spec.features:
+        features = ", ".join(template_spec.features)
+        steps.append(f"Review generated CRUD options: {features}")
 
     if template_spec.update_db_models:
         steps.append(

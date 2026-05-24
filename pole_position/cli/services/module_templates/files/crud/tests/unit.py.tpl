@@ -13,7 +13,7 @@ def test_get_{{module_name}}_raises_when_missing() -> None:
     service.repository.get.return_value = None
 
     with pytest.raises(NotFoundError):
-        service.get_{{module_name}}(123)
+        service.get_{{module_name}}({{unit_get_missing_call_args}})
 
 
 def test_update_{{module_name}}_delegates_to_repository() -> None:
@@ -26,7 +26,8 @@ def test_update_{{module_name}}_delegates_to_repository() -> None:
     result = service.update_{{module_name}}(
         123,
         {{class_name}}Update(name="Updated {{class_name}}"),
-    )
+{{unit_update_tenant_argument}}    )
 
     assert result is item
+{{unit_get_assertion}}
     service.repository.update.assert_called_once_with(item, name="Updated {{class_name}}")

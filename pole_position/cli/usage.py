@@ -3,6 +3,7 @@ import textwrap
 
 from pole_position.cli.services.database_options import SUPPORTED_DATABASES
 from pole_position.cli.services.integration_creator import SUPPORTED_INTEGRATIONS
+from pole_position.cli.services.module_templates import CRUD_FEATURE_FLAGS
 from pole_position.cli.services.module_templates import SUPPORTED_MODULE_TEMPLATES
 
 
@@ -25,6 +26,7 @@ class CommandHelp:
 
 DATABASE_CHOICES = "|".join(SUPPORTED_DATABASES)
 MODULE_TEMPLATE_CHOICES = ", ".join(SUPPORTED_MODULE_TEMPLATES)
+CRUD_FEATURE_CHOICES = ", ".join(CRUD_FEATURE_FLAGS)
 INTEGRATION_CHOICES = ", ".join(SUPPORTED_INTEGRATIONS)
 
 
@@ -82,7 +84,9 @@ COMMAND_HELP: dict[tuple[str, ...], CommandHelp] = {
         path=("add", "module"),
         usage=(
             "Usage: polepos add module <module_name> "
-            "[--template <template_name>] [--api-only]"
+            "[--template <template_name>] [--api-only] "
+            "[--pagination] [--timestamps] [--soft-delete] "
+            "[--tenant-scoped] [--auth-required]"
         ),
         summary=(
             "Generate a module under src/<package>/modules/ and wire generated tests.",
@@ -97,15 +101,37 @@ COMMAND_HELP: dict[tuple[str, ...], CommandHelp] = {
                 "--api-only",
                 "Shortcut for --template api-only; no model, repository, or db wiring.",
             ),
+            OptionHelp(
+                "--pagination",
+                "CRUD-only: add limit/offset query params and a paginated response.",
+            ),
+            OptionHelp(
+                "--timestamps",
+                "CRUD-only: add created_at and updated_at model/response fields.",
+            ),
+            OptionHelp(
+                "--soft-delete",
+                "CRUD-only: mark rows deleted with deleted_at instead of hard delete.",
+            ),
+            OptionHelp(
+                "--tenant-scoped",
+                "CRUD-only: add tenant_id fields and tenant query filtering.",
+            ),
+            OptionHelp(
+                "--auth-required",
+                "CRUD-only: protect generated routes with bearer authentication.",
+            ),
         ),
         examples=(
             "polepos add module customers",
             "polepos add module customers --template crud",
+            "polepos add module customers --template crud --pagination --timestamps",
             "polepos add module webhooks --api-only",
             "polepos add module assistant --template ai-prompt",
         ),
         notes=(
             f"Templates: {MODULE_TEMPLATE_CHOICES}",
+            f"CRUD feature options require --template crud: {CRUD_FEATURE_CHOICES}",
             "Run `polepos check` after changing generated wiring or module files.",
             "Create an Alembic revision after changing database-backed models.",
         ),

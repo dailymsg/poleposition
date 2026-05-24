@@ -99,6 +99,18 @@ def test_add_module_rejects_empty_template_value(tmp_path: Path):
     assert "Missing value for --template." in result.stdout
 
 
+def test_add_module_rejects_crud_feature_without_crud_template(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(project_root, "add", "module", "customers", "--pagination")
+
+    assert result.returncode != 0
+    assert "CRUD feature options require `--template crud`" in result.stdout
+    assert "--pagination" in result.stdout
+
+
 def test_add_integration_help_shows_usage_without_project(tmp_path: Path):
     result = run_cli(tmp_path, "add", "integration", "--help")
 
@@ -570,6 +582,7 @@ def test_add_integration_rejects_unknown_integration(tmp_path: Path):
 
 def test_module_templates_render_without_leftover_placeholders() -> None:
     from pole_position.cli.services.module_templates import (
+        CrudFeatureSet,
         build_module_template,
         llm_integration_files,
     )
@@ -583,6 +596,18 @@ def test_module_templates_render_without_leftover_placeholders() -> None:
         template="crud",
         package_name="myapp",
         module_name="customers",
+    )
+    feature_crud_template = build_module_template(
+        template="crud",
+        package_name="myapp",
+        module_name="accounts",
+        crud_features=CrudFeatureSet(
+            pagination=True,
+            timestamps=True,
+            soft_delete=True,
+            tenant_scoped=True,
+            auth_required=True,
+        ),
     )
     ai_template = build_module_template(
         template="ai-prompt",
@@ -601,6 +626,9 @@ def test_module_templates_render_without_leftover_placeholders() -> None:
         *crud_template.files.values(),
         crud_template.integration_test_content,
         crud_template.unit_test_content,
+        *feature_crud_template.files.values(),
+        feature_crud_template.integration_test_content,
+        feature_crud_template.unit_test_content,
         *ai_template.files.values(),
         ai_template.integration_test_content,
         ai_template.unit_test_content,
@@ -711,6 +739,57 @@ def test_add_module_with_crud_template_creates_full_crud_module(tmp_path: Path):
     assert "from myapp.domain.exceptions import NotFoundError" in service_content
     assert "def delete_customers" in service_content
     assert 'customers = "crud"' in manifest
+
+
+def test_add_module_with_crud_feature_options(tmp_path: Path):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    result = run_cli(
+        project_root,
+        "add",
+        "module",
+        "customers",
+        "--template",
+        "crud",
+        "--pagination",
+        "--timestamps",
+        "--soft-delete",
+        "--tenant-scoped",
+        "--auth-required",
+    )
+
+    assert result.returncode == 0
+    assert "Template: crud" in result.stdout
+    assert "Features: pagination, timestamps, soft-delete, tenant-scoped, auth-required" in result.stdout
+
+    package_root = project_root / "src" / "myapp"
+    module_root = package_root / "modules" / "customers"
+    model_content = (module_root / "model.py").read_text(encoding="utf-8")
+    schemas_content = (module_root / "schemas.py").read_text(encoding="utf-8")
+    repository_content = (module_root / "repository.py").read_text(encoding="utf-8")
+    router_content = (module_root / "router.py").read_text(encoding="utf-8")
+    integration_test_content = (
+        project_root / "tests" / "integration" / "test_customers_crud.py"
+    ).read_text(encoding="utf-8")
+    manifest = (project_root / ".poleposition.toml").read_text(encoding="utf-8")
+
+    assert "tenant_id: Mapped[str]" in model_content
+    assert "created_at: Mapped[datetime]" in model_content
+    assert "deleted_at: Mapped[datetime | None]" in model_content
+    assert "class CustomersPage(BaseModel)" in schemas_content
+    assert "statement = statement.offset(offset).limit(limit)" in repository_content
+    assert "item.deleted_at = utc_now()" in repository_content
+    assert "APIRouter(dependencies=[Depends(get_current_user)])" in router_content
+    assert "tenant_id: str = Query(..., min_length=1)" in router_content
+    assert "headers=_auth_headers()" in integration_test_content
+    assert "customers = \"crud\"" in manifest
+
+    _assert_python_files_compile(project_root)
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
 
 
 def test_added_module_templates_keep_project_python_files_compileable(

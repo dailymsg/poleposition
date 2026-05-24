@@ -120,6 +120,9 @@ Subcommands:
 
 ```bash
 polepos add module <module_name> [--template <template_name>] [--api-only]
+polepos add module <module_name> --template crud [--pagination] [--timestamps]
+polepos add module <module_name> --template crud [--soft-delete] [--tenant-scoped]
+polepos add module <module_name> --template crud [--auth-required]
 ```
 
 The command creates module files, generated tests, module exports, API router
@@ -133,12 +136,19 @@ model.
 | `--template api-only` | Router, schemas, service, and tests without model, repository, or database wiring. |
 | `--template ai-prompt` | LLM-oriented module skeleton plus shared provider-agnostic `integrations/llm` files when missing. |
 | `--api-only` | Shortcut for `--template api-only`. |
+| `--pagination` | CRUD-only. Adds `limit`/`offset` query params and a `<ClassName>Page` response envelope. |
+| `--timestamps` | CRUD-only. Adds `created_at` and `updated_at` columns and response fields. |
+| `--soft-delete` | CRUD-only. Adds `deleted_at` and changes delete behavior to mark rows deleted. |
+| `--tenant-scoped` | CRUD-only. Adds `tenant_id` and filters list/get/update/delete by tenant query parameter. |
+| `--auth-required` | CRUD-only. Protects generated CRUD routes with the starter bearer auth dependency. |
 
 Examples:
 
 ```bash
 polepos add module customers
 polepos add module customers --template crud
+polepos add module customers --template crud --pagination --timestamps
+polepos add module customers --template crud --soft-delete --tenant-scoped --auth-required
 polepos add module webhooks --api-only
 polepos add module assistant --template ai-prompt
 ```
@@ -152,9 +162,9 @@ polepos db upgrade
 polepos check
 ```
 
-For detailed template layouts, generated schema names, and safe customization
-guidance for renaming or deleting generated schema classes, see
-[Module Templates](module-templates.md#generated-schema-contracts).
+For detailed template layouts, CRUD feature behavior, generated schema names,
+and safe customization guidance for renaming or deleting generated schema
+classes, see [Module Templates](module-templates.md).
 
 ### `polepos add auth`
 

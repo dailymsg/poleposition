@@ -271,11 +271,16 @@ python -m myapp.run
 
 ```bash
 polepos add module garage
+polepos add module customers --template crud --pagination --timestamps
+polepos add module accounts --template crud --tenant-scoped --auth-required
 polepos add module assistant --template ai-prompt
 polepos add module webhook --api-only
 ```
 
 `standard` is the default template for REST and domain modules.
+`crud` generates list/create/get/update/delete routes and can opt into
+enterprise CRUD concerns such as pagination, timestamps, soft delete, explicit
+tenant scoping, and bearer-auth protection.
 `ai-prompt` adds a provider-agnostic LLM endpoint skeleton with module-local
 prompt orchestration and shared `integrations/llm` adapters.
 `api-only` generates router, schemas, a module-local `services/` package, and
@@ -306,6 +311,19 @@ generated lifecycle wiring, while `pytest` validates schema imports, request
 fields, service behavior, and response shapes. See
 [Module Templates](docs/module-templates.md#generated-schema-contracts) for the
 full schema contract guidance.
+
+CRUD feature options are documented in
+[Module Templates](docs/module-templates.md#crud-feature-options). They require
+`--template crud` and can be combined:
+
+```bash
+polepos add module customers --template crud \
+  --pagination \
+  --timestamps \
+  --soft-delete \
+  --tenant-scoped \
+  --auth-required
+```
 
 ### Remove modules
 
@@ -668,6 +686,9 @@ polepos start <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos startproject <name> [--install] [--no-bytecode] [--db sqlite|postgres|none]
 polepos add module <name>
 polepos add module <name> --template crud
+polepos add module <name> --template crud [--pagination] [--timestamps]
+polepos add module <name> --template crud [--soft-delete] [--tenant-scoped]
+polepos add module <name> --template crud [--auth-required]
 polepos add module <name> --template ai-prompt
 polepos add module <name> --api-only
 polepos add auth

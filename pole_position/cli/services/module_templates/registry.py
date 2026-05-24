@@ -1,6 +1,7 @@
 from pole_position.cli.services.module_templates.api_only import build_api_only_template
 from pole_position.cli.services.module_templates.ai_prompt import build_ai_prompt_template
 from pole_position.cli.services.module_templates.crud import build_crud_template
+from pole_position.cli.services.module_templates.crud_features import CrudFeatureSet
 from pole_position.cli.services.module_templates.spec import API_ONLY_MODULE_TEMPLATE_CONTRACT
 from pole_position.cli.services.module_templates.spec import AI_PROMPT_MODULE_TEMPLATE_CONTRACT
 from pole_position.cli.services.module_templates.spec import CRUD_MODULE_TEMPLATE_CONTRACT
@@ -50,6 +51,7 @@ def build_module_template(
     template: str,
     package_name: str,
     module_name: str,
+    crud_features: CrudFeatureSet | None = None,
 ) -> ModuleTemplate:
     if template == "standard":
         return build_standard_template(
@@ -61,6 +63,7 @@ def build_module_template(
         return build_crud_template(
             package_name=package_name,
             module_name=module_name,
+            features=crud_features,
         )
 
     if template == "ai-prompt":
