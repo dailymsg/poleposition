@@ -216,7 +216,10 @@ def _read_lines(path: Path) -> list[str] | None:
     if not path.is_file():
         return None
 
-    return path.read_text(encoding="utf-8").splitlines()
+    try:
+        return path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError:
+        return None
 
 
 def _write_lines(path: Path, lines: list[str]) -> None:

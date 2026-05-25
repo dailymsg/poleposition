@@ -242,12 +242,16 @@ def _project_check_issue_code(problem: str) -> str:
         return "PPCHK014"
     if problem.startswith("Project manifest has unsupported integration value"):
         return "PPCHK015"
+    if problem.startswith("Could not read project manifest as UTF-8"):
+        return "PPCHK016"
     if problem.startswith("Managed file is missing"):
         return "PPCHK020"
     if problem.startswith("Managed marker"):
         return "PPCHK021"
     if problem.startswith("Starter module 'status' is missing"):
         return "PPCHK022"
+    if problem.startswith("Could not read generated text file as UTF-8"):
+        return "PPCHK023"
     if problem.startswith(
         "Lifecycle module directory is not a valid Python identifier"
     ):
@@ -345,6 +349,8 @@ def _project_check_remediation(problem: str) -> str:
         )
     if problem.startswith("Project manifest has unsupported integration value"):
         return "Use unquoted true or false for generated integration values."
+    if problem.startswith("Could not read project manifest as UTF-8"):
+        return "Restore .poleposition.toml as UTF-8 TOML or remove the corrupt file."
     if problem.startswith("Managed file is missing"):
         return (
             "Restore the managed file before running PolePosition lifecycle "
@@ -354,6 +360,8 @@ def _project_check_remediation(problem: str) -> str:
         return "Restore the listed # polepos marker or manage that file manually."
     if problem.startswith("Starter module 'status' is missing"):
         return "Restore the generated status router import/include in api/router.py."
+    if problem.startswith("Could not read generated text file as UTF-8"):
+        return "Restore the file as UTF-8 text or replace it with generated content."
     if problem.startswith(
         "Lifecycle module directory is not a valid Python identifier"
     ):
@@ -658,6 +666,10 @@ def _check_project_manifest(
     if not manifest.exists:
         return
 
+    if manifest.read_error is not None:
+        problems.append(manifest.read_error)
+        return
+
     manifest_path = project_root / ".poleposition.toml"
     if manifest.package_name and manifest.package_name != package_root.name:
         problems.append(
@@ -758,10 +770,10 @@ def _collect_forbidden_database_free_content(
     path: Path,
     snippets: list[str],
 ) -> None:
-    if not path.is_file():
+    content = _read_file_text(path, problems)
+    if content is None:
         return
 
-    content = path.read_text(encoding="utf-8")
     for snippet in snippets:
         if snippet not in content:
             continue
@@ -788,7 +800,10 @@ def _check_managed_markers(
             problems.append(f"Managed file is missing: {path}")
             continue
 
-        lines = path.read_text(encoding="utf-8").splitlines()
+        lines = _read_file_lines(path, problems)
+        if lines is None:
+            continue
+
         for marker in markers:
             if marker not in lines:
                 problems.append(f"Managed marker '{marker}' is missing in {path}")
@@ -849,7 +864,7 @@ def _check_status_router_wiring(
     package_root: Path,
 ) -> None:
     router_path = package_root / "api" / "router.py"
-    content = _read_file_text(router_path)
+    content = _read_file_text(router_path, problems)
     if content is None:
         return
 
@@ -992,7 +1007,7 @@ def _check_module_export(
     module_name: str,
 ) -> None:
     modules_init_path = package_root / "modules" / "__init__.py"
-    lines = _read_file_lines(modules_init_path)
+    lines = _read_file_lines(modules_init_path, problems)
     if lines is None:
         return
 
@@ -1010,7 +1025,7 @@ def _check_module_router_wiring(
     module_name: str,
 ) -> None:
     router_path = package_root / "api" / "router.py"
-    content = _read_file_text(router_path)
+    content = _read_file_text(router_path, problems)
     if content is None:
         return
 
@@ -1060,7 +1075,7 @@ def _check_module_model_wiring(
     module_name: str,
 ) -> None:
     models_path = package_root / "db" / "models.py"
-    content = _read_file_text(models_path)
+    content = _read_file_text(models_path, problems)
     if content is None:
         return
 
@@ -1294,7 +1309,10 @@ def _module_name_from_generated_test_path(path: Path) -> str | None:
 
 
 def _test_file_references_module(path: Path, package_name: str, module_name: str) -> bool:
-    content = path.read_text(encoding="utf-8")
+    content = _read_file_text(path)
+    if content is None:
+        return False
+
     return (
         f"{package_name}.modules.{module_name}" in content
         or f"/api/v1/{module_name}" in content
@@ -1317,7 +1335,7 @@ def _check_auth_workflow(
     manifest: ProjectManifest,
     uses_database: bool,
 ) -> None:
-    pyproject_content = _read_file_text(project_root / "pyproject.toml")
+    pyproject_content = _read_file_text(project_root / "pyproject.toml", problems)
     if not _should_check_auth_workflow(
         project_root=project_root,
         package_root=package_root,
@@ -1354,7 +1372,10 @@ def _should_check_auth_workflow(
     if manifest.exists and manifest.enabled_integrations.get("auth"):
         return True
 
-    if any((package_root / relative_path).exists() for relative_path in AUTH_WORKFLOW_PACKAGE_PATHS):
+    if any(
+        (package_root / relative_path).exists()
+        for relative_path in AUTH_WORKFLOW_PACKAGE_PATHS
+    ):
         return True
 
     if any((project_root / relative_path).exists() for relative_path in AUTH_WORKFLOW_TEST_PATHS):
@@ -1410,7 +1431,7 @@ def _check_auth_dependency(
 
 def _check_auth_router_wiring(problems: list[str], package_root: Path) -> None:
     router_path = package_root / "api" / "router.py"
-    content = _read_file_text(router_path)
+    content = _read_file_text(router_path, problems)
     if content is None:
         return
 
@@ -1437,7 +1458,7 @@ def _check_auth_router_wiring(problems: list[str], package_root: Path) -> None:
 
 def _check_auth_model_wiring(problems: list[str], package_root: Path) -> None:
     models_path = package_root / "db" / "models.py"
-    content = _read_file_text(models_path)
+    content = _read_file_text(models_path, problems)
     if content is None:
         return
 
@@ -1464,9 +1485,9 @@ def _check_integration_wiring(
     manifest: ProjectManifest | None = None,
 ) -> None:
     manifest = manifest or read_project_manifest(project_root)
-    settings_content = _read_file_text(package_root / "settings.py")
-    env_content = _read_file_text(project_root / ".env.example")
-    pyproject_content = _read_file_text(project_root / "pyproject.toml")
+    settings_content = _read_file_text(package_root / "settings.py", problems)
+    env_content = _read_file_text(project_root / ".env.example", problems)
+    pyproject_content = _read_file_text(project_root / "pyproject.toml", problems)
 
     for contract in CHECKED_INTEGRATION_CONTRACTS:
         if not _should_check_integration(
@@ -1748,15 +1769,33 @@ def _env_keys(env_content: str) -> set[str]:
     return keys
 
 
-def _read_file_lines(path: Path) -> list[str] | None:
+def _read_file_lines(
+    path: Path,
+    problems: list[str] | None = None,
+) -> list[str] | None:
+    content = _read_file_text(path, problems)
+    if content is None:
+        return None
+
+    return content.splitlines()
+
+
+def _read_file_text(
+    path: Path,
+    problems: list[str] | None = None,
+) -> str | None:
     if not path.is_file():
         return None
 
-    return path.read_text(encoding="utf-8").splitlines()
-
-
-def _read_file_text(path: Path) -> str | None:
-    if not path.is_file():
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        if problems is not None:
+            problem = _unreadable_text_file_problem(path, exc)
+            if problem not in problems:
+                problems.append(problem)
         return None
 
-    return path.read_text(encoding="utf-8")
+
+def _unreadable_text_file_problem(path: Path, exc: UnicodeDecodeError) -> str:
+    return f"Could not read generated text file as UTF-8: {path}: {exc.reason}"

@@ -258,7 +258,9 @@ inference. Integration values must use TOML booleans such as `kafka = true` or
 invalid manifest values instead of being treated as generated integration
 signals. CRUD module options are recorded on the module template value, such as
 `customers = "crud[pagination,timestamps,soft-delete]"`, so lifecycle commands
-can compare generated files against the right template variant. If a project
+can compare generated files against the right template variant. If the manifest
+cannot be decoded as UTF-8, `check` reports it as manifest drift and lifecycle
+commands leave it untouched instead of overwriting a corrupt file. If a project
 intentionally uses a user-managed database workflow
 outside PolePosition's SQLAlchemy/Alembic lifecycle, set:
 
@@ -286,6 +288,11 @@ Managed markers include:
 These markers are also used by lifecycle commands. If the integration settings
 or env markers are removed, `polepos add integration ...` stops before writing
 generated files so the project is not left partially patched.
+
+Generated managed files are expected to be UTF-8 text. If `check` cannot decode
+a managed file, it reports that file as project drift instead of crashing with a
+raw decode traceback. Restore the file as UTF-8 text, regenerate the affected
+scaffold, or intentionally detach that managed surface.
 
 ### 2. Lifecycle Check
 

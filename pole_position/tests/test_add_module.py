@@ -324,6 +324,53 @@ def test_add_integration_preflight_fails_before_writing_when_marker_is_missing(
     ).read_text(encoding="utf-8")
 
 
+def test_add_integration_preflight_fails_before_writing_when_settings_is_non_utf8(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    settings_path = package_root / "settings.py"
+    settings_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "add", "integration", "kafka")
+
+    assert result.returncode != 0
+    assert "Cannot add integration because the project layout is not ready" in result.stdout
+    assert "Could not read managed text file for integration add" in result.stdout
+    assert "settings.py" in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+    assert not (package_root / "integrations" / "kafka").exists()
+    assert '"aiokafka>=0.12.0",' not in (
+        project_root / "pyproject.toml"
+    ).read_text(encoding="utf-8")
+
+
+def test_add_integration_preflight_fails_before_writing_when_manifest_is_non_utf8(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "add", "integration", "kafka")
+
+    assert result.returncode != 0
+    assert "Cannot add integration because the project layout is not ready" in result.stdout
+    assert "Could not read project manifest as UTF-8" in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+    assert not (package_root / "integrations" / "kafka").exists()
+    assert manifest_path.read_bytes() == b"\xff\xfe\x00"
+
+
 def test_add_integration_preflight_fails_before_writing_when_dependency_layout_is_unsupported(
     tmp_path: Path,
 ):
@@ -1024,6 +1071,28 @@ def test_add_module_preflight_fails_before_writing_when_marker_is_missing(tmp_pa
     assert not (project_root / "tests" / "unit" / "test_garage_service.py").exists()
 
 
+def test_add_module_preflight_fails_before_writing_when_manifest_is_non_utf8(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "add", "module", "garage")
+
+    assert result.returncode != 0
+    assert "Cannot add module because the project layout is not ready" in result.stdout
+    assert "Could not read project manifest as UTF-8" in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+    assert not (package_root / "modules" / "garage").exists()
+    assert manifest_path.read_bytes() == b"\xff\xfe\x00"
+
+
 def test_add_module_preflight_fails_before_writing_when_router_is_invalid(
     tmp_path: Path,
 ):
@@ -1044,6 +1113,30 @@ def test_add_module_preflight_fails_before_writing_when_router_is_invalid(
     assert "Cannot add module because the project layout is not ready" in result.stdout
     assert "Could not parse managed Python file for module add" in result.stdout
     assert "api/router.py" in result.stdout
+    assert not (package_root / "modules" / "garage").exists()
+    assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
+
+
+def test_add_module_preflight_fails_before_writing_when_router_is_non_utf8(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "api" / "router.py"
+    router_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "add", "module", "garage")
+
+    assert result.returncode != 0
+    assert "Cannot add module because the project layout is not ready" in result.stdout
+    assert "Could not read managed text file for module add" in result.stdout
+    assert "Could not read managed Python file for module add" in result.stdout
+    assert "api/router.py" in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
     assert not (package_root / "modules" / "garage").exists()
     assert not (project_root / "tests" / "integration" / "test_garage.py").exists()
 

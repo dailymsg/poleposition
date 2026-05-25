@@ -390,7 +390,7 @@ def test_remove_module_force_removes_custom_module_files(tmp_path: Path):
 
 def test_remove_module_force_removes_non_utf8_generated_module_file(
     tmp_path: Path,
-):
+) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
 
@@ -765,6 +765,32 @@ def test_remove_module_fails_before_deleting_when_router_alias_drifted(
     assert "router import" in result.stdout
     assert (package_root / "modules" / "garage").exists()
     assert (project_root / "tests" / "integration" / "test_garage.py").exists()
+
+
+def test_remove_module_fails_before_deleting_when_manifest_is_non_utf8(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "remove", "module", "garage")
+
+    assert result.returncode != 0
+    assert "project layout is not ready" in result.stdout
+    assert "Could not read project manifest as UTF-8" in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+    assert (package_root / "modules" / "garage").exists()
+    assert (project_root / "tests" / "integration" / "test_garage.py").exists()
+    assert manifest_path.read_bytes() == b"\xff\xfe\x00"
 
 
 def test_remove_module_fails_before_deleting_when_custom_router_reference_exists(

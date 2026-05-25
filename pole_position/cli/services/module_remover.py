@@ -575,6 +575,10 @@ def _validate_remove_module_preflight(
     if module_name in STARTER_MODULES:
         problems.append(f"Starter module cannot be removed: {module_name}")
 
+    manifest = read_project_manifest(project_root)
+    if manifest.read_error is not None:
+        problems.append(manifest.read_error)
+
     module_exists = module_root.is_dir()
     has_remnants = _has_removable_module_remnants(
         project_root=project_root,

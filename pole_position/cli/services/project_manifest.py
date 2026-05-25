@@ -23,6 +23,7 @@ class ProjectManifest:
     modules: dict[str, str] | None = None
     integrations: dict[str, bool] | None = None
     invalid_integrations: dict[str, str] | None = None
+    read_error: str | None = None
     exists: bool = False
 
     @property
@@ -99,7 +100,15 @@ def read_project_manifest(project_root: Path) -> ProjectManifest:
     integrations: dict[str, bool] = {}
     invalid_integrations: dict[str, str] = {}
 
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
+    try:
+        manifest_lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        return ProjectManifest(
+            read_error=f"Could not read project manifest as UTF-8: {path}: {exc.reason}",
+            exists=True,
+        )
+
+    for raw_line in manifest_lines:
         line = _strip_comment(raw_line).strip()
         if not line:
             continue
@@ -179,7 +188,7 @@ def record_manifest_module(
     features: tuple[str, ...] = (),
 ) -> None:
     manifest = read_project_manifest(project_root)
-    if not manifest.exists:
+    if not manifest.exists or manifest.read_error is not None:
         return
 
     modules = manifest.module_templates
@@ -202,7 +211,7 @@ def record_manifest_module(
 
 def remove_manifest_module(*, project_root: Path, module_name: str) -> None:
     manifest = read_project_manifest(project_root)
-    if not manifest.exists:
+    if not manifest.exists or manifest.read_error is not None:
         return
 
     modules = manifest.module_templates
@@ -227,7 +236,7 @@ def record_manifest_integration(
     enabled: bool = True,
 ) -> None:
     manifest = read_project_manifest(project_root)
-    if not manifest.exists:
+    if not manifest.exists or manifest.read_error is not None:
         return
 
     integrations = manifest.enabled_integrations
@@ -249,7 +258,7 @@ def record_manifest_integration(
 
 def remove_manifest_integration(*, project_root: Path, integration_name: str) -> None:
     manifest = read_project_manifest(project_root)
-    if not manifest.exists:
+    if not manifest.exists or manifest.read_error is not None:
         return
 
     integrations = manifest.enabled_integrations

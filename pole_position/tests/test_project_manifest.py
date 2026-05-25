@@ -111,6 +111,26 @@ def test_record_manifest_module_preserves_crud_feature_options(
     }
 
 
+def test_unreadable_manifest_is_reported_and_left_untouched(tmp_path: Path) -> None:
+    manifest_path = tmp_path / ".poleposition.toml"
+    manifest_path.write_bytes(b"\xff\xfe\x00")
+
+    manifest = read_project_manifest(tmp_path)
+
+    assert manifest.exists is True
+    assert manifest.read_error is not None
+    assert "Could not read project manifest as UTF-8" in manifest.read_error
+
+    record_manifest_module(
+        project_root=tmp_path,
+        module_name="garage",
+        template="standard",
+    )
+    record_manifest_integration(project_root=tmp_path, integration_name="kafka")
+
+    assert manifest_path.read_bytes() == b"\xff\xfe\x00"
+
+
 def test_manifest_module_template_parser_reads_crud_features() -> None:
     parsed = parse_manifest_module_template(
         "crud[pagination,timestamps,soft-delete,tenant-scoped,auth-required]"

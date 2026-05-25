@@ -111,6 +111,80 @@ def test_check_json_reports_issues(tmp_path: Path) -> None:
     ]
 
 
+def test_check_reports_non_utf8_managed_file(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    settings_path = project_root / "src" / "myapp" / "settings.py"
+    settings_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "check", "--json")
+
+    assert result.returncode != 0
+    payload = json.loads(result.stdout)
+    assert payload["issues"] == [
+        {
+            "code": "PPCHK023",
+            "message": (
+                "Could not read generated text file as UTF-8: "
+                f"{settings_path}: invalid start byte"
+            ),
+            "remediation": (
+                "Restore the file as UTF-8 text or replace it with generated content."
+            ),
+        }
+    ]
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+
+
+def test_check_reports_non_utf8_manifest(tmp_path: Path) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "check", "--json")
+
+    assert result.returncode != 0
+    payload = json.loads(result.stdout)
+    assert payload["issues"][0] == {
+        "code": "PPCHK016",
+        "message": (
+            "Could not read project manifest as UTF-8: "
+            f"{manifest_path}: invalid start byte"
+        ),
+        "remediation": (
+            "Restore .poleposition.toml as UTF-8 TOML or remove the corrupt file."
+        ),
+    }
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+
+
+def test_check_fix_skips_non_utf8_managed_file_and_reports_issue(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "check", "--fix")
+
+    assert result.returncode != 0
+    assert "No automatic fixes were applied." in result.stdout
+    assert "[PPCHK023] Could not read generated text file as UTF-8" in result.stdout
+    assert str(router_path) in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+
+
 def test_check_works_from_nested_directory(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0
@@ -1233,7 +1307,8 @@ def test_check_fix_restores_router_include_marker_after_multiline_include(
     assert fix_result.returncode == 0
     assert "PolePosition project check passed." in fix_result.stdout
     fixed_lines = router_path.read_text(encoding="utf-8").splitlines()
-    assert fixed_lines.index("# polepos:router-includes") > fixed_lines.index(")")
+    include_end_index = fixed_lines.index(")", fixed_lines.index("api_router.include_router("))
+    assert fixed_lines.index("# polepos:router-includes") == include_end_index + 1
 
     add_result = run_cli(project_root, "add", "module", "garage")
 

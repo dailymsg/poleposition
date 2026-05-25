@@ -14,6 +14,7 @@ from pole_position.cli.services.module_templates import (
 )
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 from pole_position.cli.services.project_manifest import manifest_path
+from pole_position.cli.services.project_manifest import read_project_manifest
 from pole_position.cli.services.project_manifest import record_manifest_integration
 from pole_position.cli.services.project_manifest import record_manifest_module
 
@@ -137,6 +138,8 @@ def _validate_add_module_preflight(
     problems: list[str] = []
     tests_root = project_root / "tests"
 
+    _collect_manifest_read_error(problems, project_root)
+
     if module_root.exists():
         problems.append(f"Module already exists: {module_name}")
 
@@ -221,6 +224,12 @@ def _collect_existing_generated_file(problems: list[str], path: Path) -> None:
         problems.append(f"Generated file already exists: {path}")
 
 
+def _collect_manifest_read_error(problems: list[str], project_root: Path) -> None:
+    manifest = read_project_manifest(project_root)
+    if manifest.read_error is not None:
+        problems.append(manifest.read_error)
+
+
 def _collect_missing_marker(problems: list[str], path: Path, marker: str) -> None:
     lines = _read_managed_file_lines(problems, path)
     if lines is None:
@@ -236,6 +245,10 @@ def _collect_python_parse_error(problems: list[str], path: Path) -> None:
 
     try:
         ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed Python file for module add: {path}: {exc.reason}"
+        )
     except SyntaxError as exc:
         problems.append(
             f"Could not parse managed Python file for module add: {path}: {exc}"
@@ -280,14 +293,21 @@ def _line_exists(path: Path, line: str) -> bool:
     if not path.is_file():
         return False
 
-    return line in path.read_text(encoding="utf-8").splitlines()
+    try:
+        return line in path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError:
+        return False
 
 
 def _has_router_reference(path: Path, package_name: str, module_name: str) -> bool:
     if not path.is_file():
         return False
 
-    content = path.read_text(encoding="utf-8")
+    try:
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return False
+
     try:
         tree = ast.parse(content, filename=str(path))
     except SyntaxError:
@@ -363,7 +383,13 @@ def _read_managed_file_text(problems: list[str], path: Path) -> str | None:
         problems.append(f"Required managed file is missing: {path}")
         return None
 
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed text file for module add: {path}: {exc.reason}"
+        )
+        return None
 
 
 def _read_managed_file_lines(problems: list[str], path: Path) -> list[str] | None:

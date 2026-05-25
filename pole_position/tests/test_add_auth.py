@@ -95,3 +95,49 @@ def test_add_auth_rejects_database_free_project(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "Auth workflow requires generated db/ wiring" in result.stdout
+
+
+def test_add_auth_preflight_fails_before_writing_when_router_is_non_utf8(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "api" / "router.py"
+    router_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "add", "auth")
+
+    assert result.returncode != 0
+    assert "Cannot add auth because the project layout is not ready" in result.stdout
+    assert "Could not read managed text file for auth add" in result.stdout
+    assert "api/router.py" in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+    assert not (package_root / "auth" / "model.py").exists()
+    assert not (project_root / "tests" / "integration" / "test_auth.py").exists()
+
+
+def test_add_auth_preflight_fails_before_writing_when_manifest_is_non_utf8(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    package_root = project_root / "src" / "myapp"
+    manifest_path = project_root / ".poleposition.toml"
+    manifest_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "add", "auth")
+
+    assert result.returncode != 0
+    assert "Cannot add auth because the project layout is not ready" in result.stdout
+    assert "Could not read project manifest as UTF-8" in result.stdout
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+    assert not (package_root / "auth" / "model.py").exists()
+    assert not (project_root / "tests" / "integration" / "test_auth.py").exists()
+    assert manifest_path.read_bytes() == b"\xff\xfe\x00"

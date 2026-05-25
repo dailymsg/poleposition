@@ -13,6 +13,7 @@ from pole_position.cli.services.integration_specs import (
 from pole_position.cli.services.module_templates.renderer import render_template
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 from pole_position.cli.services.project_manifest import manifest_path
+from pole_position.cli.services.project_manifest import read_project_manifest
 from pole_position.cli.services.project_manifest import record_manifest_integration
 from pole_position.cli.services.pyproject_editor import (
     ensure_project_dependency,
@@ -126,6 +127,8 @@ def _validate_add_integration_preflight(
     problems: list[str] = []
     pyproject_path = project_root / "pyproject.toml"
 
+    _collect_manifest_read_error(problems, project_root)
+
     if integration_root.exists():
         problems.append(f"Integration already exists: {contract.name}")
 
@@ -159,6 +162,12 @@ def _collect_required_file(problems: list[str], path: Path) -> None:
         problems.append(f"Required managed file is missing: {path}")
 
 
+def _collect_manifest_read_error(problems: list[str], project_root: Path) -> None:
+    manifest = read_project_manifest(project_root)
+    if manifest.read_error is not None:
+        problems.append(manifest.read_error)
+
+
 def _collect_patchable_project_dependency(
     problems: list[str],
     path: Path,
@@ -167,12 +176,16 @@ def _collect_patchable_project_dependency(
     if dependency is None or not path.is_file():
         return
 
-    content = path.read_text(encoding="utf-8")
     try:
+        content = path.read_text(encoding="utf-8")
         ensure_project_dependency_text(
             content,
             dependency,
             path_label=str(path),
+        )
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed text file for integration add: {path}: {exc.reason}"
         )
     except RuntimeError as exc:
         problems.append(str(exc))
@@ -183,7 +196,15 @@ def _collect_missing_marker(problems: list[str], path: Path, marker: str) -> Non
         problems.append(f"Required managed file is missing: {path}")
         return
 
-    if marker not in path.read_text(encoding="utf-8").splitlines():
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed text file for integration add: {path}: {exc.reason}"
+        )
+        return
+
+    if marker not in lines:
         problems.append(f"Required managed marker '{marker}' is missing in {path}")
 
 
@@ -199,7 +220,14 @@ def _collect_missing_marker_unless_entries_exist(
         problems.append(f"Required managed file is missing: {path}")
         return
 
-    content = path.read_text(encoding="utf-8")
+    try:
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed text file for integration add: {path}: {exc.reason}"
+        )
+        return
+
     if all(_entry_exists(content, entry, entry_type=entry_type) for entry in entries):
         return
 
@@ -686,20 +714,6 @@ def _missing_block_lines(
             missing_lines.append(line)
 
     return missing_lines
-
-
-def _insert_block_before_marker_or_anchor(
-    *,
-    path: Path,
-    block: list[str],
-    markers: list[str],
-    anchor: str | None,
-) -> None:
-    lines = path.read_text(encoding="utf-8").splitlines()
-    insert_at = _find_insert_index(lines, markers, anchor)
-
-    lines[insert_at:insert_at] = block + [""]
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _find_insert_index(

@@ -9,6 +9,7 @@ from pole_position.cli.services.module_creator import (
 from pole_position.cli.services.module_templates.renderer import render_template
 from pole_position.cli.services.project_locator import find_package_root, find_project_root
 from pole_position.cli.services.project_manifest import manifest_path
+from pole_position.cli.services.project_manifest import read_project_manifest
 from pole_position.cli.services.project_manifest import record_manifest_integration
 from pole_position.cli.services.pyproject_editor import (
     ensure_project_dependency,
@@ -96,6 +97,8 @@ def _validate_add_auth_preflight(
 ) -> None:
     problems: list[str] = []
 
+    _collect_manifest_read_error(problems, project_root)
+
     if not (package_root / "db" / "models.py").is_file():
         problems.append(
             "Auth workflow requires generated db/ wiring. "
@@ -146,8 +149,22 @@ def _collect_missing_marker(problems: list[str], path: Path, marker: str) -> Non
         problems.append(f"Required managed file is missing: {path}")
         return
 
-    if marker not in path.read_text(encoding="utf-8").splitlines():
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed text file for auth add: {path}: {exc.reason}"
+        )
+        return
+
+    if marker not in lines:
         problems.append(f"Required managed marker '{marker}' is missing in {path}")
+
+
+def _collect_manifest_read_error(problems: list[str], project_root: Path) -> None:
+    manifest = read_project_manifest(project_root)
+    if manifest.read_error is not None:
+        problems.append(manifest.read_error)
 
 
 def _collect_patchable_project_dependency(problems: list[str], path: Path) -> None:
@@ -160,6 +177,10 @@ def _collect_patchable_project_dependency(problems: list[str], path: Path) -> No
             path.read_text(encoding="utf-8"),
             AUTH_DEPENDENCY,
             path_label=str(path),
+        )
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed text file for auth add: {path}: {exc.reason}"
         )
     except RuntimeError as exc:
         problems.append(str(exc))
