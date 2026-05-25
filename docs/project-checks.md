@@ -80,7 +80,10 @@ polepos check --fix
 
 `--fix` restores missing PolePosition markers in managed files, then runs the
 same checks again. It does not install packages, generate migrations, or call
-external services.
+external services. In `api/router.py`, it places the router include marker
+after the complete `api_router.include_router(...)` statement, including
+multi-line include calls, so later lifecycle commands can keep inserting new
+router wiring safely.
 
 If fixes are applied, text output lists the changed paths before the check
 result:

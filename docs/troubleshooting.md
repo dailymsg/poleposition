@@ -173,6 +173,11 @@ custom changes. Run `polepos remove module <name> --trace` to see what would be
 removed or updated without changing files. Use `--force` only when deleting the
 customized module directory is intentional.
 
+If an expected generated file has been replaced with binary or otherwise
+non-UTF-8 content, PolePosition reports it as a modified generated file instead
+of trying to interpret the bytes. Use `--force` only when removing that file
+with the rest of the generated module is intentional.
+
 If you only want to clean generated wiring while preserving customized module
 files, run:
 

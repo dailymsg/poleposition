@@ -294,7 +294,10 @@ The command checks managed markers, generated wiring, and generated module
 content before deleting the module directory. If router, model, or export wiring
 has drifted into an unsupported custom layout, it stops before removing files so
 the project is not left partially cleaned. If module files or generated tests
-appear to contain custom changes, it also stops unless `--force` is used.
+appear to contain custom changes, it also stops unless `--force` is used. An
+expected generated file that can no longer be decoded as text is treated as a
+modified generated file, so `--force` can still remove the module intentionally
+instead of failing during custom-change detection.
 `--trace` reports the planned removals and updates without mutating files.
 
 Router and model wiring checks are Python-aware. The remover can delete the
@@ -436,6 +439,11 @@ The most important managed files are:
 If these markers are removed or rearranged incorrectly, `polepos add module`,
 `polepos remove module`, or `polepos add integration ...` may fail or stop
 updating the file automatically.
+
+`polepos check --fix` can restore missing safe markers. For `api/router.py`,
+the fixer treats `api_router.include_router(...)` as Python syntax and places
+`# polepos:router-includes` after the complete statement, including multi-line
+router include calls.
 
 ## Database Lifecycle
 

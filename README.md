@@ -356,7 +356,9 @@ metadata, and managed router, model, and export wiring.
 
 Use `--trace` to preview the files that would be removed or updated without
 changing the project. Use `--force` only when you intentionally want to remove a
-customized module directory.
+customized module directory. If an expected generated file has become
+undecodable as text, PolePosition treats it as a modified generated file; a
+normal remove stops, and `--force` can still remove the module directory.
 
 Use `--wiring-only` when you want to keep a customized module directory but
 remove PolePosition-managed references to it. This mode cleans module exports,
@@ -434,7 +436,9 @@ managed files, and before handing a project to another teammate or coding
 agent. The default command is read-only: it reports drift but does not rewrite
 files, install dependencies, run migrations, or contact external services.
 Use `polepos check --fix` when you want PolePosition to restore safe managed
-markers before checking again.
+markers before checking again. For `api/router.py`, marker repair keeps
+`# polepos:router-includes` outside complete `api_router.include_router(...)`
+calls, including multi-line includes.
 
 Failed checks include stable `PPCHK` issue codes and `Fix:` hints so humans,
 coding agents, and CI logs can refer to the same remediation.

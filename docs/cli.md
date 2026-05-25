@@ -247,6 +247,10 @@ files when custom changes or unmanaged references are detected. If you manually
 deleted the module directory, rerun `polepos remove module <name>` to clean
 remaining generated tests, manifest metadata, and managed wiring.
 
+If an expected generated file can no longer be decoded as text, `remove module`
+treats it as a modified generated file. A normal remove stops before deleting
+it; `--force` can still remove the module directory when that is intentional.
+
 For CRUD modules generated with options such as `--pagination` or
 `--tenant-scoped`, the manifest records the selected options as part of the
 module template value, for example `crud[pagination,tenant-scoped]`. The
@@ -290,6 +294,10 @@ polepos check --fix
 Failed checks include `PPCHK` issue codes and `Fix:` hints. The command does
 not install dependencies, run migrations, contact brokers, call LLM providers,
 or mutate files unless `--fix` is supplied.
+
+`--fix` is limited to safe managed-marker restoration. In `api/router.py`, it
+places the router include marker after the complete `api_router.include_router(...)`
+statement, including multi-line calls.
 
 For check layers and issue behavior, see [Project Checks](project-checks.md).
 
