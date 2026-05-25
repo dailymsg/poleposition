@@ -388,6 +388,37 @@ def test_remove_module_force_removes_custom_module_files(tmp_path: Path):
     assert check_result.returncode == 0
 
 
+def test_remove_module_force_removes_non_utf8_generated_module_file(
+    tmp_path: Path,
+):
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    add_result = run_cli(project_root, "add", "module", "garage")
+    assert add_result.returncode == 0
+
+    package_root = project_root / "src" / "myapp"
+    router_path = package_root / "modules" / "garage" / "router.py"
+    router_path.write_bytes(b"\xff\xfe\x00")
+
+    blocked_result = run_cli(project_root, "remove", "module", "garage")
+
+    assert blocked_result.returncode != 0
+    assert "Modified generated module file" in blocked_result.stdout
+    assert "UnicodeDecodeError" not in blocked_result.stdout
+    assert router_path.exists()
+
+    force_result = run_cli(project_root, "remove", "module", "garage", "--force")
+
+    assert force_result.returncode == 0
+    assert "Removed module: garage" in force_result.stdout
+    assert not (package_root / "modules" / "garage").exists()
+
+    check_result = run_cli(project_root, "check")
+    assert check_result.returncode == 0
+
+
 def test_remove_module_ignores_python_cache_artifacts(tmp_path: Path):
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0

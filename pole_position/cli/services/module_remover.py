@@ -255,7 +255,7 @@ def _detect_custom_changes(
                 changes.append(f"Unexpected module file: {path}")
                 continue
 
-            if path.read_text(encoding="utf-8") != expected_content:
+            if not _generated_file_matches(path, expected_content):
                 changes.append(f"Modified generated module file: {path}")
 
     integration_test_path = (
@@ -267,7 +267,7 @@ def _detect_custom_changes(
         unit_test_path: template.unit_test_content,
     }
     for path, expected_content in expected_tests.items():
-        if path.is_file() and path.read_text(encoding="utf-8") != expected_content:
+        if path.is_file() and not _generated_file_matches(path, expected_content):
             changes.append(f"Modified generated test file: {path}")
 
     return changes
@@ -298,10 +298,17 @@ def _detect_custom_test_changes(
     }
 
     for path, expected_content in expected_tests.items():
-        if path.is_file() and path.read_text(encoding="utf-8") != expected_content:
+        if path.is_file() and not _generated_file_matches(path, expected_content):
             changes.append(f"Modified generated test file: {path}")
 
     return changes
+
+
+def _generated_file_matches(path: Path, expected_content: str) -> bool:
+    try:
+        return path.read_text(encoding="utf-8") == expected_content
+    except UnicodeDecodeError:
+        return False
 
 
 def _is_ignored_generated_artifact(relative_path: Path) -> bool:

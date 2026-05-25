@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import shutil
@@ -1201,6 +1202,44 @@ def test_check_fix_restores_missing_managed_marker(tmp_path: Path) -> None:
     assert "src/myapp/api/router.py" in result.stdout
     assert "PolePosition project check passed." in result.stdout
     assert "# polepos:router-imports" in router_path.read_text(encoding="utf-8")
+
+
+def test_check_fix_restores_router_include_marker_after_multiline_include(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    router_path = project_root / "src" / "myapp" / "api" / "router.py"
+    router_path.write_text(
+        router_path.read_text(encoding="utf-8").replace(
+            (
+                'api_router.include_router(status_router, tags=["status"])\n'
+                "# polepos:router-includes\n"
+            ),
+            (
+                "api_router.include_router(\n"
+                "    status_router,\n"
+                '    tags=["status"],\n'
+                ")\n"
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    fix_result = run_cli(project_root, "check", "--fix")
+
+    assert fix_result.returncode == 0
+    assert "PolePosition project check passed." in fix_result.stdout
+    fixed_lines = router_path.read_text(encoding="utf-8").splitlines()
+    assert fixed_lines.index("# polepos:router-includes") > fixed_lines.index(")")
+
+    add_result = run_cli(project_root, "add", "module", "garage")
+
+    assert add_result.returncode == 0, add_result.stdout
+    ast.parse(router_path.read_text(encoding="utf-8"))
+    assert "garage_router" in router_path.read_text(encoding="utf-8")
 
 
 def test_check_fix_json_reports_fixed_paths(tmp_path: Path) -> None:

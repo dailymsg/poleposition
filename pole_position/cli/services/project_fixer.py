@@ -1,3 +1,4 @@
+import ast
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,16 +93,44 @@ def _insert_before_api_router(lines: list[str], marker: str) -> None:
 
 
 def _insert_after_last_router_include(lines: list[str], marker: str) -> None:
-    last_include_index: int | None = None
-    for index, line in enumerate(lines):
-        if "api_router.include_router(" in line:
-            last_include_index = index
-
-    if last_include_index is None:
+    insert_index = _last_api_router_include_end_index(lines)
+    if insert_index is None:
         lines.append(marker)
         return
 
-    lines.insert(last_include_index + 1, marker)
+    lines.insert(insert_index, marker)
+
+
+def _last_api_router_include_end_index(lines: list[str]) -> int | None:
+    try:
+        tree = ast.parse("\n".join(lines) + "\n")
+    except SyntaxError:
+        return None
+
+    include_end_indexes: list[int] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Expr):
+            continue
+        if not _is_api_router_include_call(node.value):
+            continue
+        end_lineno = getattr(node, "end_lineno", None)
+        if end_lineno is not None:
+            include_end_indexes.append(end_lineno)
+
+    if not include_end_indexes:
+        return None
+
+    return include_end_indexes[-1]
+
+
+def _is_api_router_include_call(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "include_router"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "api_router"
+    )
 
 
 def _fix_db_models(path: Path) -> Path | None:
