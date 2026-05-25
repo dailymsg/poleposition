@@ -139,6 +139,28 @@ def test_check_reports_non_utf8_managed_file(tmp_path: Path) -> None:
     assert "UnicodeDecodeError" not in result.stderr
 
 
+def test_check_reports_non_utf8_legacy_database_free_settings(
+    tmp_path: Path,
+) -> None:
+    create_result = run_cli(tmp_path, "start", "myapp", "--db", "none")
+    assert create_result.returncode == 0
+
+    project_root = tmp_path / "myapp"
+    settings_path = project_root / "src" / "myapp" / "settings.py"
+    (project_root / ".poleposition.toml").unlink()
+    settings_path.write_bytes(b"\xff\xfe\x00")
+
+    result = run_cli(project_root, "check", "--json")
+
+    assert result.returncode != 0
+    payload = json.loads(result.stdout)
+    assert payload["issues"][0]["code"] == "PPCHK023"
+    assert "Could not read generated text file as UTF-8" in payload["issues"][0]["message"]
+    assert str(settings_path) in payload["issues"][0]["message"]
+    assert "UnicodeDecodeError" not in result.stdout
+    assert "UnicodeDecodeError" not in result.stderr
+
+
 def test_check_reports_non_utf8_manifest(tmp_path: Path) -> None:
     create_result = run_cli(tmp_path, "start", "myapp")
     assert create_result.returncode == 0

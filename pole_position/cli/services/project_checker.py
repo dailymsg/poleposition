@@ -604,17 +604,24 @@ def _project_uses_database(project_root: Path, package_root: Path) -> bool:
         return True
 
     settings_path = package_root / "settings.py"
-    if (
-        settings_path.is_file()
-        and "database_url:" in settings_path.read_text(encoding="utf-8")
-    ):
+    if _file_contains_text(settings_path, "database_url:"):
         return True
 
     env_path = project_root / ".env.example"
-    if env_path.is_file() and "DATABASE_URL=" in env_path.read_text(encoding="utf-8"):
+    if _file_contains_text(env_path, "DATABASE_URL="):
         return True
 
     return False
+
+
+def _file_contains_text(path: Path, needle: str) -> bool:
+    if not path.is_file():
+        return False
+
+    try:
+        return needle in path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return False
 
 
 def _project_database_mode(

@@ -409,7 +409,27 @@ def _line_exists(path: Path, line: str) -> bool:
     if not path.is_file():
         return False
 
-    return line in path.read_text(encoding="utf-8").splitlines()
+    try:
+        return line in path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError:
+        return False
+
+
+def _read_optional_text(path: Path) -> str:
+    if not path.is_file():
+        return ""
+
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return ""
+
+
+def _file_content_matches(path: Path, expected_content: str | None) -> bool:
+    if expected_content is None:
+        return False
+
+    return _read_optional_text(path) == expected_content
 
 
 def _router_wiring_ranges(
@@ -420,7 +440,11 @@ def _router_wiring_ranges(
     if not path.is_file():
         return []
 
-    content = path.read_text(encoding="utf-8")
+    try:
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return []
+
     tree = ast.parse(content, filename=str(path))
     router_alias = f"{module_name}_router"
     router_module = f"{package_name}.modules.{module_name}.router"
@@ -459,7 +483,7 @@ def _planned_llm_integration_paths(package_root: Path, package_name: str) -> lis
     remove_integrations_init = (
         integrations_init.is_file()
         and not _has_other_integrations(integrations_root)
-        and integrations_init.read_text(encoding="utf-8") == expected_integrations_init
+        and _file_content_matches(integrations_init, expected_integrations_init)
     )
     if remove_integrations_init:
         removed_paths.append(integrations_init)
@@ -482,7 +506,7 @@ def _would_remove_lines_by_prefix(path: Path, prefixes: list[str]) -> bool:
 
     return any(
         any(line.strip().startswith(prefix) for prefix in prefixes)
-        for line in path.read_text(encoding="utf-8").splitlines()
+        for line in _read_optional_text(path).splitlines()
     )
 
 
@@ -688,7 +712,10 @@ def _has_router_remnant(path: Path, package_name: str, module_name: str) -> bool
     if not path.is_file():
         return False
 
-    content = path.read_text(encoding="utf-8")
+    content = _read_optional_text(path)
+    if not content:
+        return False
+
     router_alias = f"{module_name}_router"
     router_module = f"{package_name}.modules.{module_name}.router"
 
@@ -800,7 +827,13 @@ def _read_file_text(problems: list[str], path: Path) -> str | None:
         problems.append(f"Required managed file is missing: {path}")
         return None
 
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        problems.append(
+            f"Could not read managed text file for removal: {path}: {exc.reason}"
+        )
+        return None
 
 
 def _read_file_lines(problems: list[str], path: Path) -> list[str] | None:
@@ -1114,7 +1147,7 @@ def _is_generated_llm_scaffold_pristine(
         path = package_root / relative_path
         if not path.is_file():
             return False
-        if path.read_text(encoding="utf-8") != expected_content:
+        if not _file_content_matches(path, expected_content):
             return False
 
     expected_llm_paths = {
@@ -1131,12 +1164,8 @@ def _is_generated_llm_scaffold_pristine(
     if not settings_path.is_file() or not env_path.is_file():
         return False
 
-    settings_lines = settings_path.read_text(
-        encoding="utf-8",
-    ).splitlines()
-    env_lines = env_path.read_text(
-        encoding="utf-8",
-    ).splitlines()
+    settings_lines = _read_optional_text(settings_path).splitlines()
+    env_lines = _read_optional_text(env_path).splitlines()
 
     return all(line in settings_lines for line in llm_settings_block()) and all(
         line in env_lines for line in llm_env_block()
@@ -1147,7 +1176,10 @@ def _remove_lines_by_prefix(path: Path, prefixes: list[str]) -> bool:
     if not path.is_file():
         return False
 
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = _read_optional_text(path).splitlines()
+    if not lines:
+        return False
+
     updated_lines = [
         line
         for line in lines
@@ -1177,7 +1209,7 @@ def _remove_llm_integration_files(package_root: Path, package_name: str) -> list
     if (
         integrations_init.is_file()
         and not _has_other_integrations(integrations_root)
-        and integrations_init.read_text(encoding="utf-8") == expected_integrations_init
+        and _file_content_matches(integrations_init, expected_integrations_init)
     ):
         integrations_init.unlink()
         removed_paths.append(integrations_init)
