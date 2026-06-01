@@ -509,7 +509,12 @@ def _ensure_llm_env(path: Path) -> bool:
 
 
 def _insert_line_before_marker(path: Path, line: str, marker: str) -> None:
-    lines = path.read_text(encoding="utf-8").splitlines()
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        raise RuntimeError(
+            f"Could not read managed text file for module add: {path}: {exc.reason}"
+        ) from exc
     marker_index = _find_marker_index(lines, marker, path)
 
     if line in lines:
@@ -526,7 +531,12 @@ def _insert_sorted_line_before_marker(
     marker: str,
     match_prefix: str,
 ) -> None:
-    lines = path.read_text(encoding="utf-8").splitlines()
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        raise RuntimeError(
+            f"Could not read managed text file for module add: {path}: {exc.reason}"
+        ) from exc
     marker_index = _find_marker_index(lines, marker, path)
 
     managed_ranges = _collect_managed_block_ranges(
@@ -609,7 +619,12 @@ def _ensure_block_entries_before_marker_or_anchor(
     anchor: str | None,
     entry_type: str,
 ) -> bool:
-    lines = path.read_text(encoding="utf-8").splitlines()
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        raise RuntimeError(
+            f"Could not read managed text file for module add: {path}: {exc.reason}"
+        ) from exc
     missing_lines = _missing_block_lines(
         lines=lines,
         block=block,
@@ -722,7 +737,12 @@ def _insert_block_before_marker_or_anchor(
     marker: str,
     anchor: str | None,
 ) -> None:
-    lines = path.read_text(encoding="utf-8").splitlines()
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        raise RuntimeError(
+            f"Could not read managed text file for module add: {path}: {exc.reason}"
+        ) from exc
     insert_at = _find_insert_index(lines=lines, marker=marker, anchor=anchor)
 
     lines[insert_at:insert_at] = block + [""]

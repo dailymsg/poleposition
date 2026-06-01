@@ -156,3 +156,53 @@ def test_graph_supports_paths_and_topological_sort() -> None:
     cyclic = Graph([("a", "b"), ("b", "a")], directed=True)
     with pytest.raises(ValueError, match="cycle"):
         cyclic.topological_sort()
+
+
+def test_graph_remove_edge() -> None:
+    from polepos.data import Graph
+
+    undirected = Graph([("a", "b"), ("b", "c")])
+    undirected.remove_edge("a", "b")
+    assert "b" not in undirected.neighbors("a")
+    assert "a" not in undirected.neighbors("b")
+    assert "c" in undirected.neighbors("b")
+
+    directed = Graph([("x", "y"), ("y", "z")], directed=True)
+    directed.remove_edge("x", "y")
+    assert "y" not in directed.neighbors("x")
+    assert "x" not in directed.neighbors("y")
+
+    with pytest.raises(KeyError):
+        undirected.remove_edge("a", "b")
+
+
+def test_sorted_containers_remove_elements() -> None:
+    from polepos.data import SortedDict, SortedSet
+
+    unique_values = SortedSet([1, 2, 3, 4])
+    unique_values.discard(2)
+    assert list(unique_values) == [1, 3, 4]
+    assert len(unique_values) == 3
+    unique_values.discard(99)
+    assert list(unique_values) == [1, 3, 4]
+
+    mapping = SortedDict([("a", 1), ("b", 2), ("c", 3)])
+    del mapping["b"]
+    assert list(mapping.items()) == [("a", 1), ("c", 3)]
+    assert len(mapping) == 2
+    with pytest.raises(KeyError):
+        del mapping["b"]
+
+
+def test_ttl_cache_evicts_when_max_size_exceeded() -> None:
+    from polepos.data import TTLCache
+
+    cache = TTLCache[str, int](ttl=60.0, max_size=2)
+    cache["a"] = 1
+    cache["b"] = 2
+    cache["c"] = 3
+
+    assert "a" not in cache
+    assert "b" in cache
+    assert "c" in cache
+    assert len(cache) == 2

@@ -870,7 +870,10 @@ def _remove_line(path: Path, line: str) -> bool:
 
 
 def _remove_lines(path: Path, lines_to_remove: list[str]) -> bool:
-    lines = path.read_text(encoding="utf-8").splitlines()
+    text = _read_optional_text(path)
+    if not text:
+        return False
+    lines = text.splitlines()
     removals = set(lines_to_remove)
     updated_lines = [line for line in lines if line not in removals]
 
@@ -882,7 +885,9 @@ def _remove_lines(path: Path, lines_to_remove: list[str]) -> bool:
 
 
 def _remove_router_wiring(path: Path, package_name: str, module_name: str) -> bool:
-    content = path.read_text(encoding="utf-8")
+    content = _read_optional_text(path)
+    if not content:
+        return False
     tree = ast.parse(content, filename=str(path))
     router_alias = f"{module_name}_router"
     router_module = f"{package_name}.modules.{module_name}.router"
