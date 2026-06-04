@@ -5,12 +5,28 @@ Notable PolePosition changes are tracked here.
 PolePosition follows Conventional Commits in repository history. This changelog
 summarizes user-facing behavior, release readiness work, and known beta scope.
 
-## Unreleased
+## 0.0.39 - 2026-06-04
+
+### Fixed
+
+- Made `polepos.data.Graph` traversals (`bfs`, `dfs`, `shortest_path`,
+  `topological_sort`) deterministic by storing adjacency in insertion order, so
+  results no longer vary across processes with `PYTHONHASHSEED`.
+- `polepos.data` graph traversals now raise a clear `ValueError` for an unknown
+  start node instead of a bare `KeyError`.
+- Made `UnionFind.find` iterative to avoid `RecursionError` on deep chains.
+- Made `SortedList.irange` a lazy generator consistent with `SortedDict`, and
+  stopped `SortedSet.irange` from rebuilding a `SortedList` on every call.
+- Hardened `polepos remove module` router-wiring parsing with guarded
+  `ast.parse`, removed dead code, and de-duplicated the legacy `races`
+  generated-test path handling.
 
 ### Added
 
 - Added `polepos remove module <name>` for removing generated modules and their
   managed router, export, test, and model wiring.
+- Added a Docker/PostgreSQL end-to-end job to the E2E workflow so the
+  containerized migration smoke test runs in CI.
 - Added documentation pages for troubleshooting, configuration, integration
   guides, and release or upgrade notes.
 - Added a database and migrations guide for the `polepos db` lifecycle.
@@ -31,12 +47,10 @@ summarizes user-facing behavior, release readiness work, and known beta scope.
   dependency layouts are reported before generated files or settings are
   written.
 
-### Beta Release Checklist
+### Notes
 
-- Confirm the Docker/PostgreSQL e2e workflow in an environment with Docker
-  available.
-- Keep documenting intentionally scoped surfaces such as auth foundations,
-  provider-agnostic LLM adapters, and explicit messaging worker/runtime code.
+- Versions 0.0.28 through 0.0.38 were incremental development bumps that were not
+  individually changelogged; see the git history for details.
 
 ## 0.0.27 - 2026-05-05
 
