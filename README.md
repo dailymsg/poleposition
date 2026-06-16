@@ -33,7 +33,7 @@ PolePosition helps you keep [FastAPI](https://fastapi.tiangolo.com/)'s speed whi
 
 ## Installation
 
-PolePosition recommends a `uv`-first workflow for installation, dependency
+[PolePosition CLI](https://github.com/polepos) recommends a `uv`-first workflow for installation, dependency
 sync, migrations, and local development. It also works with `pip` and a normal
 Python virtual environment.
 
@@ -906,7 +906,7 @@ The repository CI currently runs the CLI test suite on Python `3.10`, `3.11`,
 |---|---|---|
 | `CI` | push, pull request, manual dispatch | Ruff lint + format check (Google Python Style Guide); repo test suite on Python `3.10`, `3.11`, `3.12`, `3.13`, and `3.14`; Docusaurus production build |
 | `E2E` | release tags, relevant pull requests, manual dispatch | Generated-project non-Docker e2e smoke tests on Python `3.11` |
-| `Release` | published GitHub release | Build and verify Python distributions, then publish to PyPI with Trusted Publishing |
+| `Release` | published GitHub release | Build and verify Python distributions, then publish to [PyPI](https://pypi.org/project/poleposition/) with Trusted Publishing |
 | `Deploy Docs` | pushes to `main`, manual dispatch | Docusaurus production build and GitHub Pages deploy |
 
 The `CI` workflow runs `pytest` with `pytest-cov`, prints a terminal coverage
