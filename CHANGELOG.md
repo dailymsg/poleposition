@@ -5,6 +5,25 @@ Notable PolePosition changes are tracked here.
 PolePosition follows Conventional Commits in repository history. This changelog
 summarizes user-facing behavior, release readiness work, and known beta scope.
 
+## 0.0.46 - 2026-06-27
+
+### Added
+
+- `polepos add module <name> --service-only` (alias for
+  `--template service-only`) generates an internal, database-backed module with
+  a model, repository, service, and tests but no router, schemas, or
+  `api/router.py` wiring. Use it for domain services, event handlers, background
+  processing, or integrations that should follow PolePosition module conventions
+  without exposing HTTP routes (resolves #81). `polepos check` recognizes that a
+  service-only module has no router and does not flag the missing route wiring,
+  and `polepos remove module` cleans it up like any other template.
+- `polepos completion <bash|zsh|fish>` prints a shell completion script. The
+  generated script calls back into the CLI for every completion, so candidates
+  are derived from the live command tree and stay in sync as commands and flags
+  change. Completion covers commands, subcommands, flags, `--template` and
+  `--db` values, integration names, and the current project's module names for
+  `polepos remove module`. No runtime dependencies were added.
+
 ## 0.0.45 - 2026-06-20
 
 ### Added

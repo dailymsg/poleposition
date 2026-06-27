@@ -94,7 +94,7 @@ COMMAND_HELP: dict[tuple[str, ...], CommandHelp] = {
         path=("add", "module"),
         usage=(
             "Usage: polepos add module <module_name> "
-            "[--template <template_name>] [--api-only] "
+            "[--template <template_name>] [--api-only] [--service-only] "
             "[--pagination] [--timestamps] [--soft-delete] "
             "[--tenant-scoped] [--auth-required]"
         ),
@@ -114,6 +114,11 @@ COMMAND_HELP: dict[tuple[str, ...], CommandHelp] = {
                 "--api-only",
                 "Shortcut for --template api-only; no model, repository, "
                 "or db wiring.",
+            ),
+            OptionHelp(
+                "--service-only",
+                "Shortcut for --template service-only; internal module with "
+                "model, repository, and db wiring but no router or API.",
             ),
             OptionHelp(
                 "--pagination",
@@ -146,6 +151,7 @@ COMMAND_HELP: dict[tuple[str, ...], CommandHelp] = {
             "polepos add module customers --template crud --pagination "
             "--timestamps",
             "polepos add module webhooks --api-only",
+            "polepos add module notifications --service-only",
             "polepos add module assistant --template ai-prompt",
         ),
         notes=(
@@ -413,6 +419,36 @@ COMMAND_HELP: dict[tuple[str, ...], CommandHelp] = {
             "polepos --version",
         ),
     ),
+    ("completion",): CommandHelp(
+        path=("completion",),
+        usage="Usage: polepos completion <bash|zsh|fish>",
+        summary=(
+            "Print a shell completion script for the given shell.",
+            "Completions are derived from the live command tree, so they stay "
+            "in sync as commands and flags change.",
+        ),
+        options=(
+            OptionHelp("bash", "Print the bash completion script."),
+            OptionHelp("zsh", "Print the zsh completion script."),
+            OptionHelp("fish", "Print the fish completion script."),
+        ),
+        examples=(
+            "polepos completion bash >> ~/.bashrc",
+            "polepos completion zsh > ~/.zfunc/_polepos",
+            "polepos completion fish > ~/.config/fish/completions/polepos.fish",
+            "source <(polepos completion bash)",
+        ),
+        notes=(
+            "bash: source the script from ~/.bashrc (requires "
+            "bash-completion).",
+            "zsh: save it to a directory on your $fpath named `_polepos`, or "
+            "source it after `compinit`.",
+            "fish: save it under ~/.config/fish/completions/polepos.fish.",
+            "Completion tab-completes commands, subcommands, flags, template "
+            "and database values, integration names, and the current "
+            "project's module names for `remove module`.",
+        ),
+    ),
     ("delete",): CommandHelp(
         path=("delete",),
         usage="Usage: polepos delete <project_name> [--force] [--trace]",
@@ -466,6 +502,7 @@ TOP_LEVEL_SECTIONS: tuple[tuple[str, tuple[OptionHelp, ...]], ...] = (
             OptionHelp("help", "Show detailed CLI usage."),
             OptionHelp("upgrade", "Report project upgrade readiness."),
             OptionHelp("version", "Show the installed CLI version."),
+            OptionHelp("completion", "Print a shell completion script."),
         ),
     ),
 )
@@ -489,4 +526,5 @@ COMMAND_TOPIC_ORDER: tuple[tuple[str, ...], ...] = (
     ("help",),
     ("upgrade",),
     ("version",),
+    ("completion",),
 )
